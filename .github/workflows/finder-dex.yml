@@ -1,0 +1,36 @@
+name: FinderDex debug
+on:
+  push:
+    branches: [feat/finder-dex-foundation-01]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: finderdex-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: temurin
+      - uses: gradle/actions/setup-gradle@v6
+      - name: Verify and assemble
+        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8' -Pvoyager.enableAbiSplits=false testDebugUnitTest lintDebug assembleDebug
+      - uses: actions/upload-artifact@v7
+        if: success()
+        with:
+          name: FinderDex-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 30
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: FinderDex-verification
+          path: |
+            app/build/reports/
+            app/build/test-results/
