@@ -54,7 +54,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         with:
-          name: FinderDex-debug
+          name: FinderDex-R2-debug-apk
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/androidTest/debug/*.apk
