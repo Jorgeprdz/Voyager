@@ -49,6 +49,14 @@ android {
     }
 
     signingConfigs {
+        providers.environmentVariable("FINDERDEX_DEBUG_KEYSTORE_PATH").orNull?.let { stableDebugKey ->
+            getByName("debug") {
+                storeFile = file(stableDebugKey)
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
         if (hasReleaseSigning) {
             create("release") {
                 storeFile = file(checkNotNull(releaseKeystorePath))
