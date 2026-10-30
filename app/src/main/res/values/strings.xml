@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Voyager</string>
+    <string name="app_name" translatable="false">FinderDex</string>
     <string name="protocol_sftp" translatable="false">SFTP</string>
     <string name="protocol_ftp" translatable="false">FTP</string>
     <string name="protocol_smb" translatable="false">SMB</string>
@@ -303,7 +303,7 @@
     <string name="details_permissions">Permissions</string>
     <string name="details_source_local">Local storage</string>
     <string name="details_source_saf">Document tree</string>
-    <string name="home_title" translatable="false">Voyager</string>
+    <string name="home_title" translatable="false">FinderDex</string>
     <string name="home_storage_section">Storage</string>
     <string name="home_limited_storage_title">Limited storage access</string>
     <string name="home_limited_storage_message">Document trees and remote servers remain available. Grant full access to browse device storage directly.</string>

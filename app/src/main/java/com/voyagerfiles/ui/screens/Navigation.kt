@@ -65,7 +65,41 @@ fun AppNavigation(
     folderRequestGeneration: Long = 0,
     onFolderRequestConsumed: () -> Unit = {},
 ) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val mode = com.voyagerfiles.desktop.DesktopModeController.mode(maxWidth.value, maxHeight.value)
+        val session by viewModel.activeSession.collectAsState()
+        var preferMobile by rememberSaveable { mutableStateOf(false) }
+        val desktop = mode != com.voyagerfiles.desktop.DesktopMode.COMPACT && hasAllFilesAccess &&
+            (session == null || session?.source == com.voyagerfiles.data.model.FileSource.LOCAL) && !preferMobile && requestedFolder == null
+        if (desktop) {
+            com.voyagerfiles.desktop.FinderDesktopHost(viewModel, mode, onMobile = { preferMobile = true })
+        } else {
+            androidx.compose.foundation.layout.Column {
+                if (mode != com.voyagerfiles.desktop.DesktopMode.COMPACT && hasAllFilesAccess) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        preferMobile = false
+                        if (session?.source != com.voyagerfiles.data.model.FileSource.LOCAL)
+                            viewModel.openLocalRoot(android.os.Environment.getExternalStorageDirectory().path)
+                    }) { Text("FinderDex · Escritorio") }
+                }
+                MobileAppNavigation(viewModel, hasAllFilesAccess, onRequestAllFilesAccess, requestedFolder,
+                    folderRequestGeneration, onFolderRequestConsumed)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileAppNavigation(
+    viewModel: FileBrowserViewModel,
+    hasAllFilesAccess: Boolean,
+    onRequestAllFilesAccess: () -> Unit,
+    requestedFolder: String? = null,
+    folderRequestGeneration: Long = 0,
+    onFolderRequestConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
+    val initialRoute = remember { if (viewModel.activeSession.value != null) Screen.Browser.createRoute(viewModel.browseState.value.currentPath) else Screen.Home.route }
     val context = LocalContext.current
     var shortcutFailed by remember { mutableStateOf(false) }
     var confirmRoot by remember { mutableStateOf(false) }
@@ -84,7 +118,7 @@ fun AppNavigation(
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
+        startDestination = initialRoute,
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),

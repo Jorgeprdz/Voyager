@@ -1,0 +1,48 @@
+package com.voyagerfiles.desktop
+
+import android.app.Application
+import androidx.compose.runtime.*
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.test.core.app.ApplicationProvider
+import com.voyagerfiles.data.model.FileSource
+import com.voyagerfiles.data.repository.LocalFileProvider
+import com.voyagerfiles.viewmodel.BrowserSession
+import kotlinx.coroutines.*
+import org.junit.*
+import org.junit.Assert.*
+import java.io.File
+
+class FinderDesktopScreenTest {
+    @get:Rule val compose = createComposeRule()
+    private lateinit var root: File
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    @Before fun setup() {
+        root = File(ApplicationProvider.getApplicationContext<Application>().cacheDir, "finderdex-ui-${System.nanoTime()}")
+        File(root, "Documents").mkdirs()
+        File(root, "Documents/notes.txt").writeText("FinderDex test")
+    }
+    @After fun cleanup() { scope.cancel(); root.deleteRecursively() }
+
+    @Test fun columnsNavigateSelectOpenAndKeepStateAcrossLayoutChange() {
+        val controller = FinderColumnController(scope,
+            BrowserSession("test", "Test", FileSource.LOCAL, root.path, root.path), LocalFileProvider()::listFiles)
+        var mode by mutableStateOf(DesktopMode.FULL)
+        var opened: String? = null
+        compose.setContent { FinderDesktopScreen(controller, mode, onOpen = { opened = it.path }) }
+        compose.runOnIdle { controller.start() }
+        compose.waitUntil(10_000) { controller.columns.value.firstOrNull()?.loading == false }
+        compose.onNodeWithText("Documents").performClick()
+        compose.waitUntil(10_000) { controller.columns.value.size == 2 && !controller.columns.value.last().loading }
+        compose.onNodeWithText("notes.txt").performClick()
+        compose.runOnIdle { mode = DesktopMode.ADAPTED }
+        compose.onNodeWithText("notes.txt").assertIsSelected()
+        compose.runOnIdle { mode = DesktopMode.FULL }
+        compose.onNodeWithText("Abrir").performClick()
+        compose.runOnIdle { assertEquals(File(root, "Documents/notes.txt").path, opened) }
+        compose.onNodeWithContentDescription("Atrás").performClick()
+        compose.waitUntil(10_000) { controller.columns.value.size == 1 }
+        compose.onNodeWithContentDescription("Adelante").performClick()
+        compose.waitUntil(10_000) { controller.currentPath == File(root, "Documents").path }
+    }
+}

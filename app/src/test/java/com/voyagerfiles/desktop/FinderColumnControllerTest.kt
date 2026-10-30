@@ -43,17 +43,19 @@ class FinderColumnControllerTest {
     // Catches accepting a late, cancellation-ignoring provider response into a replacement column.
     @Test fun staleLoadsCannotReplaceNewerColumns() = runBlocking {
         val slow = CompletableDeferred<Result<List<FileItem>>>()
+        val started = CompletableDeferred<Unit>()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
         try {
             val controller = FinderColumnController(scope, session("/root"), { path ->
                 when (path) {
                     "/root" -> Result.success(listOf(FileItem("slow", "/root/slow", true), FileItem("fast", "/root/fast", true)))
-                    "/root/slow" -> withContext(NonCancellable) { slow.await() }
+                    "/root/slow" -> withContext(NonCancellable) { started.complete(Unit); slow.await() }
                     else -> Result.success(listOf(FileItem("correct", "/root/fast/correct", false)))
                 }
             })
             controller.start(); settle(controller)
             controller.select(0, controller.columns.value[0].files[1]) // sorted: fast, slow
+            withTimeout(5000) { started.await() }
             controller.select(0, controller.columns.value[0].files[0])
             settle(controller)
             slow.complete(Result.success(listOf(FileItem("obsolete", "/root/slow/obsolete", false))))

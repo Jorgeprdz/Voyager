@@ -247,6 +247,37 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
+    private var desktopColumns: com.voyagerfiles.desktop.FinderColumnController? = null
+
+    /** Read-only binding captured for one local session; never navigates browseState to list a column. */
+    fun finderColumns(): com.voyagerfiles.desktop.FinderColumnController? {
+        val session = _activeSession.value ?: return null
+        if (session.source != FileSource.LOCAL) return null
+        desktopColumns?.takeIf { it.session.id == session.id }?.let { return it }
+        desktopColumns?.close()
+        val provider = sessionProviders[session.id] ?: return null
+        return com.voyagerfiles.desktop.FinderColumnController(
+            scope = viewModelScope,
+            session = session,
+            listDirectory = { path ->
+                if (_activeSession.value?.id != session.id) Result.failure(IllegalStateException("Session closed"))
+                else if (!BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath))
+                    Result.failure(SecurityException("Outside session"))
+                else provider.listFiles(path)
+            },
+            parentOf = provider::getParentPath,
+            onLocation = { path, selection ->
+                viewModelScope.launch {
+                    if (_activeSession.value?.id == session.id) {
+                        if (_browseState.value.currentPath != path) navigateToPath(path)
+                        if (_activeSession.value?.id == session.id && _browseState.value.currentPath == path)
+                            setDragSelection(selection)
+                    }
+                }
+            },
+        ).also { desktopColumns = it }
+    }
+
     fun navigateTo(path: String) {
         cancelInitialNavigation()
         viewModelScope.launch {

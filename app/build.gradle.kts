@@ -25,11 +25,11 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.voyagerfiles"
+        applicationId = "com.finderdex"
         minSdk = 26
         targetSdk = 35
         versionCode = 23
-        versionName = "1.14.0"
+        versionName = "0.1.0-foundation"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
