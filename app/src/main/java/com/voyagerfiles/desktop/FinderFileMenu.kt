@@ -6,9 +6,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventType
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.*
 
 enum class FinderFileAction {
     OPEN, QUICK_LOOK, COPY, CUT, RENAME, ZIP, INFO, FAVORITE, TRASH, DELETE
@@ -57,3 +55,19 @@ private fun funAction(action: FinderFileAction, name: String, onDismiss: () -> U
     callback: (FinderFileAction) -> Unit) {
     DropdownMenuItem(text = { Text(name) }, onClick = { onDismiss(); callback(action) })
 }
+
+/** Reads keyboard modifiers from the actual Android pointer event, not a stale key press. */
+internal fun Modifier.finderMouseSelectionModifiers(onChange: (Boolean, Boolean) -> Unit): Modifier =
+    pointerInput(onChange) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                if (event.type == PointerEventType.Press && event.buttons.isPrimaryPressed) {
+                    onChange(
+                        event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed,
+                        event.keyboardModifiers.isShiftPressed,
+                    )
+                }
+            }
+        }
+    }
