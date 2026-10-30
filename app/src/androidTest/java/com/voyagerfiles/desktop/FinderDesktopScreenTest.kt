@@ -46,6 +46,31 @@ class FinderDesktopScreenTest {
         compose.runOnIdle { assertEquals(File(root, "Documents/notes.txt").path, opened) }
     }
 
+
+    @Test fun listAndGalleryHaveRealNavigationAndPreserveSelectedFile() {
+        val controller = FinderColumnController(scope,
+            BrowserSession("all-views", "Test", FileSource.LOCAL, root.path, root.path),
+            LocalFileProvider()::listFiles)
+        compose.setContent { FinderDesktopScreen(controller, DesktopMode.FULL) }
+        compose.runOnIdle { controller.start() }
+        compose.waitUntil(10_000) { controller.columns.value.firstOrNull()?.loading == false }
+        compose.onNodeWithContentDescription("Vista de lista").performClick()
+        compose.onNodeWithTag("finder-list").assertExists()
+        compose.onNodeWithText("Documents").performTouchInput { doubleClick() }
+        compose.waitUntil(10_000) { controller.columns.value.lastOrNull()?.path == File(root, "Documents").path &&
+            controller.columns.value.lastOrNull()?.loading == false }
+        compose.onNodeWithText("notes.txt").performClick()
+        compose.onNodeWithContentDescription("Vista de galería").performClick()
+        compose.onNodeWithTag("finder-gallery").assertExists()
+        compose.runOnIdle {
+            assertEquals(File(root, "Documents/notes.txt").path, controller.selectedFile?.path)
+        }
+        compose.onNodeWithContentDescription(ApplicationProvider.getApplicationContext<Application>()
+            .getString(com.voyagerfiles.R.string.finderdex_view_columns)).performClick()
+        compose.onNodeWithTag("finder-columns").assertExists()
+        compose.runOnIdle { assertEquals(File(root, "Documents").path, controller.currentPath) }
+    }
+
     @Test fun columnsNavigateSelectOpenAndKeepStateAcrossLayoutChange() {
         val controller = FinderColumnController(scope,
             BrowserSession("test", "Test", FileSource.LOCAL, root.path, root.path), LocalFileProvider()::listFiles)
