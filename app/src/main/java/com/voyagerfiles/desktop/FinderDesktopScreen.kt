@@ -170,6 +170,10 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         onOpen = { file -> FileUtils.openFile(context, file).onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
         operationsAvailable = true,
         onPaste = viewModel::paste,
+        onCopyPaths = { paths, cut ->
+            if (cut) viewModel.cutToClipboard(paths, false)
+            else viewModel.copyToClipboard(paths, false)
+        },
         onRename = { file, name -> viewModel.rename(file.path, name) },
         onFileAction = { action, file ->
             when (action) {
@@ -205,6 +209,7 @@ fun FinderDesktopScreen(
     onDismissMessage: () -> Unit = {},
     operationsAvailable: Boolean = false,
     onPaste: () -> Unit = {},
+    onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
     onFileAction: (FinderFileAction, FileItem) -> Unit = { _, _ -> },
 ) {
@@ -252,10 +257,12 @@ fun FinderDesktopScreen(
                     quickLook = controller.selectedFile; true
                 }
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C && operationsAvailable -> {
-                    controller.selectedFile?.let { onFileAction(FinderFileAction.COPY, it) }; true
+                    controller.columns.value.lastOrNull()?.selected.orEmpty().toList()
+                        .takeIf { it.isNotEmpty() }?.let { onCopyPaths(it, false) }; true
                 }
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.X && operationsAvailable -> {
-                    controller.selectedFile?.let { onFileAction(FinderFileAction.CUT, it) }; true
+                    controller.columns.value.lastOrNull()?.selected.orEmpty().toList()
+                        .takeIf { it.isNotEmpty() }?.let { onCopyPaths(it, true) }; true
                 }
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.V && operationsAvailable -> {
                     onPaste(); true
