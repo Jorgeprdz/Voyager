@@ -46,6 +46,8 @@ import com.voyagerfiles.data.model.*
 import com.voyagerfiles.ui.components.FileThumbnailOrIcon
 import com.voyagerfiles.util.FileUtils
 import com.voyagerfiles.viewmodel.FileBrowserViewModel
+import com.voyagerfiles.ui.text.resolve
+import com.voyagerfiles.ui.components.TransferConflictDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -152,6 +154,8 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val session by viewModel.activeSession.collectAsState()
     val browser by viewModel.browseState.collectAsState()
     val operation by viewModel.operationState.collectAsState()
+    val conflict by viewModel.transferConflict.collectAsState()
+    val uiMessage by viewModel.snackbarMessage.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(session?.id) {
         if (session == null) viewModel.openLocalRoot(Environment.getExternalStorageDirectory().path)
@@ -172,6 +176,12 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         volumes = withContext(Dispatchers.IO) { FileUtils.getStorageDirectories(context) }
     }
     var message by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(uiMessage) {
+        uiMessage?.let {
+            message = it.resolve(context.resources)
+            viewModel.clearSnackbar()
+        }
+    }
     LaunchedEffect(browser.files, controller) {
         if (!browser.isLoading) controller.refresh()
     }
@@ -220,6 +230,11 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             }
         },
         message = message, onDismissMessage = { message = null })
+    conflict?.let { request ->
+        TransferConflictDialog(request) { response ->
+            viewModel.resolveTransferConflict(request, response)
+        }
+    }
 }
 
 @Composable
