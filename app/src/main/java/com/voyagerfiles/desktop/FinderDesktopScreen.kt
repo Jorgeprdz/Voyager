@@ -136,8 +136,9 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         return
     }
     val bookmarks by viewModel.bookmarks.collectAsState()
-    val volumes by produceState(initialValue = emptyList<com.voyagerfiles.util.StorageDirectory>(), context) {
-        value = withContext(Dispatchers.IO) { FileUtils.getStorageDirectories(context) }
+    var volumes by remember(context) { mutableStateOf(emptyList<com.voyagerfiles.util.StorageDirectory>()) }
+    LaunchedEffect(context) {
+        volumes = withContext(Dispatchers.IO) { FileUtils.getStorageDirectories(context) }
     }
     var message by remember { mutableStateOf<String?>(null) }
     FinderDesktopScreen(controller, mode, bookmarks.filter { it.source == FileSource.LOCAL }.map { it.name to it.path },
@@ -349,8 +350,10 @@ private fun PreviewDetail(title: String, value: String) {
 
 @Composable
 private fun FinderStatusBar(controller: FinderColumnController, columns: List<FinderColumn>) {
-    val free by produceState<Long?>(null, controller.currentPath) {
-        value = withContext(Dispatchers.IO) { runCatching { android.os.StatFs(controller.currentPath).availableBytes }.getOrNull() }
+    val path = controller.currentPath
+    var free by remember(path) { mutableStateOf<Long?>(null) }
+    LaunchedEffect(path) {
+        free = withContext(Dispatchers.IO) { runCatching { android.os.StatFs(path).availableBytes }.getOrNull() }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Line))
     Row(Modifier.fillMaxWidth().height(25.dp).background(Color(0xfff5f5f7)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {

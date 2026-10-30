@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="finderdex_view_columns">カラム表示</string>
+    <string name="finderdex_search_folder">このフォルダ内を検索</string>
+    <string name="finderdex_desktop">FinderDex · デスクトップ</string>
+</resources>

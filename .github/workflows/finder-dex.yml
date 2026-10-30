@@ -12,6 +12,8 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4096m
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
@@ -19,10 +21,28 @@ jobs:
           java-version: '17'
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v6
-      - name: Verify and assemble
-        run: ./gradlew --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8' -Pvoyager.enableAbiSplits=false testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest
+        with:
+          cache-provider: basic
+          cache-read-only: false
+      - name: '1/4 · Compilar app y pruebas Android'
+        id: compile
+        run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false compileDebugKotlin compileDebugAndroidTestKotlin
+      - name: '2/4 · Pruebas unitarias'
+        id: tests
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        # Always execute tests, including contracts which inspect source/resources directly.
+        run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false testDebugUnitTest --rerun
+      - name: '3/4 · Lint'
+        id: lint
+        if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
+        # Collect lint findings even if tests fail, avoiding one run per kind of error.
+        run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false lintDebug
+      - name: '4/4 · Empaquetar APK debug'
+        id: apk
+        if: ${{ !cancelled() && steps.tests.outcome == 'success' && steps.lint.outcome == 'success' }}
+        run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false assembleDebug assembleDebugAndroidTest
       - uses: actions/upload-artifact@v7
-        if: success()
+        if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         with:
           name: FinderDex-debug
           path: |
