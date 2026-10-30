@@ -363,7 +363,6 @@ fun FinderDesktopScreen(
     }
 }
 
-@Composable
 internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }
 
 @Composable
