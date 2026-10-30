@@ -113,7 +113,29 @@ class FinderColumnControllerTest {
         } finally { scope.cancel() }
     }
 
-    @Test fun windowModeUsesActualWindowAndHeight() {
+
+    @Test fun additiveAndRangeSelectionOnlyAffectCurrentDirectory() = runBlocking {
+        val root = temporary.newFolder()
+        val docs = File(root, "Documents").apply { mkdir() }
+        listOf("a.txt", "b.txt", "c.txt", "d.txt").forEach { File(docs, it).writeText(it) }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        try {
+            val controller = FinderColumnController(scope, session(root.path), LocalFileProvider()::listFiles)
+            controller.start(); settle(controller)
+            controller.select(0, controller.columns.value.first().files.single()); settle(controller)
+            val ordered = controller.columns.value.last().files
+            controller.selectOnly(1, ordered[0])
+            controller.selectOnly(1, ordered[2], additive = true)
+            assertEquals(setOf(ordered[0].path, ordered[2].path), controller.columns.value.last().selected)
+            controller.selectOnly(1, ordered[3], extend = true)
+            assertEquals(setOf(ordered[2].path, ordered[3].path), controller.columns.value.last().selected)
+            controller.selectAll()
+            assertEquals(4, controller.columns.value.last().selected.size)
+            assertEquals(setOf(docs.path), controller.columns.value.first().selected)
+            assertEquals("a.txt", File(docs, "a.txt").readText())
+        } finally { scope.cancel() }
+    }
+\n    @Test fun windowModeUsesActualWindowAndHeight() {
         assertEquals(DesktopMode.COMPACT, DesktopModeController.mode(500f, 700f))
         assertEquals(DesktopMode.ADAPTED, DesktopModeController.mode(700f, 700f))
         assertEquals(DesktopMode.FULL, DesktopModeController.mode(1200f, 700f))
