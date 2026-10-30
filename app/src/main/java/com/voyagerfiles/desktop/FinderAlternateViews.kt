@@ -66,7 +66,10 @@ internal fun FinderListView(
                     .background(if (selected) blue else if (hovered) soft else Color.Transparent)
                     .hoverable(hoverSource)
                     .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
-                    .finderRightClick { controller.selectOnly(columns.lastIndex, file); menu = true }
+                    .finderRightClick {
+                        if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
+                        menu = true
+                    }
                     .combinedClickable(
                         onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift) },
                         onDoubleClick = {
@@ -133,7 +136,10 @@ internal fun FinderGalleryView(
                 val active = file.path in last?.selected.orEmpty()
                 Column(Modifier.width(105.dp).fillMaxHeight().clip(RoundedCornerShape(9.dp))
                     .background(if (active) blue else Color.Transparent)
-                    .finderRightClick { controller.selectOnly(columns.lastIndex, file); menu = true }
+                    .finderRightClick {
+                        if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
+                        menu = true
+                    }
                     .combinedClickable(
                         onClick = { controller.selectOnly(columns.lastIndex, file) },
                         onDoubleClick = {
