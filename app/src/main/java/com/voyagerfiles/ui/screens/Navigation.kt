@@ -80,7 +80,7 @@ fun AppNavigation(
                         preferMobile = false
                         if (session?.source != com.voyagerfiles.data.model.FileSource.LOCAL)
                             viewModel.openLocalRoot(android.os.Environment.getExternalStorageDirectory().path)
-                    }) { Text("FinderDex · Escritorio") }
+                    }) { Text(stringResource(R.string.finderdex_desktop)) }
                 }
                 MobileAppNavigation(viewModel, hasAllFilesAccess, onRequestAllFilesAccess, requestedFolder,
                     folderRequestGeneration, onFolderRequestConsumed)

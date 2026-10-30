@@ -558,4 +558,7 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_view_columns">Vista por columnas</string>
+    <string name="finderdex_search_folder">Buscar en esta carpeta</string>
+    <string name="finderdex_desktop">FinderDex · Escritorio</string>
 </resources>
