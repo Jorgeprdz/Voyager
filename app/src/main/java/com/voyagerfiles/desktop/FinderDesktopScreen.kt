@@ -16,6 +16,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -159,9 +162,33 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         volumes = withContext(Dispatchers.IO) { FileUtils.getStorageDirectories(context) }
     }
     var message by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(browser.files, controller) {
+        if (!browser.isLoading) controller.refresh()
+    }
     FinderDesktopScreen(controller, mode, bookmarks.filter { it.source == FileSource.LOCAL }.map { it.name to it.path },
         volumes.map { it.name to it.path }, viewModel::openLocalRoot, onMobile,
         onOpen = { file -> FileUtils.openFile(context, file).onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
+        operationsAvailable = true,
+        onPaste = viewModel::paste,
+        onRename = { file, name -> viewModel.rename(file.path, name) },
+        onFileAction = { action, file ->
+            when (action) {
+                FinderFileAction.COPY -> viewModel.copyToClipboard(listOf(file.path), false)
+                FinderFileAction.CUT -> viewModel.cutToClipboard(listOf(file.path), false)
+                FinderFileAction.ZIP -> {
+                    val current = viewModel.browseState.value
+                    if (current.files.any { it.path == file.path }) {
+                        val name = com.voyagerfiles.ui.screens.BrowserArchiveActions.defaultZipName(
+                            listOf(file), current.files.map { it.name }.toSet(), "Archivo")
+                        viewModel.createZip(listOf(file.path), name)
+                    } else message = "Abre la carpeta del archivo para comprimirlo"
+                }
+                FinderFileAction.FAVORITE -> if (file.isDirectory) viewModel.addBookmark(file.path, file.name)
+                FinderFileAction.TRASH -> viewModel.deletePaths(listOf(file.path), com.voyagerfiles.viewmodel.DeleteMode.TRASH)
+                FinderFileAction.DELETE -> viewModel.deletePaths(listOf(file.path), com.voyagerfiles.viewmodel.DeleteMode.PERMANENT)
+                else -> Unit
+            }
+        },
         message = message, onDismissMessage = { message = null })
 }
 
@@ -176,6 +203,10 @@ fun FinderDesktopScreen(
     onOpen: (FileItem) -> Unit = {},
     message: String? = null,
     onDismissMessage: () -> Unit = {},
+    operationsAvailable: Boolean = false,
+    onPaste: () -> Unit = {},
+    onRename: (FileItem, String) -> Unit = { _, _ -> },
+    onFileAction: (FinderFileAction, FileItem) -> Unit = { _, _ -> },
 ) {
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
@@ -185,16 +216,56 @@ fun FinderDesktopScreen(
     var search by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
     var descending by remember { mutableStateOf(false) }
+    var quickLook by remember { mutableStateOf<FileItem?>(null) }
+    var infoFile by remember { mutableStateOf<FileItem?>(null) }
+    var renameFile by remember { mutableStateOf<FileItem?>(null) }
+    var renameText by remember { mutableStateOf("") }
+    var deleteFile by remember { mutableStateOf<FileItem?>(null) }
+    var permanentDelete by remember { mutableStateOf(false) }
+    fun execute(action: FinderFileAction, file: FileItem) {
+        when (action) {
+            FinderFileAction.OPEN -> if (file.isDirectory) {
+                columns.indexOfLast { it.files.any { entry -> entry.path == file.path } }
+                    .takeIf { it >= 0 }?.let { controller.select(it, file) }
+            } else onOpen(file)
+            FinderFileAction.QUICK_LOOK -> if (!file.isDirectory) quickLook = file
+            FinderFileAction.INFO -> infoFile = file
+            FinderFileAction.RENAME -> { renameFile = file; renameText = file.name }
+            FinderFileAction.TRASH, FinderFileAction.DELETE -> {
+                deleteFile = file; permanentDelete = action == FinderFileAction.DELETE
+            }
+            else -> onFileAction(action, file)
+        }
+    }
     val density = LocalDensity.current.density
     val effectiveSidebarWidth = if (mode == DesktopMode.ADAPTED) 176f else sidebarWidth
-    BackHandler(controller.canBack) { controller.back() }
+    BackHandler(controller.canBack && quickLook == null && infoFile == null && renameFile == null && deleteFile == null) { controller.back() }
     Column(Modifier.fillMaxSize().background(Header)
         .windowInsetsPadding(WindowInsets.systemBars.exclude(WindowInsets.captionBar))
         .padding(top = (chrome.layout.topInset / density).dp)
+        .clip(RoundedCornerShape(20.dp))
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) false
             else when {
                 event.key == Key.Escape && searching -> { searching = false; search = ""; true }
+                event.key == Key.Spacebar && !searching && quickLook == null && controller.selectedFile != null -> {
+                    quickLook = controller.selectedFile; true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C && operationsAvailable -> {
+                    controller.selectedFile?.let { onFileAction(FinderFileAction.COPY, it) }; true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.X && operationsAvailable -> {
+                    controller.selectedFile?.let { onFileAction(FinderFileAction.CUT, it) }; true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.V && operationsAvailable -> {
+                    onPaste(); true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.A && !searching -> {
+                    controller.selectAll(); true
+                }
+                event.key == Key.Delete && controller.selectedFile != null && operationsAvailable -> {
+                    deleteFile = controller.selectedFile; permanentDelete = event.isShiftPressed; true
+                }
                 event.isAltPressed && event.key == Key.DirectionLeft -> { controller.back(); true }
                 event.isAltPressed && event.key == Key.DirectionRight -> { controller.forward(); true }
                 event.key == Key.Enter -> { controller.selectedFile?.let { file ->
@@ -213,14 +284,50 @@ fun FinderDesktopScreen(
             Box(Modifier.fillMaxHeight().width(4.dp).background(Sidebar).pointerInput(density) {
                 detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
             }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
-            if (iconView) FinderIconView(controller, columns, search, descending, Modifier.weight(1f), onOpen)
-            else FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f).background(Paper), onOpen)
+            if (iconView) FinderIconView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute)
+            else FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, ::execute)
             if (showPreview && mode == DesktopMode.FULL) FinderPreview(controller.selectedFile, onOpen)
         }
         if (message != null) Row(Modifier.fillMaxWidth().background(Color(0xffffefcd)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Label(message, Modifier.weight(1f)); Label("Cerrar", Modifier.clickable(onClick = onDismissMessage).padding(4.dp), color = Accent)
         }
         FinderStatusBar(controller, columns)
+    }
+    quickLook?.let { file -> FinderQuickLookDialog(file) { quickLook = null } }
+    infoFile?.let { file ->
+        AlertDialog(onDismissRequest = { infoFile = null }, title = { Text("Obtener información") },
+            text = { Column {
+                PreviewDetail("Nombre", file.name)
+                PreviewDetail("Tipo MIME", file.mimeType)
+                PreviewDetail("Tamaño", file.formattedSize)
+                PreviewDetail("Ubicación", file.path)
+                PreviewDetail("Origen", file.source.name)
+                PreviewDetail("Permisos", file.permissions ?: "No disponibles")
+                PreviewDetail("Modificado", DateFormat.getDateTimeInstance().format(file.lastModified))
+            } },
+            confirmButton = { TextButton(onClick = { infoFile = null }) { Text("Cerrar") } })
+    }
+    renameFile?.let { file ->
+        AlertDialog(onDismissRequest = { renameFile = null }, title = { Text("Renombrar") },
+            text = { BasicTextField(renameText, { renameText = it },
+                Modifier.fillMaxWidth().border(1.dp, Line, RoundedCornerShape(8.dp)).padding(12.dp),
+                singleLine = true, textStyle = TextStyle(fontSize = 15.sp, color = Ink)) },
+            confirmButton = { TextButton(onClick = {
+                if (renameText.isNotBlank() && renameText != file.name) onRename(file, renameText)
+                renameFile = null
+            }) { Text("Guardar") } },
+            dismissButton = { TextButton(onClick = { renameFile = null }) { Text("Cancelar") } })
+    }
+    deleteFile?.let { file ->
+        AlertDialog(onDismissRequest = { deleteFile = null },
+            title = { Text(if (permanentDelete) "Eliminar definitivamente" else "Mover a papelera") },
+            text = { Text(if (permanentDelete) "Esta acción no se puede deshacer: ${file.name}"
+                else "¿Mover ${file.name} a la papelera?") },
+            confirmButton = { TextButton(onClick = {
+                onFileAction(if (permanentDelete) FinderFileAction.DELETE else FinderFileAction.TRASH, file)
+                deleteFile = null
+            }) { Text(if (permanentDelete) "Eliminar" else "Mover") } },
+            dismissButton = { TextButton(onClick = { deleteFile = null }) { Text("Cancelar") } })
     }
 }
 
@@ -308,36 +415,44 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FinderIconView(controller: FinderColumnController, columns: List<FinderColumn>, query: String,
-    descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit) {
+    descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
+    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit) {
     val column = columns.lastOrNull()
     val files = remember(column?.files, query, descending) {
         column?.files.orEmpty().filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
     }
     Box(modifier.fillMaxHeight().background(Paper).testTag("finder-icons")) {
         key(column?.path) {
-            LazyVerticalGrid(columns = GridCells.Adaptive(108.dp), modifier = Modifier.fillMaxSize(),
+            LazyVerticalGrid(columns = GridCells.Adaptive(140.dp), modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(24.dp, 22.dp), horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(files, key = { it.path }) { file ->
                     val selected = file.path in column?.selected.orEmpty()
                     val interaction = remember { MutableInteractionSource() }
                     val hovered by interaction.collectIsHoveredAsState()
-                    Column(Modifier.fillMaxWidth().height(118.dp).clip(RoundedCornerShape(7.dp))
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Column(Modifier.fillMaxWidth().height(151.dp).clip(RoundedCornerShape(11.dp))
                         .background(if (hovered && !selected) Color(0xfff7f8fa) else Color.Transparent)
-                        .hoverable(interaction).combinedClickable(
+                        .hoverable(interaction)
+                        .finderRightClick { controller.selectOnly(columns.lastIndex, file); menuOpen = true }
+                        .combinedClickable(
                             onClick = { controller.selectOnly(columns.lastIndex, file) },
-                            onDoubleClick = { if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file) })
+                            onDoubleClick = { if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file) },
+                            onLongClick = { controller.selectOnly(columns.lastIndex, file); menuOpen = true })
                         .semantics { this.selected = selected }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(88.dp, 78.dp).clip(RoundedCornerShape(6.dp))
+                        Box(Modifier.size(118.dp, 108.dp).clip(RoundedCornerShape(8.dp))
                             .background(if (selected) Color(0xffe9edf5) else Color.Transparent), contentAlignment = Alignment.Center) {
-                            if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(70.dp))
-                            else FileThumbnailOrIcon(file, 62.dp)
+                            if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(100.dp))
+                            else FileThumbnailOrIcon(file, 94.dp)
                         }
                         Spacer(Modifier.height(5.dp))
                         BasicText(file.name, Modifier.clip(RoundedCornerShape(4.dp))
                             .background(if (selected) Accent else Color.Transparent).padding(4.dp, 2.dp),
                             style = TextStyle(color = if (selected) Color.White else Ink, fontSize = 12.sp,
                                 fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable) {
+                            onFileAction(it, file)
+                        }
                     }
                 }
             }
@@ -351,13 +466,15 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
 }
 
 @Composable
-private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit) {
+private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
+    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit) {
     val horizontal = rememberScrollState()
     LaunchedEffect(columns.size) { horizontal.animateScrollTo(horizontal.maxValue) }
     Row(modifier.fillMaxHeight().testTag("finder-columns").horizontalScroll(horizontal)) {
         columns.forEachIndexed { index, column ->
             key(column.id) {
-                ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, onOpen)
+                ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, onOpen,
+                    operationsAvailable && index == columns.lastIndex, onFileAction)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -366,7 +483,8 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, onOpen: (FileItem) -> Unit) {
+private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, onOpen: (FileItem) -> Unit,
+    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit) {
     val scroll = rememberLazyListState(column.scrollIndex, column.scrollOffset)
     LaunchedEffect(scroll) {
         snapshotFlow { scroll.firstVisibleItemIndex to scroll.firstVisibleItemScrollOffset }.collect { (i, offset) -> controller.rememberScroll(index, i, offset) }
@@ -381,17 +499,24 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                     val selected = file.path in column.selected
                     val interaction = remember { MutableInteractionSource() }
                     val hovered by interaction.collectIsHoveredAsState()
-                    Row(Modifier.fillMaxWidth().height(25.dp).clip(RoundedCornerShape(4.dp))
+                    var menuOpen by remember { mutableStateOf(false) }
+                    Row(Modifier.fillMaxWidth().height(27.dp).clip(RoundedCornerShape(4.dp))
                         .background(if (selected) { if (active) Accent else Color(0xffdedee3) }
                             else if (hovered) Color(0xffefeff2) else Color.Transparent)
-                        .hoverable(interaction).combinedClickable(
+                        .hoverable(interaction)
+                        .finderRightClick { menuOpen = true }
+                        .combinedClickable(
                             onClick = { controller.select(index, file) },
-                            onDoubleClick = { if (file.isDirectory) controller.select(index, file) else onOpen(file) })
+                            onDoubleClick = { if (file.isDirectory) controller.select(index, file) else onOpen(file) },
+                            onLongClick = { menuOpen = true })
                         .semantics { this.selected = selected }.padding(horizontal = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         FinderGlyph(if (file.isDirectory) "folder" else "file", if (selected && active) Color.White else Muted, Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
                         Label(file.name, Modifier.weight(1f), if (selected && active) Color.White else Ink)
                         if (file.isDirectory) FinderGlyph("forward", if (selected && active) Color.White else Muted, Modifier.size(10.dp))
+                        FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable) {
+                            onFileAction(it, file)
+                        }
                     }
                 }
             }

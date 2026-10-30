@@ -75,6 +75,17 @@ class FinderColumnController(
         onLocation(currentPath, setOf(file.path))
     }
 
+    /** Selects the loaded directory only, never ancestors or hidden items. */
+    fun selectAll() {
+        val last = _columns.value.lastOrNull() ?: return
+        if (last.loading || last.error != null) return
+        val selection = last.files.mapTo(mutableSetOf()) { it.path }
+        _columns.update { columns -> columns.mapIndexed { i, c ->
+            if (i == columns.lastIndex) c.copy(selected = selection) else c
+        } }
+        onLocation(currentPath, selection)
+    }
+
     fun select(index: Int, file: FileItem) {
         val original = _columns.value
         val column = original.getOrNull(index) ?: return
