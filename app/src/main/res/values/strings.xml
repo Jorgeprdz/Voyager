@@ -562,4 +562,5 @@
     <string name="finderdex_search_folder">Search this folder</string>
     <string name="finderdex_desktop">FinderDex · Desktop</string>
     <string name="finderdex_view_icons">Icon view</string>
+    <string name="finderdex_preview_app_name" translatable="false">FinderDex Preview</string>
 </resources>

@@ -28,8 +28,8 @@ android {
         applicationId = "com.finderdex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 23
-        versionName = "0.1.0-foundation"
+        versionCode = 24
+        versionName = "0.2.0-shell-preview"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -72,7 +72,7 @@ android {
             )
         }
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = ".preview"
             isDebuggable = true
         }
     }

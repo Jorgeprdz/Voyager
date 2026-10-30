@@ -24,6 +24,16 @@ jobs:
         with:
           cache-provider: basic
           cache-read-only: false
+      - name: Restore stable FinderDex debug signing key
+        env:
+          FINDERDEX_DEBUG_KEYSTORE_BASE64: ${{ secrets.FINDERDEX_DEBUG_KEYSTORE_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${FINDERDEX_DEBUG_KEYSTORE_BASE64:?Stable debug signing key is required}"
+          umask 077
+          mkdir -p "$HOME/.android"
+          printf '%s' "$FINDERDEX_DEBUG_KEYSTORE_BASE64" | base64 --decode > "$HOME/.android/debug.keystore"
       - name: '1/4 · Compilar app y pruebas Android'
         id: compile
         run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false compileDebugKotlin compileDebugAndroidTestKotlin
