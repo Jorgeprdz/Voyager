@@ -27,6 +27,7 @@ class FinderColumnController(
     private val _columns = MutableStateFlow<List<FinderColumn>>(emptyList())
     val columns = _columns.asStateFlow()
     private var nextId = 0L
+    private var selectionAnchor: String? = null
     private val jobs = mutableMapOf<Long, Job>()
     private val past = ArrayDeque<List<FinderColumn>>()
     private val future = ArrayDeque<List<FinderColumn>>()
@@ -49,6 +50,7 @@ class FinderColumnController(
     }
 
     private fun rebuild(path: String, selected: Set<String>) {
+        selectionAnchor = null
         val paths = chain(path) ?: return
         cancelLoads()
         _columns.value = paths.mapIndexed { i, p ->
@@ -68,11 +70,26 @@ class FinderColumnController(
     }
 
     /** Icon view selects a folder on one click; activation opens it separately. */
-    fun selectOnly(index: Int, file: FileItem) {
+    fun selectOnly(index: Int, file: FileItem, additive: Boolean = false, extend: Boolean = false) {
         val columns = _columns.value
-        if (index != columns.lastIndex || columns.getOrNull(index)?.files?.none { it.path == file.path } != false) return
-        _columns.value = columns.mapIndexed { i, column -> if (i == index) column.copy(selected = setOf(file.path)) else column }
-        onLocation(currentPath, setOf(file.path))
+        val column = columns.getOrNull(index) ?: return
+        if (index != columns.lastIndex || column.files.none { it.path == file.path }) return
+        val selection = when {
+            extend -> {
+                val anchor = column.files.indexOfFirst { it.path == selectionAnchor }
+                val target = column.files.indexOfFirst { it.path == file.path }
+                if (anchor < 0) setOf(file.path)
+                else column.files.subList(minOf(anchor, target), maxOf(anchor, target) + 1)
+                    .mapTo(mutableSetOf()) { it.path }
+            }
+            additive -> column.selected.toMutableSet().apply {
+                if (!add(file.path)) remove(file.path)
+            }
+            else -> setOf(file.path)
+        }
+        if (!extend) selectionAnchor = file.path
+        _columns.value = columns.mapIndexed { i, c -> if (i == index) c.copy(selected = selection) else c }
+        onLocation(currentPath, selection)
     }
 
     /** Selects the loaded directory only, never ancestors or hidden items. */
@@ -80,6 +97,7 @@ class FinderColumnController(
         val last = _columns.value.lastOrNull() ?: return
         if (last.loading || last.error != null) return
         val selection = last.files.mapTo(mutableSetOf()) { it.path }
+        selectionAnchor = last.files.firstOrNull()?.path
         _columns.update { columns -> columns.mapIndexed { i, c ->
             if (i == columns.lastIndex) c.copy(selected = selection) else c
         } }
@@ -87,6 +105,7 @@ class FinderColumnController(
     }
 
     fun select(index: Int, file: FileItem) {
+        selectionAnchor = file.path
         val original = _columns.value
         val column = original.getOrNull(index) ?: return
         if (column.files.none { it.path == file.path }) return
