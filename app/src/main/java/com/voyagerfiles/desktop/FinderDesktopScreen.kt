@@ -189,17 +189,29 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             else viewModel.copyToClipboard(paths, false)
         },
         onRename = { file, name -> viewModel.rename(file.path, name) },
+        onCreateFolder = viewModel::createDirectory,
+        onDeletePaths = { paths, permanent ->
+            viewModel.deletePaths(paths, if (permanent) com.voyagerfiles.viewmodel.DeleteMode.PERMANENT
+                else com.voyagerfiles.viewmodel.DeleteMode.TRASH)
+        },
+        canCancelOperation = (operation as? com.voyagerfiles.viewmodel.OperationState.Running)?.cancellable == true,
+        onCancelOperation = viewModel::cancelOperation,
         onFileAction = { action, file ->
             when (action) {
                 FinderFileAction.COPY -> viewModel.copyToClipboard(listOf(file.path), false)
                 FinderFileAction.CUT -> viewModel.cutToClipboard(listOf(file.path), false)
                 FinderFileAction.ZIP -> {
                     val current = viewModel.browseState.value
-                    if (current.files.any { it.path == file.path }) {
+                    val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
+                    val selection = if (file.path in selected && selected.size > 1)
+                        current.files.filter { it.path in selected }
+                    else current.files.filter { it.path == file.path }
+                    if (current.currentPath == controller.currentPath &&
+                        selection.isNotEmpty() && selection.all { it.path in current.files.map { f -> f.path } }) {
                         val name = com.voyagerfiles.ui.screens.BrowserArchiveActions.defaultZipName(
-                            listOf(file), current.files.map { it.name }.toSet(), "Archivo")
-                        viewModel.createZip(listOf(file.path), name)
-                    } else message = "Abre la carpeta del archivo para comprimirlo"
+                            selection, current.files.map { it.name }.toSet(), "Archivo")
+                        viewModel.createZip(selection.map { it.path }, name)
+                    } else message = "Espera a que termine la navegación antes de comprimir"
                 }
                 FinderFileAction.FAVORITE -> if (file.isDirectory) viewModel.addBookmark(file.path, file.name)
                 FinderFileAction.TRASH -> viewModel.deletePaths(listOf(file.path), com.voyagerfiles.viewmodel.DeleteMode.TRASH)
@@ -224,6 +236,10 @@ fun FinderDesktopScreen(
     operationsAvailable: Boolean = false,
     onPaste: () -> Unit = {},
     operationProgress: com.voyagerfiles.viewmodel.TransferProgress? = null,
+    canCancelOperation: Boolean = false,
+    onCancelOperation: () -> Unit = {},
+    onCreateFolder: (String) -> Unit = {},
+    onDeletePaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
     onFileAction: (FinderFileAction, FileItem) -> Unit = { _, _ -> },
@@ -242,6 +258,9 @@ fun FinderDesktopScreen(
     var renameText by remember { mutableStateOf("") }
     var deleteFile by remember { mutableStateOf<FileItem?>(null) }
     var permanentDelete by remember { mutableStateOf(false) }
+    var pendingDeletePaths by remember { mutableStateOf<List<String>>(emptyList()) }
+    var newFolderDialog by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
         when (action) {
             FinderFileAction.OPEN -> if (file.isDirectory) {
@@ -253,6 +272,10 @@ fun FinderDesktopScreen(
             FinderFileAction.RENAME -> { renameFile = file; renameText = file.name }
             FinderFileAction.TRASH, FinderFileAction.DELETE -> {
                 deleteFile = file; permanentDelete = action == FinderFileAction.DELETE
+                val selected = columns.lastOrNull()?.selected.orEmpty()
+                pendingDeletePaths = if (file.path in selected) {
+                    columns.lastOrNull()?.files.orEmpty().filter { it.path in selected }.map { it.path }
+                } else listOf(file.path)
             }
             else -> onFileAction(action, file)
         }
@@ -286,7 +309,11 @@ fun FinderDesktopScreen(
                     controller.selectAll(); true
                 }
                 event.key == Key.Delete && controller.selectedFile != null && operationsAvailable -> {
-                    deleteFile = controller.selectedFile; permanentDelete = event.isShiftPressed; true
+                    val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
+                    pendingDeletePaths = selected.toList()
+                    deleteFile = controller.selectedFile
+                    permanentDelete = event.isShiftPressed
+                    true
                 }
                 event.isAltPressed && event.key == Key.DirectionLeft -> { controller.back(); true }
                 event.isAltPressed && event.key == Key.DirectionRight -> { controller.forward(); true }
@@ -297,7 +324,8 @@ fun FinderDesktopScreen(
             }
         }) {
         FinderToolbar(controller, chrome, effectiveSidebarWidth, mode == DesktopMode.ADAPTED, viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
-            showPreview, { showPreview = !showPreview }, descending, { descending = !descending }, onMobile)
+            showPreview, { showPreview = !showPreview }, descending, { descending = !descending }, onMobile,
+            onNewFolder = { newFolderName = ""; newFolderDialog = true })
         if (searching && mode == DesktopMode.ADAPTED) BasicTextField(search, { search = it },
             Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(Paper, RoundedCornerShape(6.dp)).padding(8.dp),
             singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
@@ -322,6 +350,8 @@ fun FinderDesktopScreen(
             Label("Operación en curso · " + (operationProgress.detailText ?: "Procesando…"),
                 Modifier.weight(1f), color = Ink)
             operationProgress.percentageText?.let { Label(it, color = Accent, bold = true) }
+            if (canCancelOperation) Label("Cancelar",
+                Modifier.clickable { onCancelOperation() }.padding(horizontal = 9.dp), color = Accent)
         }
         FinderStatusBar(controller, columns)
     }
@@ -350,17 +380,29 @@ fun FinderDesktopScreen(
             }) { Text("Guardar") } },
             dismissButton = { TextButton(onClick = { renameFile = null }) { Text("Cancelar") } })
     }
-    deleteFile?.let { file ->
+    deleteFile?.let { _ ->
         AlertDialog(onDismissRequest = { deleteFile = null },
             title = { Text(if (permanentDelete) "Eliminar definitivamente" else "Mover a papelera") },
-            text = { Text(if (permanentDelete) "Esta acción no se puede deshacer: ${file.name}"
-                else "¿Mover ${file.name} a la papelera?") },
+            text = { Text(if (permanentDelete)
+                "Eliminar ${pendingDeletePaths.size} elemento(s) definitivamente. No se puede deshacer."
+                else "¿Mover ${pendingDeletePaths.size} elemento(s) a la papelera?") },
             confirmButton = { TextButton(onClick = {
-                onFileAction(if (permanentDelete) FinderFileAction.DELETE else FinderFileAction.TRASH, file)
+                onDeletePaths(pendingDeletePaths.toList(), permanentDelete)
                 deleteFile = null
+                pendingDeletePaths = emptyList()
             }) { Text(if (permanentDelete) "Eliminar" else "Mover") } },
             dismissButton = { TextButton(onClick = { deleteFile = null }) { Text("Cancelar") } })
     }
+    if (newFolderDialog) AlertDialog(
+        onDismissRequest = { newFolderDialog = false }, title = { Text("Nueva carpeta") },
+        text = { BasicTextField(newFolderName, { newFolderName = it },
+            Modifier.fillMaxWidth().border(1.dp, Line, RoundedCornerShape(8.dp)).padding(12.dp),
+            singleLine = true, textStyle = TextStyle(fontSize = 15.sp, color = Ink)) },
+        confirmButton = { TextButton(onClick = {
+            if (newFolderName.isNotBlank()) onCreateFolder(newFolderName)
+            newFolderDialog = false
+        }) { Text("Crear") } },
+        dismissButton = { TextButton(onClick = { newFolderDialog = false }) { Text("Cancelar") } })
 }
 
 internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }
@@ -369,7 +411,8 @@ internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }
 private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWindowChrome, sidebarWidth: Float, compact: Boolean,
     viewStyle: FinderViewStyle, setViewStyle: (FinderViewStyle) -> Unit, searching: Boolean, search: String,
     toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
-    descending: Boolean, toggleSort: () -> Unit, onMobile: () -> Unit) {
+    descending: Boolean, toggleSort: () -> Unit, onMobile: () -> Unit,
+    onNewFolder: () -> Unit) {
     val columnsDescription = stringResource(R.string.finderdex_view_columns)
     val searchDescription = stringResource(R.string.finderdex_search_folder)
     val rootTitle = stringResource(R.string.home_storage)
@@ -402,6 +445,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
             Tool("Vista de galería", "gallery", selected = viewStyle == FinderViewStyle.GALLERY) { setViewStyle(FinderViewStyle.GALLERY) }
         }
         Spacer(Modifier.width(12.dp))
+        if (!compact) Tool("Nueva carpeta", "folder-outline", action = onNewFolder)
         if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
         if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
         Tool(searchDescription, "search", selected = searching, action = toggleSearch)
