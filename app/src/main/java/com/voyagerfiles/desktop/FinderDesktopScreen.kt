@@ -167,7 +167,13 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         if (!browser.isLoading && controller != null) controller.reconcile(browser.currentPath, browser.selectedFiles)
     }
     if (controller == null) {
-        Box(Modifier.fillMaxSize().background(Paper), contentAlignment = Alignment.Center) { Label("FinderDex…") }
+        Column(Modifier.fillMaxSize().background(Paper), horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center) {
+            Label(if (session?.source != null && session?.source != FileSource.LOCAL)
+                "Este proveedor utiliza el navegador de Voyager" else "Abriendo FinderDex…", color = Muted)
+            if (session?.source != null && session?.source != FileSource.LOCAL)
+                Label("Volver a vista móvil", Modifier.clickable(onClick = onMobile).padding(14.dp), color = Accent)
+        }
         return
     }
     val bookmarks by viewModel.bookmarks.collectAsState()
