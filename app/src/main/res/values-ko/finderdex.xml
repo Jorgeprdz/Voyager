@@ -3,4 +3,5 @@
     <string name="finderdex_view_columns">열 보기</string>
     <string name="finderdex_search_folder">이 폴더에서 검색</string>
     <string name="finderdex_desktop">FinderDex · 데스크톱</string>
+    <string name="finderdex_view_icons">아이콘 보기</string>
 </resources>

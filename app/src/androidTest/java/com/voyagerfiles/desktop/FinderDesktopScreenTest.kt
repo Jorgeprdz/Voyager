@@ -24,6 +24,28 @@ class FinderDesktopScreenTest {
     }
     @After fun cleanup() { scope.cancel(); root.deleteRecursively() }
 
+    @Test fun startupIsIconViewAndFolderSelectionIsSeparateFromOpening() {
+        val controller = FinderColumnController(scope,
+            BrowserSession("icons", "Test", FileSource.LOCAL, root.path, root.path), LocalFileProvider()::listFiles)
+        var opened: String? = null
+        compose.setContent { FinderDesktopScreen(controller, DesktopMode.FULL, onOpen = { opened = it.path }) }
+        compose.runOnIdle { controller.start() }
+        compose.waitUntil(10_000) { controller.columns.value.firstOrNull()?.loading == false }
+        compose.onNodeWithTag("finder-icons").assertExists()
+        compose.onNodeWithTag("finder-columns").assertDoesNotExist()
+        compose.onNodeWithText("Documents").performClick()
+        compose.runOnIdle {
+            assertEquals(root.path, controller.currentPath)
+            assertEquals(File(root, "Documents").path, controller.selectedFile?.path)
+        }
+        compose.onNodeWithText("Documents").performTouchInput { doubleClick() }
+        compose.waitUntil(10_000) { controller.columns.value.size == 2 && !controller.columns.value.last().loading }
+        compose.onNodeWithText("notes.txt").performClick()
+        compose.runOnIdle { assertNull(opened) }
+        compose.onNodeWithText("notes.txt").performTouchInput { doubleClick() }
+        compose.runOnIdle { assertEquals(File(root, "Documents/notes.txt").path, opened) }
+    }
+
     @Test fun columnsNavigateSelectOpenAndKeepStateAcrossLayoutChange() {
         val controller = FinderColumnController(scope,
             BrowserSession("test", "Test", FileSource.LOCAL, root.path, root.path), LocalFileProvider()::listFiles)
@@ -32,12 +54,14 @@ class FinderDesktopScreenTest {
         compose.setContent { FinderDesktopScreen(controller, mode, onOpen = { opened = it.path }) }
         compose.runOnIdle { controller.start() }
         compose.waitUntil(10_000) { controller.columns.value.firstOrNull()?.loading == false }
+        compose.onNodeWithContentDescription(ApplicationProvider.getApplicationContext<Application>().getString(com.voyagerfiles.R.string.finderdex_view_columns)).performClick()
         compose.onNodeWithText("Documents").performClick()
         compose.waitUntil(10_000) { controller.columns.value.size == 2 && !controller.columns.value.last().loading }
         compose.onNodeWithText("notes.txt").performClick()
         compose.runOnIdle { mode = DesktopMode.ADAPTED }
         compose.onNodeWithText("notes.txt").assertIsSelected()
         compose.runOnIdle { mode = DesktopMode.FULL }
+        compose.onNodeWithContentDescription("Mostrar vista previa").performClick()
         compose.onNodeWithText("Abrir").performClick()
         compose.runOnIdle { assertEquals(File(root, "Documents/notes.txt").path, opened) }
         compose.onNodeWithContentDescription("Atrás").performClick()

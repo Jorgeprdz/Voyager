@@ -3,4 +3,5 @@
     <string name="finderdex_view_columns">分栏视图</string>
     <string name="finderdex_search_folder">在此文件夹中搜索</string>
     <string name="finderdex_desktop">FinderDex · 桌面</string>
+    <string name="finderdex_view_icons">图标视图</string>
 </resources>

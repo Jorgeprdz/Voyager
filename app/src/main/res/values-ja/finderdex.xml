@@ -3,4 +3,5 @@
     <string name="finderdex_view_columns">カラム表示</string>
     <string name="finderdex_search_folder">このフォルダ内を検索</string>
     <string name="finderdex_desktop">FinderDex · デスクトップ</string>
+    <string name="finderdex_view_icons">アイコン表示</string>
 </resources>

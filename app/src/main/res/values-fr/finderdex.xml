@@ -3,4 +3,5 @@
     <string name="finderdex_view_columns">Présentation par colonnes</string>
     <string name="finderdex_search_folder">Rechercher dans ce dossier</string>
     <string name="finderdex_desktop">FinderDex · Bureau</string>
+    <string name="finderdex_view_icons">Présentation par icônes</string>
 </resources>

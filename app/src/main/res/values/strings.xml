@@ -561,4 +561,5 @@
     <string name="finderdex_view_columns">Column view</string>
     <string name="finderdex_search_folder">Search this folder</string>
     <string name="finderdex_desktop">FinderDex · Desktop</string>
+    <string name="finderdex_view_icons">Icon view</string>
 </resources>

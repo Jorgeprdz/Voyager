@@ -96,6 +96,23 @@ class FinderColumnControllerTest {
         } finally { scope.cancel() }
     }
 
+    @Test fun iconSelectionDoesNotOpenFolderUntilActivated() = runBlocking {
+        val root = temporary.newFolder()
+        val child = File(root, "Documents").apply { mkdir() }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        try {
+            val controller = FinderColumnController(scope, session(root.path), LocalFileProvider()::listFiles)
+            controller.start(); settle(controller)
+            val folder = controller.columns.value.single().files.single()
+            controller.selectOnly(0, folder)
+            assertEquals(root.path, controller.currentPath)
+            assertEquals(child.path, controller.selectedFile?.path)
+            assertEquals(1, controller.columns.value.size)
+            controller.select(0, folder); settle(controller)
+            assertEquals(child.path, controller.currentPath)
+        } finally { scope.cancel() }
+    }
+
     @Test fun windowModeUsesActualWindowAndHeight() {
         assertEquals(DesktopMode.COMPACT, DesktopModeController.mode(500f, 700f))
         assertEquals(DesktopMode.ADAPTED, DesktopModeController.mode(700f, 700f))

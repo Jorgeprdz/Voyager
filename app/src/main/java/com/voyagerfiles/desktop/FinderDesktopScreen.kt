@@ -10,14 +10,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -32,6 +37,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import com.voyagerfiles.data.model.*
 import com.voyagerfiles.ui.components.FileThumbnailOrIcon
@@ -43,10 +49,11 @@ import java.text.DateFormat
 
 private val Ink = Color(0xff303034)
 private val Muted = Color(0xff77777e)
-private val Line = Color(0xffd8d8dc)
+private val Line = Color(0xffe4e4e8)
 private val Accent = Color(0xff087cf1)
-private val Sidebar = Color(0xffe9e9ed)
-private val Paper = Color(0xfffdfdfd)
+private val Sidebar = Color(0xfff0f0f3)
+private val Header = Color(0xfff7f7f9)
+private val Paper = Color.White
 
 @Composable
 private fun Label(text: String, modifier: Modifier = Modifier, color: Color = Ink, size: Int = 13, bold: Boolean = false) {
@@ -62,14 +69,25 @@ private fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier =
         val w = size.width; val h = size.height
         val stroke = Stroke(width = w * .075f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         when (kind) {
-            "folder" -> {
-                val p = Path().apply {
-                    moveTo(w*.04f,h*.22f); lineTo(w*.4f,h*.22f); lineTo(w*.5f,h*.34f)
-                    lineTo(w*.96f,h*.34f); lineTo(w*.96f,h*.85f); lineTo(w*.04f,h*.85f); close()
+            "folder", "folder-outline" -> {
+                val tab = Path().apply {
+                    moveTo(w*.06f,h*.28f); quadraticBezierTo(w*.06f,h*.2f,w*.14f,h*.2f)
+                    lineTo(w*.38f,h*.2f); lineTo(w*.47f,h*.31f); lineTo(w*.86f,h*.31f)
+                    quadraticBezierTo(w*.94f,h*.31f,w*.94f,h*.4f); lineTo(w*.94f,h*.78f)
+                    quadraticBezierTo(w*.94f,h*.85f,w*.86f,h*.85f); lineTo(w*.14f,h*.85f)
+                    quadraticBezierTo(w*.06f,h*.85f,w*.06f,h*.78f); close()
                 }
-                drawPath(p, Brush.verticalGradient(listOf(Color(0xff80d5f7), Color(0xff37a9e7))))
-                drawLine(Color(0xffa5e5ff), Offset(w*.08f,h*.42f), Offset(w*.92f,h*.42f), w*.04f)
+                if (kind == "folder-outline") drawPath(tab,color,style=stroke)
+                else {
+                    drawPath(tab, Color(0xff85d6f5))
+                    drawRoundRect(Brush.verticalGradient(listOf(Color(0xff75cff5),Color(0xff39a9e2))),
+                        Offset(w*.06f,h*.38f),androidx.compose.ui.geometry.Size(w*.88f,h*.47f),androidx.compose.ui.geometry.CornerRadius(w*.045f))
+                    drawLine(Color(0xffb5e9ff),Offset(w*.1f,h*.41f),Offset(w*.9f,h*.41f),w*.018f)
+                }
             }
+            "icons" -> listOf(.18f,.58f).forEach { x -> listOf(.18f,.58f).forEach { y ->
+                drawRoundRect(color,Offset(w*x,h*y),androidx.compose.ui.geometry.Size(w*.25f,h*.25f),androidx.compose.ui.geometry.CornerRadius(w*.045f),style=stroke)
+            } }
             "back", "forward", "down" -> {
                 val p = Path().apply {
                     if (kind == "down") { moveTo(w*.25f,h*.4f); lineTo(w*.5f,h*.65f); lineTo(w*.75f,h*.4f) }
@@ -109,8 +127,8 @@ private fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier =
 private fun Tool(label: String, glyph: String, enabled: Boolean = true, selected: Boolean = false, action: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Box(Modifier.size(32.dp, 28.dp).clip(RoundedCornerShape(6.dp))
-        .background(if (selected) Color(0xffd3d3d8) else if (hovered && enabled) Color(0xffe0e0e4) else Color.Transparent)
+    Box(Modifier.size(34.dp, 30.dp).clip(RoundedCornerShape(6.dp))
+        .background(if (selected) Color(0xffe4e4e9) else if (hovered && enabled) Color(0xffededf1) else Color.Transparent)
         .hoverable(interaction).clickable(enabled = enabled, onClickLabel = label, onClick = action)
         .semantics { contentDescription = label; role = Role.Button }, contentAlignment = Alignment.Center) {
         FinderGlyph(glyph, if (enabled) Ink else Color(0xffbcbcc1))
@@ -160,33 +178,43 @@ fun FinderDesktopScreen(
     onDismissMessage: () -> Unit = {},
 ) {
     val columns by controller.columns.collectAsState()
-    var sidebarWidth by remember { mutableFloatStateOf(200f) }
-    var showPreview by remember { mutableStateOf(mode == DesktopMode.FULL) }
+    val chrome = rememberFinderWindowChrome()
+    var sidebarWidth by rememberSaveable { mutableFloatStateOf(208f) }
+    var iconView by rememberSaveable { mutableStateOf(true) }
+    var showPreview by rememberSaveable { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
     var descending by remember { mutableStateOf(false) }
     val density = LocalDensity.current.density
+    val effectiveSidebarWidth = if (mode == DesktopMode.ADAPTED) 176f else sidebarWidth
     BackHandler(controller.canBack) { controller.back() }
-    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).padding(6.dp)
-        .shadow(7.dp, RoundedCornerShape(10.dp)).clip(RoundedCornerShape(10.dp)).background(Paper).border(1.dp, Line, RoundedCornerShape(10.dp))
+    Column(Modifier.fillMaxSize().background(Header)
+        .windowInsetsPadding(WindowInsets.systemBars.exclude(WindowInsets.captionBar))
+        .padding(top = (chrome.layout.topInset / density).dp)
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) false
             else when {
                 event.key == Key.Escape && searching -> { searching = false; search = ""; true }
                 event.isAltPressed && event.key == Key.DirectionLeft -> { controller.back(); true }
                 event.isAltPressed && event.key == Key.DirectionRight -> { controller.forward(); true }
-                event.key == Key.Enter -> { controller.selectedFile?.takeUnless { it.isDirectory }?.let(onOpen); true }
+                event.key == Key.Enter -> { controller.selectedFile?.let { file ->
+                    if (file.isDirectory) controller.select(columns.indexOfLast { file.path in it.selected }, file) else onOpen(file)
+                }; true }
                 else -> false
             }
         }) {
-        FinderToolbar(controller, sidebarWidth, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
+        FinderToolbar(controller, chrome, effectiveSidebarWidth, mode == DesktopMode.ADAPTED, iconView, { iconView = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
             showPreview, { showPreview = !showPreview }, descending, { descending = !descending }, onMobile)
+        if (searching && mode == DesktopMode.ADAPTED) BasicTextField(search, { search = it },
+            Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(Paper, RoundedCornerShape(6.dp)).padding(8.dp),
+            singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
         Row(Modifier.weight(1f)) {
-            FinderSidebar(controller.currentPath, sidebarWidth.dp, bookmarks, volumes, onRoot)
-            Box(Modifier.fillMaxHeight().width(5.dp).background(Sidebar).pointerInput(density) {
-                detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(150f, 300f) }
-            }) { Box(Modifier.fillMaxHeight().width(1.dp).align(Alignment.CenterEnd).background(Line)) }
-            FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f), onOpen)
+            FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot)
+            Box(Modifier.fillMaxHeight().width(4.dp).background(Sidebar).pointerInput(density) {
+                detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
+            }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
+            if (iconView) FinderIconView(controller, columns, search, descending, Modifier.weight(1f), onOpen)
+            else FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f).background(Paper), onOpen)
             if (showPreview && mode == DesktopMode.FULL) FinderPreview(controller.selectedFile, onOpen)
         }
         if (message != null) Row(Modifier.fillMaxWidth().background(Color(0xffffefcd)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -197,33 +225,50 @@ fun FinderDesktopScreen(
 }
 
 @Composable
-private fun FinderToolbar(controller: FinderColumnController, sidebarWidth: Float, searching: Boolean, search: String,
+private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWindowChrome, sidebarWidth: Float, compact: Boolean,
+    iconView: Boolean, setIconView: (Boolean) -> Unit, searching: Boolean, search: String,
     toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
     descending: Boolean, toggleSort: () -> Unit, onMobile: () -> Unit) {
     val columnsDescription = stringResource(R.string.finderdex_view_columns)
     val searchDescription = stringResource(R.string.finderdex_search_folder)
-    Row(Modifier.fillMaxWidth().height(53.dp).background(Color(0xfff0f0f3)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Label("FinderDex", Modifier.width((sidebarWidth - 7f).dp), size = 14, bold = true)
+    val rootTitle = stringResource(R.string.home_storage)
+    val leading = chrome.layout.leading / chrome.density
+    val trailing = chrome.layout.trailing / chrome.density
+    val height = maxOf(52f, chrome.captionHeight / chrome.density)
+    Row(Modifier.fillMaxWidth().height(height.dp).background(Header)
+        .onGloballyPositioned { chrome.reserveInput(it, sidebarWidth + 4f, if (searching) 380f else 220f) }
+        .padding(end = trailing.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.width((sidebarWidth + 4f).dp).fillMaxHeight().background(Sidebar)
+            .padding(start = maxOf(18f, leading + 8f).dp), verticalAlignment = Alignment.CenterVertically) {
+            Label(stringResource(R.string.app_name), size = 12, color = Muted, bold = true)
+        }
+        Spacer(Modifier.width(12.dp))
         Tool("Atrás", "back", controller.canBack) { controller.back() }
         Tool("Adelante", "forward", controller.canForward) { controller.forward() }
         Spacer(Modifier.width(12.dp))
-        Label(controller.currentPath.substringAfterLast('/').ifEmpty { "Almacenamiento" }, Modifier.weight(1f), size = 15, bold = true)
-        FinderGlyph("columns", Ink, Modifier.size(30.dp, 20.dp).semantics { contentDescription = columnsDescription })
+        Label(if (controller.currentPath == Environment.getExternalStorageDirectory().path) rootTitle
+            else controller.currentPath.substringAfterLast('/').ifEmpty { rootTitle }, Modifier.weight(1f), size = 15, bold = true)
+        if (compact) Tool(if (iconView) columnsDescription else stringResource(R.string.finderdex_view_icons),
+            if (iconView) "columns" else "icons") { setIconView(!iconView) }
+        else Row(Modifier.clip(RoundedCornerShape(7.dp)).background(Color(0xffeeeeF2)).padding(2.dp)) {
+            Tool(stringResource(R.string.finderdex_view_icons), "icons", selected = iconView) { setIconView(true) }
+            Tool(columnsDescription, "columns", selected = !iconView) { setIconView(false) }
+        }
         Spacer(Modifier.width(12.dp))
-        Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
-        Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
+        if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
+        if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
         Tool(searchDescription, "search", selected = searching, action = toggleSearch)
-        if (searching) BasicTextField(search, setSearch, Modifier.padding(start = 5.dp).width(140.dp).background(Color.White, RoundedCornerShape(5.dp)).padding(5.dp)
+        if (searching && !compact) BasicTextField(search, setSearch, Modifier.padding(start = 6.dp).width(136.dp)
+            .background(Color.White, RoundedCornerShape(6.dp)).border(0.5.dp, Line, RoundedCornerShape(6.dp)).padding(6.dp)
             .semantics { contentDescription = searchDescription }, singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
-        Label("Móvil", Modifier.padding(start = 12.dp).clickable(onClick = onMobile).padding(4.dp), color = Muted, size = 11)
+        Spacer(Modifier.width(14.dp))
     }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Line))
 }
 
 @Composable
 private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit) {
     val root = Environment.getExternalStorageDirectory().path
-    Column(Modifier.width(width).fillMaxHeight().background(Sidebar).verticalScroll(rememberScrollState()).padding(10.dp, 12.dp)) {
+    Column(Modifier.width(width).fillMaxHeight().background(Sidebar).verticalScroll(rememberScrollState()).padding(12.dp, 14.dp)) {
         var favoritesExpanded by remember { mutableStateOf(true) }
         var locationsExpanded by remember { mutableStateOf(true) }
         SidebarHeading("Favoritos", favoritesExpanded) { favoritesExpanded = !favoritesExpanded }
@@ -231,9 +276,9 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
             SidebarItem("Inicio", root, "home", currentPath == root, onRoot)
             listOf("Descargas" to "Download", "Documentos" to "Documents", "Imágenes" to "Pictures", "Música" to "Music", "Películas" to "Movies").forEach { (name, folder) ->
                 val path = java.io.File(root, folder).path
-                SidebarItem(name, path, "folder", currentPath == path || currentPath.startsWith("$path/"), onRoot)
+                SidebarItem(name, path, "folder-outline", currentPath == path || currentPath.startsWith("$path/"), onRoot)
             }
-            bookmarks.forEach { (name, path) -> SidebarItem(name, path, "folder", currentPath == path, onRoot) }
+            bookmarks.forEach { (name, path) -> SidebarItem(name, path, "folder-outline", currentPath == path, onRoot) }
         }
         Spacer(Modifier.height(20.dp))
         SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
@@ -253,10 +298,55 @@ private fun SidebarHeading(text: String, expanded: Boolean, onClick: () -> Unit)
 private fun SidebarItem(name: String, path: String, glyph: String, selected: Boolean, onRoot: (String) -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Row(Modifier.fillMaxWidth().height(29.dp).clip(RoundedCornerShape(5.dp))
-        .background(if (selected) Color(0xffcfcfd5) else if (hovered) Color(0xffddddE3) else Color.Transparent)
+    Row(Modifier.fillMaxWidth().height(30.dp).clip(RoundedCornerShape(5.dp))
+        .background(if (selected) Color(0xffdcdfe6) else if (hovered) Color(0xffe6e7ec) else Color.Transparent)
         .hoverable(interaction).clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         FinderGlyph(glyph, Accent); Spacer(Modifier.width(8.dp)); Label(name)
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun FinderIconView(controller: FinderColumnController, columns: List<FinderColumn>, query: String,
+    descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit) {
+    val column = columns.lastOrNull()
+    val files = remember(column?.files, query, descending) {
+        column?.files.orEmpty().filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
+    }
+    Box(modifier.fillMaxHeight().background(Paper).testTag("finder-icons")) {
+        key(column?.path) {
+            LazyVerticalGrid(columns = GridCells.Adaptive(108.dp), modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(24.dp, 22.dp), horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                items(files, key = { it.path }) { file ->
+                    val selected = file.path in column?.selected.orEmpty()
+                    val interaction = remember { MutableInteractionSource() }
+                    val hovered by interaction.collectIsHoveredAsState()
+                    Column(Modifier.fillMaxWidth().height(118.dp).clip(RoundedCornerShape(7.dp))
+                        .background(if (hovered && !selected) Color(0xfff7f8fa) else Color.Transparent)
+                        .hoverable(interaction).combinedClickable(
+                            onClick = { controller.selectOnly(columns.lastIndex, file) },
+                            onDoubleClick = { if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file) })
+                        .semantics { this.selected = selected }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(88.dp, 78.dp).clip(RoundedCornerShape(6.dp))
+                            .background(if (selected) Color(0xffe9edf5) else Color.Transparent), contentAlignment = Alignment.Center) {
+                            if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(70.dp))
+                            else FileThumbnailOrIcon(file, 62.dp)
+                        }
+                        Spacer(Modifier.height(5.dp))
+                        BasicText(file.name, Modifier.clip(RoundedCornerShape(4.dp))
+                            .background(if (selected) Accent else Color.Transparent).padding(4.dp, 2.dp),
+                            style = TextStyle(color = if (selected) Color.White else Ink, fontSize = 12.sp,
+                                fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+        if (column?.loading == true) Label("Cargando…", Modifier.align(Alignment.Center), Muted)
+        else if (column?.error != null) Column(Modifier.align(Alignment.Center).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            BasicText(column.error, style = TextStyle(color = Muted, fontSize = 12.sp))
+            Label("Reintentar", Modifier.clickable { controller.refresh() }.padding(12.dp), Accent)
+        } else if (files.isEmpty()) Label(if (query.isBlank()) "Carpeta vacía" else "Sin resultados", Modifier.align(Alignment.Center), Muted)
     }
 }
 
@@ -264,7 +354,7 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
 private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit) {
     val horizontal = rememberScrollState()
     LaunchedEffect(columns.size) { horizontal.animateScrollTo(horizontal.maxValue) }
-    Row(modifier.fillMaxHeight().horizontalScroll(horizontal)) {
+    Row(modifier.fillMaxHeight().testTag("finder-columns").horizontalScroll(horizontal)) {
         columns.forEachIndexed { index, column ->
             key(column.id) {
                 ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, onOpen)
@@ -311,14 +401,14 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                 Label("Reintentar", Modifier.clickable { controller.refresh() }.padding(10.dp), Accent)
             } else if (filtered.isEmpty()) Label(if (query.isEmpty()) "Carpeta vacía" else "Sin resultados", Modifier.align(Alignment.Center), Muted)
         }
-        Box(Modifier.width(1.dp).fillMaxHeight().background(Line))
+        Box(Modifier.width(0.5.dp).fillMaxHeight().background(Line))
     }
 }
 
 @Composable
 private fun FinderPreview(file: FileItem?, onOpen: (FileItem) -> Unit) {
     Row(Modifier.width(230.dp).fillMaxHeight()) {
-        Box(Modifier.width(1.dp).fillMaxHeight().background(Line))
+        Box(Modifier.width(0.5.dp).fillMaxHeight().background(Line))
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(30.dp))
             if (file == null) Label("Vista previa", color = Muted)
@@ -356,7 +446,7 @@ private fun FinderStatusBar(controller: FinderColumnController, columns: List<Fi
         free = withContext(Dispatchers.IO) { runCatching { android.os.StatFs(path).availableBytes }.getOrNull() }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Line))
-    Row(Modifier.fillMaxWidth().height(25.dp).background(Color(0xfff5f5f7)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().height(28.dp).background(Color(0xfffafafa)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         columns.forEachIndexed { i, c ->
             if (i > 0) Label(" › ", color = Muted, size = 11)
             Label(c.path.substringAfterLast('/').ifEmpty { "/" }, Modifier.clickable { controller.navigateColumn(i) }.widthIn(max = 110.dp), size = 11)

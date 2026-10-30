@@ -3,4 +3,5 @@
     <string name="finderdex_view_columns">Vista a colonne</string>
     <string name="finderdex_search_folder">Cerca in questa cartella</string>
     <string name="finderdex_desktop">FinderDex · Scrivania</string>
+    <string name="finderdex_view_icons">Vista a icone</string>
 </resources>

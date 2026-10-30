@@ -67,6 +67,14 @@ class FinderColumnController(
         }
     }
 
+    /** Icon view selects a folder on one click; activation opens it separately. */
+    fun selectOnly(index: Int, file: FileItem) {
+        val columns = _columns.value
+        if (index != columns.lastIndex || columns.getOrNull(index)?.files?.none { it.path == file.path } != false) return
+        _columns.value = columns.mapIndexed { i, column -> if (i == index) column.copy(selected = setOf(file.path)) else column }
+        onLocation(currentPath, setOf(file.path))
+    }
+
     fun select(index: Int, file: FileItem) {
         val original = _columns.value
         val column = original.getOrNull(index) ?: return

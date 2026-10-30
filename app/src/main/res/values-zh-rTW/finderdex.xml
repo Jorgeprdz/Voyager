@@ -3,4 +3,5 @@
     <string name="finderdex_view_columns">分欄顯示</string>
     <string name="finderdex_search_folder">搜尋此資料夾</string>
     <string name="finderdex_desktop">FinderDex · 桌面</string>
+    <string name="finderdex_view_icons">圖像顯示</string>
 </resources>
