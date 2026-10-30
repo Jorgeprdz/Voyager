@@ -529,7 +529,10 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         .background(if (hovered && !selected) Color(0xfff7f8fa) else Color.Transparent)
                         .hoverable(interaction)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
-                        .finderRightClick { controller.selectOnly(columns.lastIndex, file); menuOpen = true }
+                        .finderRightClick {
+                            if (file.path !in column?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
+                            menuOpen = true
+                        }
                         .combinedClickable(
                             onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift) },
                             onDoubleClick = { if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file) },
