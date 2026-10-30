@@ -325,6 +325,7 @@ fun FinderDesktopScreen(
         }) {
         FinderToolbar(controller, chrome, effectiveSidebarWidth, mode == DesktopMode.ADAPTED, viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
             showPreview, { showPreview = !showPreview }, descending, { descending = !descending }, onMobile,
+            canCreateFolder = operationsAvailable,
             onNewFolder = { newFolderName = ""; newFolderDialog = true })
         if (searching && mode == DesktopMode.ADAPTED) BasicTextField(search, { search = it },
             Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(Paper, RoundedCornerShape(6.dp)).padding(8.dp),
@@ -412,7 +413,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
     viewStyle: FinderViewStyle, setViewStyle: (FinderViewStyle) -> Unit, searching: Boolean, search: String,
     toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
     descending: Boolean, toggleSort: () -> Unit, onMobile: () -> Unit,
-    onNewFolder: () -> Unit) {
+    canCreateFolder: Boolean, onNewFolder: () -> Unit) {
     val columnsDescription = stringResource(R.string.finderdex_view_columns)
     val searchDescription = stringResource(R.string.finderdex_search_folder)
     val rootTitle = stringResource(R.string.home_storage)
@@ -445,7 +446,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
             Tool("Vista de galería", "gallery", selected = viewStyle == FinderViewStyle.GALLERY) { setViewStyle(FinderViewStyle.GALLERY) }
         }
         Spacer(Modifier.width(12.dp))
-        if (!compact) Tool("Nueva carpeta", "folder-outline", action = onNewFolder)
+        if (!compact) Tool("Nueva carpeta", "folder-outline", enabled = canCreateFolder, action = onNewFolder)
         if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
         if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
         Tool(searchDescription, "search", selected = searching, action = toggleSearch)
@@ -467,13 +468,20 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
             SidebarItem("Inicio", root, "home", currentPath == root, onRoot)
             listOf("Descargas" to "Download", "Documentos" to "Documents", "Imágenes" to "Pictures", "Música" to "Music", "Películas" to "Movies").forEach { (name, folder) ->
                 val path = java.io.File(root, folder).path
-                SidebarItem(name, path, "folder-outline", currentPath == path || currentPath.startsWith("$path/"), onRoot)
+                if (java.io.File(path).isDirectory && java.io.File(path).canRead())
+                    SidebarItem(name, path, "folder-outline", currentPath == path || currentPath.startsWith("$path/"), onRoot)
             }
-            bookmarks.forEach { (name, path) -> SidebarItem(name, path, "folder-outline", currentPath == path, onRoot) }
+            bookmarks.forEach { (name, path) ->
+                if (java.io.File(path).isDirectory && java.io.File(path).canRead())
+                    SidebarItem(name, path, "folder-outline", currentPath == path, onRoot)
+            }
         }
         Spacer(Modifier.height(20.dp))
         SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
-        if (locationsExpanded) volumes.forEach { (name, path) -> SidebarItem(name, path, "drive", currentPath == path, onRoot) }
+        if (locationsExpanded) volumes.forEach { (name, path) ->
+            if (java.io.File(path).isDirectory && java.io.File(path).canRead())
+                SidebarItem(name, path, "drive", currentPath == path, onRoot)
+        }
     }
 }
 
