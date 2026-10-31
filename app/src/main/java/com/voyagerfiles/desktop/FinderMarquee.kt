@@ -11,7 +11,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -75,13 +75,24 @@ internal fun Modifier.finderMarqueeGesture(
 ): Modifier = composed {
     var origin by remember { mutableStateOf(Offset.Zero) }
     var started by remember { mutableStateOf(false) }
+    var additive by remember { mutableStateOf(false) }
     this.onGloballyPositioned { origin = it.positionInRoot() }
+        .pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    if (event.type == PointerEventType.Press) additive =
+                        event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed ||
+                            event.keyboardModifiers.isShiftPressed
+                }
+            }
+        }
         .pointerInput(controller, marquee, drag) {
             detectDragGestures(
                 onDragStart = { offset ->
                     val start = origin + offset
                     started = drag.draggingPaths.isEmpty() &&
-                        marquee.startDrag(start, controller.columns.value.lastOrNull()?.selected.orEmpty(), false)
+                        marquee.startDrag(start, controller.columns.value.lastOrNull()?.selected.orEmpty(), additive)
                 },
                 onDrag = { change, _ ->
                     if (started) {
@@ -103,9 +114,10 @@ internal fun Modifier.finderMarqueeGesture(
 @Composable
 internal fun FinderMarqueeOverlay(marquee: FinderMarqueeState, modifier: Modifier = Modifier) {
     if (!marquee.active) return
-    Canvas(modifier.fillMaxSize()) {
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    Canvas(modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         val region = marquee.rectangle
-        val local = Offset(region.left, region.top)
+        val local = Offset(region.left - origin.x, region.top - origin.y)
         val rectSize = androidx.compose.ui.geometry.Size(region.width, region.height)
         drawRect(Color(0xff087cf1).copy(alpha = .13f), topLeft = local, size = rectSize)
         drawRect(Color(0xff087cf1).copy(alpha = .7f), topLeft = local,
