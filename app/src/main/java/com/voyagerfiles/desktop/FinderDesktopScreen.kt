@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.geometry.Rect
@@ -416,7 +417,10 @@ fun FinderDesktopScreen(
     val widthPrefs = remember(localContext) {
         localContext.getSharedPreferences("finderdex_window", Context.MODE_PRIVATE)
     }
-    var sidebarWidth by rememberSaveable { mutableFloatStateOf(widthPrefs.getFloat("sidebarWidth", 208f)) }
+    var sidebarWidth by rememberSaveable { mutableFloatStateOf(
+        widthPrefs.getFloat("sidebarWidth", FinderWindowGeometry.SIDEBAR_DEFAULT_WIDTH_DP)
+            .coerceIn(FinderWindowGeometry.SIDEBAR_MIN_WIDTH_DP, FinderWindowGeometry.SIDEBAR_MAX_WIDTH_DP)
+    ) }
     LaunchedEffect(sidebarWidth) {
         delay(220)
         widthPrefs.edit().putFloat("sidebarWidth", sidebarWidth).apply()
@@ -461,13 +465,24 @@ fun FinderDesktopScreen(
         }
     }
     val density = LocalDensity.current.density
-    val effectiveSidebarWidth = if (mode == DesktopMode.ADAPTED) 176f else sidebarWidth
     BackHandler(controller.canBack && quickLook == null && infoFile == null && renameFile == null && deleteFile == null) { controller.back() }
-    Box(Modifier.fillMaxSize()) {
-    Column(Modifier.fillMaxSize().background(Header)
+    // Size from the actual window constraints, not the monitor's physical resolution.
+    // The native DeX frame/caption controls remain owned by Android.
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val shell = FinderWindowGeometry.resolve(
+        maxWidth.value, maxHeight.value, sidebarWidth,
+        chrome.layout.trailing / density,
+    )
+    val effectiveSidebarWidth = shell.sidebarWidthDp
+    val dividerWidth = if (shell.sidebarRail) 1.dp else FinderWindowGeometry.DIVIDER_HIT_WIDTH_DP.dp
+    val windowShape = RoundedCornerShape(shell.cornerRadiusDp.dp)
+    Column(Modifier.fillMaxSize()
         .windowInsetsPadding(WindowInsets.systemBars.exclude(WindowInsets.captionBar))
         .padding(top = (chrome.layout.topInset / density).dp)
-        .clip(RoundedCornerShape(20.dp))
+        .shadow(FinderWindowGeometry.SHADOW_ELEVATION_DP.dp, windowShape, clip = false)
+        .clip(windowShape)
+        .background(Header)
+        .border(FinderWindowGeometry.BORDER_WIDTH_DP.dp, Color(0x4d838b9b), windowShape)
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) false
             else when {
@@ -521,28 +536,43 @@ fun FinderDesktopScreen(
                 else -> false
             }
         }) {
-        FinderToolbar(controller, chrome, effectiveSidebarWidth, mode == DesktopMode.ADAPTED, viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
+        FinderToolbar(controller, chrome, effectiveSidebarWidth, dividerWidth.value, maxWidth.value,
+            shell.compactToolbar, shell.minimalToolbar,
+            viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
             showPreview, { showPreview = !showPreview }, descending, { descending = !descending },
             sortBy, { sortBy = it }, onMobile,
             canCreateFolder = operationsAvailable,
             onNewFolder = { newFolderName = ""; newFolderDialog = true },
             onTrash = { onRefreshTrash(); showTrash = true })
-        if (searching && mode == DesktopMode.ADAPTED) BasicTextField(search, { search = it },
+        if (searching && shell.compactToolbar) BasicTextField(search, { search = it },
             Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(Paper, RoundedCornerShape(6.dp)).padding(8.dp),
             singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
-        Row(Modifier.weight(1f)) {
-            FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
-                favoriteImages, onRemoveFavorite, onReorderFavorite, onPickFavoriteImage, onRemoveFavoriteImage, dragState)
-            Box(Modifier.fillMaxHeight().width(4.dp).background(Sidebar).pointerInput(density) {
-                detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
-            }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
+        Row(Modifier.weight(1f).fillMaxWidth()) {
+            if (effectiveSidebarWidth >= 40f) {
+                FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
+                    favoriteImages, onRemoveFavorite, onReorderFavorite, onPickFavoriteImage, onRemoveFavoriteImage,
+                    dragState, rail = shell.sidebarRail)
+            }
+            // Keep a wide pointer target only when the full sidebar can be resized.
+            Box(Modifier.fillMaxHeight().width(dividerWidth).background(Sidebar)
+                .pointerInput(density, shell.sidebarRail) {
+                    if (!shell.sidebarRail) detectHorizontalDragGestures { change, delta ->
+                        change.consume()
+                        sidebarWidth = (sidebarWidth + delta / density).coerceIn(
+                            FinderWindowGeometry.SIDEBAR_MIN_WIDTH_DP,
+                            FinderWindowGeometry.SIDEBAR_MAX_WIDTH_DP,
+                        )
+                    }
+                }) {
+                Box(Modifier.fillMaxHeight().width(1.dp).align(Alignment.CenterEnd).background(Line))
+            }
             when (viewStyle) {
                 FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
                 FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
                 FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
                 FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
             }
-            if (showPreview && mode == DesktopMode.FULL) FinderPreview(controller.selectedFile, onOpen)
+            if (showPreview && shell.showPreview && mode != DesktopMode.COMPACT) FinderPreview(controller.selectedFile, onOpen)
         }
         if (message != null) Row(Modifier.fillMaxWidth().background(Color(0xffffefcd)).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Label(message, Modifier.weight(1f)); Label("Cerrar", Modifier.clickable(onClick = onDismissMessage).padding(4.dp), color = Accent)
@@ -562,7 +592,8 @@ fun FinderDesktopScreen(
                 ?: "Arrastra a una carpeta para mover · Se pedirá confirmación",
                 color = Accent)
         }
-        FinderStatusBar(controller, columns)
+        FinderStatusBar(controller, columns, effectiveSidebarWidth + dividerWidth.value,
+            shell.statusBarHeightDp, shell.compactToolbar)
     }
     if (dragState.springFolder != null && dragState.draggingPaths.isNotEmpty())
         FinderSpringFolderPanel(dragState, Modifier.align(Alignment.CenterEnd).padding(end = 26.dp))
@@ -642,7 +673,8 @@ fun FinderDesktopScreen(
 internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }
 
 @Composable
-private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWindowChrome, sidebarWidth: Float, compact: Boolean,
+private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWindowChrome,
+    sidebarWidth: Float, dividerWidth: Float, windowWidth: Float, compact: Boolean, minimal: Boolean,
     viewStyle: FinderViewStyle, setViewStyle: (FinderViewStyle) -> Unit, searching: Boolean, search: String,
     toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
     descending: Boolean, toggleSort: () -> Unit,
@@ -653,27 +685,36 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
     val rootTitle = stringResource(R.string.home_storage)
     val leading = chrome.layout.leading / chrome.density
     val trailing = chrome.layout.trailing / chrome.density
-    val height = maxOf(52f, chrome.captionHeight / chrome.density)
+    val height = maxOf(FinderWindowGeometry.TOOLBAR_HEIGHT_DP, chrome.captionHeight / chrome.density)
+    // This gutter keeps controls clear of a native leading caption group when the sidebar is a rail.
+    val leftGap = maxOf(FinderWindowGeometry.TOOLBAR_GAP_DP,
+        leading - sidebarWidth - dividerWidth + FinderWindowGeometry.CAPTION_CLEARANCE_DP)
+    val freeToolbarWidth = (windowWidth - sidebarWidth - dividerWidth - leftGap -
+        trailing - 14f).coerceAtLeast(0f)
     Row(Modifier.fillMaxWidth().height(height.dp).background(Header)
-        .onGloballyPositioned { chrome.reserveInput(it, sidebarWidth + 4f, if (searching) 380f else 220f) }
+        .onGloballyPositioned { chrome.reserveInput(it, sidebarWidth + dividerWidth + leftGap,
+            if (searching) 380f else 220f) }
         .padding(end = trailing.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.width((sidebarWidth + 4f).dp).fillMaxHeight().background(Sidebar)
-            .padding(start = maxOf(18f, leading + 8f).dp), verticalAlignment = Alignment.CenterVertically) {
-            Label(stringResource(R.string.app_name), size = 12, color = Muted, bold = true)
+        Row(Modifier.width((sidebarWidth + dividerWidth).dp).fillMaxHeight().background(Sidebar)
+            .padding(start = minOf(leading + FinderWindowGeometry.CAPTION_CLEARANCE_DP, sidebarWidth).dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            if (sidebarWidth > 160f && leading + 42f < sidebarWidth)
+                Label(stringResource(R.string.app_name), size = 12, color = Muted, bold = true)
         }
-        Spacer(Modifier.width(12.dp))
-        Tool("Atrás", "back", controller.canBack) { controller.back() }
-        Tool("Adelante", "forward", controller.canForward) { controller.forward() }
-        Spacer(Modifier.width(12.dp))
-        Label(if (controller.currentPath == Environment.getExternalStorageDirectory().path) rootTitle
+        Spacer(Modifier.width(leftGap.dp))
+        if (freeToolbarWidth >= 65f) Tool("Atrás", "back", controller.canBack) { controller.back() }
+        if (!minimal) Tool("Adelante", "forward", controller.canForward) { controller.forward() }
+        Spacer(Modifier.width(FinderWindowGeometry.TOOLBAR_GAP_DP.dp))
+        if (!minimal) Label(if (controller.currentPath == Environment.getExternalStorageDirectory().path) rootTitle
             else controller.currentPath.substringAfterLast('/').ifEmpty { rootTitle }, Modifier.weight(1f), size = 15, bold = true)
-        if (compact) Tool("Cambiar vista", when (viewStyle) {
+        else Spacer(Modifier.weight(1f))
+        if (compact && (!minimal || freeToolbarWidth >= 175f)) Tool("Cambiar vista", when (viewStyle) {
             FinderViewStyle.ICONS -> "icons"
             FinderViewStyle.LIST -> "list"
             FinderViewStyle.COLUMNS -> "columns"
             FinderViewStyle.GALLERY -> "gallery"
         }) { setViewStyle(FinderViewStyle.entries[(viewStyle.ordinal + 1) % FinderViewStyle.entries.size]) }
-        else Row(Modifier.clip(RoundedCornerShape(9.dp)).background(Color(0xffeeeeF2)).padding(2.dp)) {
+        else if (!compact) Row(Modifier.clip(RoundedCornerShape(9.dp)).background(Color(0xffeeeeF2)).padding(2.dp)) {
             Tool(stringResource(R.string.finderdex_view_icons), "icons", selected = viewStyle == FinderViewStyle.ICONS) { setViewStyle(FinderViewStyle.ICONS) }
             Tool("Vista de lista", "list", selected = viewStyle == FinderViewStyle.LIST) { setViewStyle(FinderViewStyle.LIST) }
             Tool(columnsDescription, "columns", selected = viewStyle == FinderViewStyle.COLUMNS) { setViewStyle(FinderViewStyle.COLUMNS) }
@@ -694,7 +735,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
         }
         if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
         if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
-        Tool(searchDescription, "search", selected = searching, action = toggleSearch)
+        if (freeToolbarWidth >= 145f) Tool(searchDescription, "search", selected = searching, action = toggleSearch)
         if (searching && !compact) BasicTextField(search, setSearch, Modifier.padding(start = 6.dp).width(136.dp)
             .background(Color.White, RoundedCornerShape(6.dp)).border(0.5.dp, Line, RoundedCornerShape(6.dp)).padding(6.dp)
             .semantics { contentDescription = searchDescription }, singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
@@ -707,19 +748,20 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
     onReorderFavorite: (String, Int) -> Unit,
     onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit,
-    dragState: FinderDragDropState) {
+    dragState: FinderDragDropState, rail: Boolean = false) {
     val root = Environment.getExternalStorageDirectory().path
-    Column(Modifier.width(width).fillMaxHeight().background(Sidebar).verticalScroll(rememberScrollState()).padding(12.dp, 14.dp)) {
+    Column(Modifier.width(width).fillMaxHeight().background(Sidebar).verticalScroll(rememberScrollState())
+        .padding(horizontal = if (rail) 8.dp else 12.dp, vertical = 14.dp)) {
         var favoritesExpanded by remember { mutableStateOf(true) }
         var locationsExpanded by remember { mutableStateOf(true) }
-        SidebarHeading("Favoritos", favoritesExpanded) { favoritesExpanded = !favoritesExpanded }
-        if (favoritesExpanded) {
-            SidebarItem("Inicio", root, "home", currentPath == root, onRoot, dragState = dragState)
+        if (!rail) SidebarHeading("Favoritos", favoritesExpanded) { favoritesExpanded = !favoritesExpanded }
+        if (favoritesExpanded || rail) {
+            SidebarItem("Inicio", root, "home", currentPath == root, onRoot, dragState = dragState, rail = rail)
             listOf("Descargas" to "Download", "Documentos" to "Documents", "Imágenes" to "Pictures", "Música" to "Music", "Películas" to "Movies").forEach { (name, folder) ->
                 val path = java.io.File(root, folder).path
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())
                     SidebarItem(name, path, "folder-outline", currentPath == path || currentPath.startsWith("$path/"), onRoot,
-                        dragState = dragState)
+                        dragState = dragState, rail = rail)
             }
             bookmarks.forEach { (name, path) ->
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())
@@ -728,14 +770,14 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
                         onRemoveFavorite = onRemoveFavorite,
                         onReorderFavorite = onReorderFavorite,
                         onPickImage = onPickFavoriteImage, onClearImage = onRemoveFavoriteImage,
-                        dragState = dragState)
+                        dragState = dragState, rail = rail)
             }
         }
         Spacer(Modifier.height(20.dp))
-        SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
-        if (locationsExpanded) volumes.forEach { (name, path) ->
+        if (!rail) SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
+        if (locationsExpanded || rail) volumes.forEach { (name, path) ->
             if (java.io.File(path).isDirectory && java.io.File(path).canRead())
-                SidebarItem(name, path, "drive", currentPath == path, onRoot, dragState = dragState)
+                SidebarItem(name, path, "drive", currentPath == path, onRoot, dragState = dragState, rail = rail)
         }
     }
 }
@@ -753,7 +795,7 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
     pinned: Boolean = false, imageUri: String? = null, onRemoveFavorite: (String) -> Unit = {},
     onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     onPickImage: (String) -> Unit = {}, onClearImage: (String) -> Unit = {},
-    dragState: FinderDragDropState? = null) {
+    dragState: FinderDragDropState? = null, rail: Boolean = false) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     var menu by remember { mutableStateOf(false) }
@@ -763,12 +805,18 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
         .then(if (dragState != null) Modifier.finderFolderDropTarget("sidebar:$path", path, dragState) else Modifier)
         .then(if (dragState != null) Modifier.finderDragVisual(path, true, dragState) else Modifier)
         .finderRightClick { if (pinned) menu = true }
-        .clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        .clickable { onRoot(path) }
+        .semantics { contentDescription = name }
+        .padding(horizontal = if (rail) 0.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (rail) Arrangement.Center else Arrangement.Start) {
         if (imageUri != null) AsyncImage(model = Uri.parse(imageUri), contentDescription = null,
             modifier = Modifier.size(19.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
         else FinderGlyph(glyph, Accent)
-        Spacer(Modifier.width(8.dp))
-        Label(name, Modifier.weight(1f))
+        if (!rail) {
+            Spacer(Modifier.width(8.dp))
+            Label(name, Modifier.weight(1f))
+        }
         if (pinned) DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text("Subir favorito") },
                 onClick = { menu = false; onReorderFavorite(path, -1) })
@@ -944,7 +992,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
 
 @Composable
 private fun FinderPreview(file: FileItem?, onOpen: (FileItem) -> Unit) {
-    Row(Modifier.width(230.dp).fillMaxHeight()) {
+    Row(Modifier.width(FinderWindowGeometry.PREVIEW_WIDTH_DP.dp).fillMaxHeight()) {
         Box(Modifier.width(0.5.dp).fillMaxHeight().background(Line))
         Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.height(30.dp))
@@ -976,21 +1024,38 @@ private fun PreviewDetail(title: String, value: String) {
 }
 
 @Composable
-private fun FinderStatusBar(controller: FinderColumnController, columns: List<FinderColumn>) {
+private fun FinderStatusBar(controller: FinderColumnController, columns: List<FinderColumn>,
+    sidebarExtentDp: Float, heightDp: Float, compact: Boolean) {
     val path = controller.currentPath
     var free by remember(path) { mutableStateOf<Long?>(null) }
     LaunchedEffect(path) {
         free = withContext(Dispatchers.IO) { runCatching { android.os.StatFs(path).availableBytes }.getOrNull() }
     }
     Box(Modifier.fillMaxWidth().height(1.dp).background(Line))
-    Row(Modifier.fillMaxWidth().height(28.dp).background(Color(0xfffafafa)).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        columns.forEachIndexed { i, c ->
-            if (i > 0) Label(" › ", color = Muted, size = 11)
-            Label(c.path.substringAfterLast('/').ifEmpty { "/" }, Modifier.clickable { controller.navigateColumn(i) }.widthIn(max = 110.dp), size = 11)
+    Row(Modifier.fillMaxWidth().height(heightDp.dp).background(Color(0xfffafafa)),
+        verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.width(sidebarExtentDp.dp).fillMaxHeight().background(Sidebar))
+        Row(Modifier.weight(1f).fillMaxHeight()
+            .padding(horizontal = FinderWindowGeometry.STATUS_HORIZONTAL_PADDING_DP.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            // Preserve original column indices even when narrow windows show fewer breadcrumbs.
+            val visibleIndices = if (compact) columns.indices.toList().takeLast(2) else columns.indices.toList()
+            visibleIndices.forEachIndexed { visibleIndex, index ->
+                val column = columns[index]
+                if (visibleIndex > 0) Label(" › ", color = Muted, size = 11)
+                Label(column.path.substringAfterLast('/').ifEmpty { "/" },
+                    Modifier.clickable { controller.navigateColumn(index) }.widthIn(max = 95.dp), size = 11)
+            }
+            Spacer(Modifier.weight(1f))
+            val current = columns.lastOrNull()
+            if (!compact) {
+                Label("${current?.files?.size ?: 0} elementos" +
+                    if (current?.selected?.isNotEmpty() == true) ", ${current.selected.size} seleccionado" else "",
+                    color = Muted, size = 11)
+                free?.let { Label(" · ${FileItem.formatFileSize(it)} disponibles", color = Muted, size = 11) }
+            } else if (visibleIndices.isEmpty()) {
+                Label("${current?.files?.size ?: 0} elementos", color = Muted, size = 11)
+            }
         }
-        Spacer(Modifier.weight(1f))
-        val current = columns.lastOrNull()
-        Label("${current?.files?.size ?: 0} elementos" + if (current?.selected?.isNotEmpty() == true) ", ${current.selected.size} seleccionado" else "", color = Muted, size = 11)
-        free?.let { Label(" · ${FileItem.formatFileSize(it)} disponibles", color = Muted, size = 11) }
     }
 }
