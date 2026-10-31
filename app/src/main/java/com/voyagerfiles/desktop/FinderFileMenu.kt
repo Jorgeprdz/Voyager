@@ -34,6 +34,7 @@ internal fun FinderFileMenu(
     operationsAvailable: Boolean,
     selectionCount: Int = 1,
     isArchive: Boolean = false,
+    canPaste: Boolean = false,
     onAction: (FinderFileAction) -> Unit,
 ) {
     val count = selectionCount.coerceAtLeast(1)
@@ -51,7 +52,7 @@ internal fun FinderFileMenu(
         if (operationsAvailable) {
             funAction(FinderFileAction.COPY, many("Copiar   Ctrl+C", "Copiar"), onDismiss, onAction)
             funAction(FinderFileAction.CUT, many("Cortar   Ctrl+X", "Cortar"), onDismiss, onAction)
-            if (isDirectory) funAction(FinderFileAction.PASTE_INTO, "Pegar dentro de esta carpeta", onDismiss, onAction)
+            if (isDirectory && canPaste) funAction(FinderFileAction.PASTE_INTO, "Pegar dentro de esta carpeta", onDismiss, onAction)
             funAction(FinderFileAction.DUPLICATE, many("Duplicar", "Duplicar"), onDismiss, onAction)
             if (count == 1) funAction(FinderFileAction.RENAME, "Renombrar", onDismiss, onAction)
             funAction(FinderFileAction.ZIP, many("Comprimir ZIP", "Comprimir"), onDismiss, onAction)
