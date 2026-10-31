@@ -26,6 +26,8 @@ internal class FinderDragDropState(
 ) {
     /** Explicit Alt+drag uses Android's global mechanism; ordinary drags remain local. */
     var externalStart: ((List<String>) -> Boolean)? = null
+    var externalHoveredDestination by mutableStateOf<String?>(null)
+        private set
     var externalError: (() -> Unit)? = null
     private val targets = mutableStateMapOf<String, FinderDropTarget>()
     var allowedRoot: String = "/"
@@ -67,7 +69,17 @@ internal class FinderDragDropState(
         targets.remove(id)
         if (draggingPaths.isNotEmpty()) resolveHover()
     }
-    fun clearTargets() { targets.clear(); hoveredDestination = null }
+    fun clearTargets() { targets.clear(); hoveredDestination = null; externalHoveredDestination = null }
+
+    /** Android root-relative drag location resolves the smallest writable folder target. */
+    fun externalTargetAt(point: Offset): String? {
+        if (!point.x.isFinite() || !point.y.isFinite()) return null
+        return targets.values.asSequence()
+            .filter { it.allowed && withinRoot(it.path) && it.rect.contains(point) }
+            .minByOrNull { it.rect.width * it.rect.height }?.path
+    }
+    fun updateExternalHover(point: Offset) { externalHoveredDestination = externalTargetAt(point) }
+    fun clearExternalHover() { externalHoveredDestination = null }
     fun start(paths: List<String>, at: Offset, from: Offset = at) {
         if (!enabled) return
         val valid = paths.distinct().filter(::withinRoot)

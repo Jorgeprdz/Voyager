@@ -41,4 +41,18 @@ class FinderDragDropStateTest {
         state.end()
         assertNull(state.pending)
     }
+    @Test fun externalTargetUsesSmallestWritableFolder() {
+        val state = FinderDragDropState { path -> !path.endsWith("restricted") }
+        state.allowedRoot = "/root"
+        state.register("parent", "/root/parent", Rect(0f, 0f, 100f, 100f))
+        state.register("nested", "/root/parent/child", Rect(10f, 10f, 40f, 40f))
+        state.register("restricted", "/root/restricted", Rect(60f, 60f, 90f, 90f))
+        assertEquals("/root/parent/child", state.externalTargetAt(Offset(20f, 20f)))
+        assertEquals("/root/parent", state.externalTargetAt(Offset(70f, 70f)))
+        state.updateExternalHover(Offset(20f, 20f))
+        assertEquals("/root/parent/child", state.externalHoveredDestination)
+        state.clearExternalHover()
+        assertNull(state.externalHoveredDestination)
+        assertTrue(state.draggingPaths.isEmpty())
+    }
 }

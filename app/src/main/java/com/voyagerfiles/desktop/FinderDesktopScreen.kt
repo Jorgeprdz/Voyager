@@ -260,6 +260,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         }
         return
     }
+    val sharedDragState = remember(controller.session.id) { FinderDragDropState() }
     val bookmarks by viewModel.bookmarks.collectAsState()
     val favoritePrefs = remember(context) { context.getSharedPreferences("finderdex_favorites", Context.MODE_PRIVATE) }
     var favoriteOrder by remember(favoritePrefs) { mutableStateOf(
@@ -270,17 +271,27 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     ) }
     // Only external content:// payloads enter Voyager's existing cancellable upload engine.
     // Permissions remain alive until its onFinished callback, including cancellation.
-    DisposableEffect(rootView, controller) {
+    DisposableEffect(rootView, controller, sharedDragState) {
         val listener = android.view.View.OnDragListener { _, event ->
-            val target = controller?.currentPath
-            val ready = target != null &&
-                viewModel.browseState.value.currentPath == target &&
+            val target = sharedDragState.externalTargetAt(Offset(event.x, event.y))
+                ?: controller.currentPath
+            val ready = viewModel.browseState.value.currentPath == controller.currentPath &&
                 FinderCrossAppTransfer.writableLocalFolder(target) &&
                 viewModel.operationState.value !is com.voyagerfiles.viewmodel.OperationState.Running
             when (event.action) {
                 android.view.DragEvent.ACTION_DRAG_STARTED ->
                     ready && FinderCrossAppTransfer.activity(context) != null
+                android.view.DragEvent.ACTION_DRAG_LOCATION -> {
+                    sharedDragState.updateExternalHover(Offset(event.x, event.y))
+                    true
+                }
+                android.view.DragEvent.ACTION_DRAG_EXITED,
+                android.view.DragEvent.ACTION_DRAG_ENDED -> {
+                    sharedDragState.clearExternalHover()
+                    true
+                }
                 android.view.DragEvent.ACTION_DROP -> {
+                    sharedDragState.clearExternalHover()
                     val uris = FinderCrossAppTransfer.incomingUris(event)
                     if (!ready || !FinderCrossAppPolicy.accepts(
                             uris.map { it.toString() }, true, false)) false
@@ -289,7 +300,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
                         val permission = activity?.requestDragAndDropPermissions(event)
                         if (permission == null) false
                         else {
-                            viewModel.uploadDocuments(uris, target!!) { permission.release() }
+                            viewModel.uploadDocuments(uris, target) { permission.release() }
                             true
                         }
                     }
@@ -298,7 +309,10 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             }
         }
         rootView.setOnDragListener(listener)
-        onDispose { rootView.setOnDragListener(null) }
+        onDispose {
+            sharedDragState.clearExternalHover()
+            rootView.setOnDragListener(null)
+        }
     }
     val orderedFavorites = bookmarks.filter { it.source == FileSource.LOCAL }
         .sortedWith(compareBy { favoriteOrder.indexOf(it.path).let { index ->
@@ -338,6 +352,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     }
     FinderDesktopScreen(controller, mode, orderedFavorites.map { it.name to it.path },
         volumes = volumes.map { it.name to it.path },
+        externalDragState = sharedDragState,
         onRoot = viewModel::openLocalRoot,
         onMobile = onMobile,
         favoriteImages = customImages,
@@ -450,6 +465,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
 fun FinderDesktopScreen(
     controller: FinderColumnController,
     mode: DesktopMode,
+    externalDragState: FinderDragDropState? = null,
     bookmarks: List<Pair<String, String>> = emptyList(),
     volumes: List<Pair<String, String>> = emptyList(),
     favoriteImages: Map<String, String> = emptyMap(),
@@ -485,7 +501,7 @@ fun FinderDesktopScreen(
 ) {
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
-    val dragState = remember(controller.session.id) { FinderDragDropState() }
+    val dragState = externalDragState ?: remember(controller.session.id) { FinderDragDropState() }
     val androidView = LocalView.current
     SideEffect {
         dragState.externalError = { /* Unsupported MIME or missing URI access; no source mutation. */ }

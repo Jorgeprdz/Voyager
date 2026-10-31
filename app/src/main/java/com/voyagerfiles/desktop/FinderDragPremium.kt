@@ -29,7 +29,7 @@ internal fun Modifier.finderDragVisual(
     drag: FinderDragDropState,
 ): Modifier = composed {
     val dragged = path in drag.draggingPaths
-    val hovered = isFolder && drag.hoveredDestination == path
+    val hovered = isFolder && (drag.hoveredDestination == path || drag.externalHoveredDestination == path)
     val materials = LocalFinderMaterials.current
     val p = materials.palette
     val alpha by animateFloatAsState(if (dragged) .40f else 1f,
