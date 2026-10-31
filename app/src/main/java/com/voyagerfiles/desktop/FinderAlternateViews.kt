@@ -40,6 +40,7 @@ internal fun FinderListView(
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
     onAction: (FinderFileAction, FileItem) -> Unit,
+    dragState: FinderDragDropState,
 ) {
     val last = columns.lastOrNull()
     val files = remember(last?.files, query, descending) {
@@ -65,6 +66,8 @@ internal fun FinderListView(
                     .clip(RoundedCornerShape(7.dp))
                     .background(if (selected) blue else if (hovered) soft else Color.Transparent)
                     .hoverable(hoverSource)
+                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState)
+                    .then(if (file.isDirectory) Modifier.finderFolderDropTarget("list:${file.path}", file.path, dragState) else Modifier)
                     .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                     .finderRightClick {
                         if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
@@ -107,6 +110,7 @@ internal fun FinderGalleryView(
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
     onAction: (FinderFileAction, FileItem) -> Unit,
+    dragState: FinderDragDropState,
 ) {
     val last = columns.lastOrNull()
     val files = remember(last?.files, query, descending) {
@@ -136,6 +140,8 @@ internal fun FinderGalleryView(
                 val active = file.path in last?.selected.orEmpty()
                 Column(Modifier.width(105.dp).fillMaxHeight().clip(RoundedCornerShape(9.dp))
                     .background(if (active) blue else Color.Transparent)
+                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState)
+                    .then(if (file.isDirectory) Modifier.finderFolderDropTarget("gallery:${file.path}", file.path, dragState) else Modifier)
                     .finderRightClick {
                         if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
                         menu = true
