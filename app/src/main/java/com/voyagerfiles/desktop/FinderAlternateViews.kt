@@ -47,7 +47,10 @@ internal fun FinderListView(
         last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) }
             .let { if (descending) it.reversed() else it }
     }
-    Column(modifier.background(Color.White).testTag("finder-list")) {
+    val marquee = remember(last?.path) { FinderMarqueeState() }
+    Box(modifier.background(Color.White).testTag("finder-list")
+        .finderMarqueeGesture(controller, marquee, dragState)) {
+    Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().height(31.dp).background(Color(0xfff5f5f7))
             .padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Nombre", Modifier.weight(1f), color = ink, fontSize = 11.sp)
@@ -66,7 +69,9 @@ internal fun FinderListView(
                     .clip(RoundedCornerShape(7.dp))
                     .background(if (selected) blue else if (hovered) soft else Color.Transparent)
                     .hoverable(hoverSource)
-                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState)
+                    .finderMarqueeItem(file.path, marquee)
+                    .finderDragVisual(file.path, file.isDirectory, dragState)
+                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
                     .then(if (file.isDirectory) Modifier.finderFolderDropTarget("list:${file.path}", file.path, dragState) else Modifier)
                     .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                     .finderRightClick {
@@ -90,12 +95,15 @@ internal fun FinderListView(
                         Modifier.width(100.dp), color = ink, fontSize = 11.sp, maxLines = 1)
                     Text(DateFormat.getDateInstance(DateFormat.SHORT).format(file.lastModified),
                         Modifier.width(128.dp), color = ink, fontSize = 11.sp, maxLines = 1)
-                    FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable) {
+                    FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
+                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1) {
                         onAction(it, file)
                     }
                 }
             }
         }
+    }
+    FinderMarqueeOverlay(marquee)
     }
 }
 
@@ -137,17 +145,21 @@ internal fun FinderGalleryView(
             .padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             items(files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
+                var ctrl by remember { mutableStateOf(false) }
+                var shift by remember { mutableStateOf(false) }
                 val active = file.path in last?.selected.orEmpty()
                 Column(Modifier.width(105.dp).fillMaxHeight().clip(RoundedCornerShape(9.dp))
                     .background(if (active) blue else Color.Transparent)
-                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState)
+                    .finderDragVisual(file.path, file.isDirectory, dragState)
+                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
+                    .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                     .then(if (file.isDirectory) Modifier.finderFolderDropTarget("gallery:${file.path}", file.path, dragState) else Modifier)
                     .finderRightClick {
                         if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
                         menu = true
                     }
                     .combinedClickable(
-                        onClick = { controller.selectOnly(columns.lastIndex, file) },
+                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift) },
                         onDoubleClick = {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
                         },
@@ -158,7 +170,8 @@ internal fun FinderGalleryView(
                     Spacer(Modifier.height(4.dp))
                     Text(file.name, color = ink, fontSize = 11.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
-                    FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable) {
+                    FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
+                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1) {
                         onAction(it, file)
                     }
                 }
