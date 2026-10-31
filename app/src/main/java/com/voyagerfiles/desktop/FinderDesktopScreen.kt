@@ -383,7 +383,11 @@ fun FinderDesktopScreen(
     var showTrash by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
+        val selectedPaths = columns.lastOrNull()?.selected.orEmpty()
+        val effectivePaths = if (file.path in selectedPaths) selectedPaths.toList() else listOf(file.path)
         when (action) {
+            FinderFileAction.COPY -> onCopyPaths(effectivePaths, false)
+            FinderFileAction.CUT -> onCopyPaths(effectivePaths, true)
             FinderFileAction.OPEN -> if (file.isDirectory) {
                 columns.indexOfLast { it.files.any { entry -> entry.path == file.path } }
                     .takeIf { it >= 0 }?.let { controller.select(it, file) }
@@ -413,6 +417,20 @@ fun FinderDesktopScreen(
             if (event.type != KeyEventType.KeyDown) false
             else when {
                 event.key == Key.Escape && searching -> { searching = false; search = ""; true }
+                event.key == Key.Escape && dragState.draggingPaths.isNotEmpty() -> { dragState.cancel(); true }
+                event.key == Key.Escape && controller.selectedFile != null -> { controller.clearSelection(); true }
+                !searching && event.key in listOf(Key.DirectionLeft, Key.DirectionRight,
+                    Key.DirectionUp, Key.DirectionDown) && !event.isAltPressed -> {
+                    val columnDelta = if (viewStyle == FinderViewStyle.ICONS) 4 else 1
+                    val step = when (event.key) {
+                        Key.DirectionLeft -> -1
+                        Key.DirectionRight -> 1
+                        Key.DirectionUp -> -columnDelta
+                        else -> columnDelta
+                    }
+                    controller.moveSelectionBy(step, event.isShiftPressed)
+                    true
+                }
                 event.key == Key.Spacebar && !searching && quickLook == null && controller.selectedFile != null -> {
                     quickLook = controller.selectedFile; true
                 }
@@ -731,7 +749,8 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                             .background(if (selected) Accent else Color.Transparent).padding(4.dp, 2.dp),
                             style = TextStyle(color = if (selected) Color.White else Ink, fontSize = 12.sp,
                                 fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable) {
+                        FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
+                            if (file.path in column?.selected.orEmpty()) column?.selected?.size ?: 1 else 1) {
                             onFileAction(it, file)
                         }
                     }
@@ -808,7 +827,8 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         Spacer(Modifier.width(6.dp))
                         Label(file.name, Modifier.weight(1f), if (selected && active) Color.White else Ink)
                         if (file.isDirectory) FinderGlyph("forward", if (selected && active) Color.White else Muted, Modifier.size(10.dp))
-                        FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable) {
+                        FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
+                            if (file.path in column.selected) column.selected.size else 1) {
                             onFileAction(it, file)
                         }
                     }
