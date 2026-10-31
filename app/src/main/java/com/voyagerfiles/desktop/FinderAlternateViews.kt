@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import com.voyagerfiles.data.model.FileItem
+import com.voyagerfiles.data.model.SortBy
 import com.voyagerfiles.ui.components.FileThumbnailOrIcon
 import java.text.DateFormat
 
@@ -41,6 +42,7 @@ internal fun FinderListView(
     columns: List<FinderColumn>,
     query: String,
     descending: Boolean,
+    sortBy: SortBy,
     modifier: Modifier,
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
@@ -48,9 +50,9 @@ internal fun FinderListView(
     dragState: FinderDragDropState,
 ) {
     val last = columns.lastOrNull()
-    val files = remember(last?.files, query, descending) {
-        last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) }
-            .let { if (descending) it.reversed() else it }
+    val files = remember(last?.files, query, descending, sortBy) {
+        finderOrderFiles(last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) },
+            sortBy, descending)
     }
     val marquee = remember(last?.path) { FinderMarqueeState() }
     val listState = rememberLazyListState()
@@ -124,6 +126,7 @@ internal fun FinderGalleryView(
     columns: List<FinderColumn>,
     query: String,
     descending: Boolean,
+    sortBy: SortBy,
     modifier: Modifier,
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
@@ -131,9 +134,9 @@ internal fun FinderGalleryView(
     dragState: FinderDragDropState,
 ) {
     val last = columns.lastOrNull()
-    val files = remember(last?.files, query, descending) {
-        last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) }
-            .let { if (descending) it.reversed() else it }
+    val files = remember(last?.files, query, descending, sortBy) {
+        finderOrderFiles(last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) },
+            sortBy, descending)
     }
     val selected = files.firstOrNull { it.path in last?.selected.orEmpty() }
     Column(modifier.background(Color.White).testTag("finder-gallery")) {
