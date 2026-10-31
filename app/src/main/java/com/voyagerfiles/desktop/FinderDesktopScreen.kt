@@ -797,7 +797,8 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
     val marquee = remember(column?.path) { FinderMarqueeState() }
     val gridState = rememberLazyGridState()
     LaunchedEffect(gridState) {
-        snapshotFlow { gridState.layoutInfo.maxSpan }.collect { controller.iconColumns = it.coerceAtLeast(1) }
+        snapshotFlow { gridState.layoutInfo.visibleItemsInfo.maxOfOrNull { item -> item.column }?.plus(1) ?: 1 }
+            .collect { controller.iconColumns = it.coerceAtLeast(1) }
     }
     var gridBounds by remember { mutableStateOf(Rect.Zero) }
     FinderEdgeAutoScroll(marquee, dragState, gridBounds) { gridState.scrollBy(it) }
