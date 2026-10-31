@@ -994,8 +994,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
         val session = _activeSession.value ?: return
         if (session.source != FileSource.LOCAL || paths.isEmpty()) return
         val normalized = BrowserNavigationBounds.normalizePath(destinationDirectory)
-        if (!BrowserNavigationBounds.isPathAtOrInsideRoot(normalized, session.rootPath) ||
-            paths.any { !BrowserNavigationBounds.isPathAtOrInsideRoot(it, session.rootPath) }) {
+        val canonicalRoot = runCatching { java.io.File(session.rootPath).canonicalFile.toPath() }.getOrNull()
+        fun isSafeLocalPath(path: String): Boolean = canonicalRoot != null &&
+            BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
+            runCatching { java.io.File(path).canonicalFile.toPath().startsWith(canonicalRoot) }.getOrDefault(false)
+        if (!isSafeLocalPath(normalized) || paths.any { !isSafeLocalPath(it) }) {
             showSnackbar(UiText.Dynamic("Origen o destino fuera de la sesión")); return
         }
         val provider = sessionProviders[session.id] ?: return
@@ -1035,40 +1038,60 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
-    /** Duplicates selected items without overwriting the originals. */
+    /** Duplicate through Voyager's transactional coordinator, retaining every original. */
     fun duplicateDesktopPaths(paths: List<String>) {
         val session = _activeSession.value ?: return
         if (session.source != FileSource.LOCAL || paths.isEmpty()) return
         val provider = sessionProviders[session.id] ?: return
         val parent = _browseState.value.currentPath
-        if (!BrowserNavigationBounds.isPathAtOrInsideRoot(parent, session.rootPath) ||
-            paths.any { !BrowserNavigationBounds.isPathAtOrInsideRoot(it, session.rootPath) ||
-                provider.getParentPath(it) != parent }) {
+        val rootCanonical = runCatching { java.io.File(session.rootPath).canonicalFile.toPath() }.getOrNull()
+        fun inside(path: String) = rootCanonical != null &&
+            BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
+            runCatching { java.io.File(path).canonicalFile.toPath().startsWith(rootCanonical) }.getOrDefault(false)
+        if (!inside(parent) || paths.any { !inside(it) || provider.getParentPath(it) != parent }) {
             showSnackbar(UiText.Dynamic("Selección fuera del directorio activo")); return
         }
         val chosen = paths.distinct()
         launchOperation(R.string.progress_copying, R.string.operation_paste) {
-            val usedNames = provider.listFiles(parent).getOrThrow().mapTo(mutableSetOf()) { it.name.lowercase() }
+            val names = provider.listFiles(parent).getOrThrow().mapTo(mutableSetOf()) { it.name.lowercase() }
+            val failures = mutableListOf<String>()
             var completed = 0
-            for (source in chosen) {
-                val item = provider.getFileInfo(source).getOrThrow()
-                val stem = if (item.isDirectory || !item.name.contains('.')) item.name else item.name.substringBeforeLast('.')
-                val extension = if (item.isDirectory || !item.name.contains('.')) "" else ".${item.name.substringAfterLast('.')}"
-                val destinationName = generateSequence(1) { it + 1 }
-                    .map { suffix -> "$stem copia" + (if (suffix == 1) "" else " $suffix") + extension }
-                    .first { name -> name.lowercase() !in usedNames }
-                // Never allow an existing destination to be replaced when duplicating.
-                val outcome = FileOperationCoordinator.copyPath(provider, provider, source, parent,
-                    destinationName = destinationName)
-                outcome.getOrThrow()
-                usedNames.add(destinationName.lowercase())
-                completed++
-                updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_copying),
-                    completedItems = completed, totalItems = chosen.size, currentItemName = item.name))
+            try {
+                chosen.forEach { source ->
+                    try {
+                        val file = provider.getFileInfo(source).getOrThrow()
+                        val base = if (file.isDirectory || !file.name.contains('.')) file.name
+                            else file.name.substringBeforeLast('.')
+                        val ext = if (file.isDirectory || !file.name.contains('.')) ""
+                            else ".${file.name.substringAfterLast('.')}"
+                        val name = generateSequence(1) { it + 1 }
+                            .map { index -> "$base copia" + (if (index == 1) "" else " $index") + ext }
+                            .first { it.lowercase() !in names }
+                        FileOperationCoordinator.copyPath(provider, provider, source, parent,
+                            onProgress = { progress ->
+                                updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_copying),
+                                    completedItems = completed, totalItems = chosen.size, currentItemName = file.name,
+                                    copiedBytes = progress.bytesTransferred, totalBytes = progress.totalBytes,
+                                    elapsedNanos = progress.elapsedNanos))
+                            }, destinationName = name).getOrThrow()
+                        names += name.lowercase()
+                        completed++
+                        updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_copying),
+                            completedItems = completed, totalItems = chosen.size, currentItemName = file.name))
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        operationController.recordFailure(error)
+                        failures += "${source.substringAfterLast('/')}: ${error.localizedMessage ?: "error"}"
+                    }
+                }
+            } finally {
+                refreshFiles()
+                desktopColumns?.refresh()
             }
-            refreshFiles()
-            desktopColumns?.refresh()
-            showSnackbar(UiText.Dynamic("$completed elemento(s) duplicado(s)"))
+            if (failures.isNotEmpty())
+                showSnackbar(UiText.Dynamic("${failures.size} duplicaciones fallaron: ${failures.joinToString("; ").take(380)}"))
+            else showSnackbar(UiText.Dynamic("$completed elementos duplicados"))
         }
     }
 
