@@ -346,7 +346,11 @@ fun FinderDesktopScreen(
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
     val dragState = remember { FinderDragDropState() }
-    LaunchedEffect(controller.currentPath) { dragState.clearTargets() }
+    LaunchedEffect(controller.currentPath) {
+        dragState.clearTargets()
+        dragState.cancel()
+        dragState.dismiss()
+    }
     var sidebarWidth by rememberSaveable { mutableFloatStateOf(208f) }
     var viewStyle by rememberSaveable { mutableStateOf(FinderViewStyle.ICONS) }
     var showPreview by rememberSaveable { mutableStateOf(false) }
