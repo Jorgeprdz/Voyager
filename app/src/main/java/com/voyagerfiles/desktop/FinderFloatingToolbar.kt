@@ -316,18 +316,19 @@ internal fun FinderToolbarBreadcrumb(
     val p = LocalFinderMaterials.current.palette
     val clipboard = LocalClipboardManager.current
     var open by remember { mutableStateOf(false) }
-    val columns = controller.columns.value
+    val columns by controller.columns.collectAsState()
+    val breadcrumbAccessibility = stringResource(R.string.finderdex_breadcrumb_description, controller.currentPath)
     Box(modifier, contentAlignment = Alignment.CenterStart) {
         Text(title, Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable { open = true }
             .padding(horizontal = 7.dp, vertical = 6.dp)
-            .semantics { contentDescription = "Ruta actual: " + controller.currentPath },
+            .semantics { contentDescription = breadcrumbAccessibility },
             color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
             overflow = TextOverflow.Ellipsis, maxLines = 1)
         FinderGlassMenu(expanded = open, onDismissRequest = { open = false }) {
             columns.forEachIndexed { index, column ->
-                val name = if (index == 0) "Almacenamiento" else
+                val name = if (index == 0) stringResource(R.string.home_storage) else
                     column.path.substringAfterLast('/').ifEmpty { "/" }
                 DropdownMenuItem(text = { Text(name) },
                     onClick = { open = false; controller.navigateColumn(index) })

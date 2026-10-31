@@ -591,6 +591,7 @@
     <string name="finderdex_toolbar_preview_resize">Preview (enlarge window)</string>
     <string name="finderdex_toolbar_preview_hide">Hide preview</string>
     <string name="finderdex_toolbar_preview_show">Show preview</string>
+    <string name="finderdex_breadcrumb_description">Current location: %1$s</string>
     <string name="finderdex_path_copy">Copy full path</string>
     <string name="finderdex_path_parent">Go to parent folder</string>
     <string name="finderdex_zoom_very_small">Very small</string>
