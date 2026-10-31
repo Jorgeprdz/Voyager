@@ -449,7 +449,7 @@
     <string name="sftp_host_keys_forget_title">Forget saved host keys?</string>
     <string name="sftp_host_keys_forget_warning">This removes all saved host keys for %1$s. The next connection will save a new host key. Verify the replacement key with the server administrator through a trusted channel before reconnecting. A changed key can indicate someone impersonating the server. Existing sessions stay connected.</string>
     <string name="sftp_host_keys_forget">Forget</string>
-    <string name="transfer_channel">transferencias de archivos</string>
+    <string name="transfer_channel">Transferencias</string>
     <string name="transfer_cancelling">Cancelar transferencia</string>
     <string name="transfer_cancelled">Transferencia cancelada</string>
     <string name="action_remove_bookmark">Eliminar de marcadores</string>
@@ -462,13 +462,13 @@
     <string name="shortcut_unavailable">No se pudo agregar un acceso directo. Compruebe que la carpeta sea accesible y que su lanzador admita accesos directos anclados.</string>
     <string name="shortcut_permission_required">Conceda acceso completo al almacenamiento para abrir este acceso directo a la carpeta.</string>
     <string name="shortcut_folder_unavailable">Esta carpeta ya no está disponible. Compruebe que el almacenamiento esté conectado y que la carpeta aún exista.</string>
-    <string name="transfer_conflict_title">Replace %1$s?</string>
-    <string name="transfer_conflict_source">Source: %1$s</string>
-    <string name="transfer_conflict_destination">Destination: %1$s</string>
-    <string name="transfer_conflict_apply_all">Apply to all conflicts in this transfer</string>
-    <string name="transfer_conflict_replace">Replace</string>
-    <string name="transfer_conflict_skip">Skip</string>
-    <string name="transfer_conflict_unknown">Unknown</string>
+    <string name="transfer_conflict_title">¿Reemplazar %1$s?</string>
+    <string name="transfer_conflict_source">Origen: %1$s</string>
+    <string name="transfer_conflict_destination">Destino: %1$s</string>
+    <string name="transfer_conflict_apply_all">Aplicar a todos los conflictos de esta transferencia</string>
+    <string name="transfer_conflict_replace">Reemplazar</string>
+    <string name="transfer_conflict_skip">Omitir</string>
+    <string name="transfer_conflict_unknown">Desconocido</string>
     <string name="transfer_items_skipped">%1$d omitido</string>
     <string name="audio_set_ringtone">Establecer como tono de llamada</string>
     <string name="audio_set_notification">Establecer como tono de notificación</string>
@@ -624,8 +624,8 @@
     <string name="r31_your_files">Todo en su lugar</string>
     <string name="r31_tools">Herramientas</string>
     <string name="r31_clouds">Almacenamiento en nube</string>
-    <string name="r31_cloud_open">Abrir cuenta y autorización</string>
-    <string name="r31_cloud_config">Falta el registro OAuth. Esta versión no tiene client ID configurado.</string>
+    <string name="r31_cloud_open">Cuenta y acceso</string>
+    <string name="r31_cloud_config">Esta versión no tiene un ID de cliente OAuth configurado.</string>
     <string name="r31_cloud_authorize">Autoriza tu cuenta en el navegador del sistema para acceder a archivos.</string>
     <string name="r31_cloud_error">No se pudo verificar la operación. Revisa la conexión, la autorización y el destino antes de reintentar.</string>
     <string name="r31_connect">Conectar cuenta</string>
@@ -645,4 +645,5 @@
     <string name="r31_preserve_extension">Preservar extensión</string>
     <string name="r31_last_week">Últimos 7 días</string>
     <string name="r31_remove_history">Quitar</string>
+    <string name="r321_other">Otros</string>
 </resources>

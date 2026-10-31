@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -75,9 +76,9 @@ fun FileListItem(
         label = "selection_bg",
     )
     val horizontalPadding = if (compact) 8.dp else 16.dp
-    val verticalPadding = if (compact) 4.dp else 8.dp
-    val iconSize = if (compact) 32.dp else 40.dp
-    val iconSpacing = if (compact) 12.dp else 16.dp
+    val verticalPadding = if (compact) 4.dp else 6.dp
+    val iconSize = if (compact) 32.dp else 36.dp
+    val iconSpacing = if (compact) 12.dp else 14.dp
     val nameStyle = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
     // Give trailing content the row's full height through the screen edge.
     val trailingWidth = if (compact) 48.dp else 56.dp
@@ -175,6 +176,12 @@ fun FileListItem(
                 }
             }
 
+            HorizontalDivider(
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .padding(start = horizontalPadding + iconSize + iconSpacing),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+            )
             if (trailingContent != null) {
                 Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
                     Box(

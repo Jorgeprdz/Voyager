@@ -193,3 +193,11 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 ### 2026-10-31 UTC — compatibilidad de firma R3.1 → R3.2
 - Los logs de [R3.1 run 41192949098](https://github.com/Jorgeprdz/Voyager/actions/runs/41192949098) y [R3.2 run 41213278060](https://github.com/Jorgeprdz/Voyager/actions/runs/41213278060) informan el mismo certificado de firma V2 SHA-256: `767da04162cffcc91d3db64f9d1a58128cf35a8a11a72cf30dd7058795781023`.
 - Mismo package `com.finderdex.preview`, mismo `versionCode` 25 de build.gradle.kts: la firma permite actualización entre ambas variantes, pero instalación encima de igual `versionCode` puede requerir actualización/reinstalación según instalador y política del dispositivo; no probado físicamente.
+
+### 2026-10-31 UTC — Inicio FinderDex R3.2.1 Premium Micro-Polish
+- Rama aislada `feat/finderdex-r3.2.1-premium-polish`, creada desde HEAD real R3.2 `d589e567fd6ba429e71eaf01819a6eeb7d1f3758` (documentación posterior al código CI R3.2).
+- Home y sesiones: etiquetas contextuales sin mutar sesiones, sesión activa destacada, filas más compactas.
+- `CloudBrowserDialog`: diálogo FinderDex compacto y autorización solo si configured; sin tocar proveedores ni OAuth.
+- Analizador móvil ahora usa `FinderMobileAnalyticsPanel` con scanner/summary existentes; el componente Desktop original no cambia.
+- Código listo para gate automatizado; no registrar tests ni APK hasta recibir resultados reales.
+- Estado: `R3.2.1_CODE_PENDING_CI_AND_PHYSICAL`; ver reporte y prompt R3.2.1.

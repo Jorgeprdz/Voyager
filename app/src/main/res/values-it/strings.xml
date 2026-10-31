@@ -645,4 +645,5 @@
     <string name="r31_preserve_extension">Preserve extension</string>
     <string name="r31_last_week">Last 7 days</string>
     <string name="r31_remove_history">Remove</string>
+    <string name="r321_other">Altro</string>
 </resources>

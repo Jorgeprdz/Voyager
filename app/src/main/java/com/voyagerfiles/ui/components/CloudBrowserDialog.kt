@@ -6,6 +6,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Cloud
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
+import com.voyagerfiles.ui.theme.FinderMobileTokens
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -105,29 +114,57 @@ internal fun CloudBrowserDialog(cloud: CloudService, onDismiss: () -> Unit) {
     }
     LaunchedEffect(auth) { if (authorized) launch { load() } }
     DisposableEffect(auth) { onDispose { auth.dispose() } }
-    AlertDialog(onDismissRequest = { job?.cancel(); onDismiss() },
-        title = { Text(stringResource(if (cloud == CloudService.GOOGLE_DRIVE) R.string.finderdex_cloud_drive_title else R.string.finderdex_onedrive_title)) },
-        text = {
-            Column(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
+    Dialog(onDismissRequest = { job?.cancel(); onDismiss() }) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().widthIn(max = 540.dp),
+            shape = FinderMobileTokens.menuShape,
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            shadowElevation = 8.dp,
+        ) {
+            Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Cloud, null, tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(if (cloud == CloudService.GOOGLE_DRIVE)
+                            R.string.finderdex_cloud_drive_title else R.string.finderdex_onedrive_title),
+                            style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Column(Modifier.fillMaxWidth().heightIn(max = if (authorized) 465.dp else 180.dp)) {
                 if (!authorized) {
-                    Text(stringResource(if (auth.configured) R.string.r31_cloud_authorize else R.string.r31_cloud_config))
-                    TextButton(enabled = auth.configured && !busy, onClick = {
-                        runCatching { oauthLauncher.launch(auth.authorizationIntent()) }
-                            .onFailure { error = context.getString(R.string.r31_cloud_error) }
-                    }) { Text(stringResource(R.string.r31_connect)) }
+                    Text(
+                        stringResource(if (auth.configured) R.string.r31_cloud_authorize else R.string.r31_cloud_config),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (auth.configured) {
+                        Button(enabled = !busy, onClick = {
+                            runCatching { oauthLauncher.launch(auth.authorizationIntent()) }
+                                .onFailure { error = context.getString(R.string.r31_cloud_error) }
+                        }) { Text(stringResource(R.string.r31_connect)) }
+                    }
                 } else {
                     Row {
                         TextButton(enabled = !busy && trail.size > 1, onClick = {
                             trail = trail.dropLast(1); query = ""; launch { load() }
-                        }) { Text("↑") }
+                        }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back)) }
                         Text(trail.last().second, Modifier.weight(1f).padding(12.dp), maxLines = 1)
                         TextButton(enabled = !busy, onClick = {
                             job?.cancel(); auth.disconnect(); authorized = false; entries = emptyList()
                             scope.launch { provider.disconnect() }; onDismiss()
                         }) { Text(stringResource(R.string.r31_disconnect)) }
                     }
-                    OutlinedTextField(query, { query = it }, modifier = Modifier.fillMaxWidth(), singleLine = true,
-                        label = { Text(stringResource(R.string.action_search)) })
+                    FinderMobileSearchField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        placeholder = stringResource(R.string.action_search),
+                        clearDescription = stringResource(R.string.content_desc_clear_search),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     Row {
                         TextButton(enabled = !busy, onClick = { launch { load() } }) { Text(stringResource(R.string.action_search)) }
                         TextButton(enabled = !busy && query.isBlank(), onClick = { newFolder = true; name = "" }) { Text(stringResource(R.string.create_new_folder)) }
@@ -144,16 +181,22 @@ internal fun CloudBrowserDialog(cloud: CloudService, onDismiss: () -> Unit) {
                             TextButton(onClick = { destination = null }) { Text(stringResource(R.string.action_cancel)) }
                         }
                     }
-                    LazyColumn(Modifier.weight(1f, fill = false)) {
+                    LazyColumn(Modifier.weight(1f, fill = false).heightIn(max = 290.dp)) {
                         items(entries, key = { it.id }) { item ->
                             var menu by remember { mutableStateOf(false) }
                             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(enabled = !busy) {
                                 if (item.isFolder) { trail = trail + (item.id to item.name); query = ""; launch { load() } }
                                 else { download = item; saveLauncher.launch(item.name + if (item.isNativeDocument) { if (CloudDocumentPolicy.exportMime(item.mimeType) == "text/csv") ".csv" else ".pdf" } else "") }
                             }) {
-                                Text((if (item.isFolder) "▸ " else "") + item.name, Modifier.weight(1f).padding(vertical = 14.dp), maxLines = 2)
+                                Row(Modifier.weight(1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    if (item.isFolder) FinderMobileFolder(Modifier.size(30.dp))
+                                    else Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null,
+                                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(item.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
                                 Box {
-                                    TextButton(enabled = !busy, onClick = { menu = true }) { Text("⋮") }
+                                    TextButton(enabled = !busy, onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.content_desc_more)) }
                                     DropdownMenu(menu, { menu = false }) {
                                         DropdownMenuItem(text = { Text(stringResource(R.string.action_rename)) }, onClick = { menu = false; rename = item; name = item.name })
                                         DropdownMenuItem(text = { Text(stringResource(R.string.action_move)) }, onClick = { menu = false; destination = item to true; query = "" })
@@ -176,11 +219,19 @@ internal fun CloudBrowserDialog(cloud: CloudService, onDismiss: () -> Unit) {
                     Text(it, color = MaterialTheme.colorScheme.error)
                     if (authorized) TextButton(enabled = !busy, onClick = { launch { load() } }) { Text(stringResource(R.string.r31_retry)) }
                 }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { job?.cancel(); onDismiss() }) {
+                        Text(stringResource(R.string.finderdex_close))
+                    }
+                }
             }
-        }, confirmButton = { TextButton(onClick = { job?.cancel(); onDismiss() }) { Text(stringResource(R.string.finderdex_close)) } })
+        }
+    }
     if (rename != null || newFolder) AlertDialog(onDismissRequest = { rename = null; newFolder = false },
         title = { Text(stringResource(if (newFolder) R.string.create_new_folder else R.string.action_rename)) },
-        text = { OutlinedTextField(name, { name = it }, singleLine = true) },
+        text = { OutlinedTextField(name, { name = it }, singleLine = true,
+            shape = FinderMobileTokens.controlShape, colors = finderMobileInputColors()) },
         confirmButton = { TextButton(enabled = name.isNotBlank() && '/' !in name && '\\' !in name, onClick = {
             val target = rename; val folder = newFolder; val value = name
             rename = null; newFolder = false
