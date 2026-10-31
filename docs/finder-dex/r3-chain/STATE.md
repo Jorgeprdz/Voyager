@@ -6,8 +6,8 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `04-STORAGE-ANALYTICS.md`
 - LAST_COMPLETED_STAGE: `03-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_03_PARTIAL_PASS_AUTOMATED_STAGE_04_READY`
-- NEXT_ACTION: `Ejecutar 04-STORAGE-ANALYTICS.md: reutilizar StorageCategoryIndex y DuplicateScanner, integración nativa y validación CI`
+- STATUS: `STAGE_04_IMPLEMENTED_CI_RUNNING`
+- NEXT_ACTION: `Revisar run 41185041348 para commit b2c439f de etapa 04; corregir build/tests/lint hasta PASS, registrar cobertura y avanzar a 05 si no quedan fallos P0`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -15,7 +15,7 @@
 | 01 Google Drive | PARTIAL/PASS_AUTOMATED (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) SUCCESS: compile,  unit, lint, debug APK, signing checks; SHA256 `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
 | 02 Drag & drop externo | PARTIAL/PASS_AUTOMATED (global Alt+drag, content URI receive, hovered folder/sidebar destinations) | `d44d96a0` | [Run 41176885241](https://github.com/Jorgeprdz/Voyager/actions/runs/41176885241) SUCCESS: build, unit, lint, APK, signed package; SHA256 `35b4a53819c07365255ff87c4320b3c52ef9cdb59ed72f915f4937a20199ef37` | PENDING_PHYSICAL_DEX | Folder-as-source unsupported; external app acceptance and URI grants unverified physically |
 | 03 OneDrive | PARTIAL/PASS_AUTOMATED (Graph adapter + disconnected sidebar, no OAuth) | `2df8dfe` | [Run 41177638059](https://github.com/Jorgeprdz/Voyager/actions/runs/41177638059) SUCCESS: build, unit, lint, signed APK; SHA256 `baca78228e30f7849b14f92f6c9f6165d3f54f52df6d3ff95cc681de925b903d` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: Microsoft app registration/MSAL OAuth/consent; resumable uploads and async copy not implemented |
-| 04 Analizador | PLANNED | — | — | PENDING | — |
+| 04 Analizador | PARTIAL / CI_PENDING (panel nativo, escaneo acotado de categorías y revisión de duplicados) | `b2c439f` | [Run 41185041348](https://github.com/Jorgeprdz/Voyager/actions/runs/41185041348) IN_PROGRESS | PENDING_PHYSICAL_DEX | No se estima espacio de carpetas inaccesibles ni se borran datos; revisión pendiente |
 | 05 Recientes/red/Quick Share | PLANNED | — | — | PENDING | — |
 | 06 Pestañas y doble panel | PLANNED | — | — | PENDING | — |
 | 07 Renombrado/transferencias | PLANNED | — | — | PENDING | — |
@@ -86,3 +86,8 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Artefacto intermedio `FinderDex-R3-APK` ID `13033058443`, SHA256 del APK según log `baca78228e30f7849b14f92f6c9f6165d3f54f52df6d3ff95cc681de925b903d`.
 - OneDrive continúa **PARTIAL/BLOCKED_EXTERNAL**: no MSAL OAuth configurado, no sesión real, sin upload resumible, copy asíncrono ni E2E; no declarar conexión funcional.
 - `CURRENT_STAGE` avanza a 04, que es independiente. R2.2 estable intacta.
+
+### 2026-10-31 UTC — etapa 04 código en validación
+- Commit `b2c439f`: extensión `StorageCategoryIndex.scanAll` que reutiliza el recorrido acotado, resumen de uso y archivos/carpetas mayores, y `FinderAnalyticsDialog` dentro del shell R2.2, con resumen de duplicados del escáner existente.
+- Navegación por sidebar y apertura de ubicaciones, selección de archivos sin borrado automático; resalta cobertura incompleta. CI [41185041348](https://github.com/Jorgeprdz/Voyager/actions/runs/41185041348) en ejecución; todavía NO es PASS.
+- No se estiman cachés inaccesibles, análisis no sincronizado con terceros, ni resultados físicos DeX confirmados. Pendientes métricas detalladas por volumen y pruebas de equipos reales.
