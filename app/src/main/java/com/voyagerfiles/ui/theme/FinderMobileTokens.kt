@@ -79,7 +79,7 @@ object FinderMobileTokens {
     }
 
     val shapes = Shapes(
-        extraSmall = RoundedCornerShape(8.dp),
+        extraSmall = RoundedCornerShape(14.dp),
         small = RoundedCornerShape(12.dp),
         medium = controlShape,
         large = menuShape,
