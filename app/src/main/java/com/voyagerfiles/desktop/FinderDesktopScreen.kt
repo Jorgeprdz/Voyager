@@ -389,7 +389,8 @@ fun FinderDesktopScreen(
     var showPreview by rememberSaveable { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
-    var descending by remember { mutableStateOf(false) }
+    var descending by rememberSaveable { mutableStateOf(false) }
+    var sortBy by rememberSaveable { mutableStateOf(SortBy.NAME) }
     var quickLook by remember { mutableStateOf<FileItem?>(null) }
     var infoFile by remember { mutableStateOf<FileItem?>(null) }
     var renameFile by remember { mutableStateOf<FileItem?>(null) }
@@ -482,7 +483,8 @@ fun FinderDesktopScreen(
             }
         }) {
         FinderToolbar(controller, chrome, effectiveSidebarWidth, mode == DesktopMode.ADAPTED, viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
-            showPreview, { showPreview = !showPreview }, descending, { descending = !descending }, onMobile,
+            showPreview, { showPreview = !showPreview }, descending, { descending = !descending },
+            sortBy, { sortBy = it }, onMobile,
             canCreateFolder = operationsAvailable,
             onNewFolder = { newFolderName = ""; newFolderDialog = true },
             onTrash = { onRefreshTrash(); showTrash = true })
@@ -496,10 +498,10 @@ fun FinderDesktopScreen(
                 detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
             }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
             when (viewStyle) {
-                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
-                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
-                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, ::execute, dragState)
-                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
             }
             if (showPreview && mode == DesktopMode.FULL) FinderPreview(controller.selectedFile, onOpen)
         }
@@ -604,7 +606,8 @@ internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }
 private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWindowChrome, sidebarWidth: Float, compact: Boolean,
     viewStyle: FinderViewStyle, setViewStyle: (FinderViewStyle) -> Unit, searching: Boolean, search: String,
     toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
-    descending: Boolean, toggleSort: () -> Unit, onMobile: () -> Unit,
+    descending: Boolean, toggleSort: () -> Unit,
+    sortBy: SortBy, setSortBy: (SortBy) -> Unit, onMobile: () -> Unit,
     canCreateFolder: Boolean, onNewFolder: () -> Unit, onTrash: () -> Unit) {
     val columnsDescription = stringResource(R.string.finderdex_view_columns)
     val searchDescription = stringResource(R.string.finderdex_search_folder)
@@ -640,6 +643,16 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
         Spacer(Modifier.width(12.dp))
         if (!compact) Tool("Nueva carpeta", "folder-outline", enabled = canCreateFolder, action = onNewFolder)
         if (!compact) Tool("Papelera", "trash", enabled = canCreateFolder, action = onTrash)
+        var sortMenu by remember { mutableStateOf(false) }
+        if (!compact) Box {
+            Tool("Ordenar: ${sortBy.name.lowercase()}", "sort") { sortMenu = true }
+            DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                listOf(SortBy.NAME to "Nombre", SortBy.TYPE to "Tipo",
+                    SortBy.DATE to "Fecha", SortBy.SIZE to "Tamaño").forEach { (mode, label) ->
+                    DropdownMenuItem(text = { Text(label) }, onClick = { setSortBy(mode); sortMenu = false })
+                }
+            }
+        }
         if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
         if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
         Tool(searchDescription, "search", selected = searching, action = toggleSearch)
@@ -728,12 +741,12 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FinderIconView(controller: FinderColumnController, columns: List<FinderColumn>, query: String,
-    descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
+    descending: Boolean, sortBy: SortBy, modifier: Modifier, onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val column = columns.lastOrNull()
-    val files = remember(column?.files, query, descending) {
-        column?.files.orEmpty().filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
+    val files = remember(column?.files, query, descending, sortBy) {
+        finderOrderFiles(column?.files.orEmpty().filter { it.name.contains(query, true) }, sortBy, descending)
     }
     val marquee = remember(column?.path) { FinderMarqueeState() }
     val gridState = rememberLazyGridState()
@@ -798,7 +811,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
 }
 
 @Composable
-private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
+private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, sortBy: SortBy, modifier: Modifier, onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val horizontal = rememberScrollState()
@@ -806,7 +819,7 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
     Row(modifier.fillMaxHeight().testTag("finder-columns").horizontalScroll(horizontal)) {
         columns.forEachIndexed { index, column ->
             key(column.id) {
-                ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, onOpen,
+                ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, sortBy, onOpen,
                     operationsAvailable && index == columns.lastIndex, onFileAction, dragState)
             }
         }
@@ -816,7 +829,7 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, onOpen: (FileItem) -> Unit,
+private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, sortBy: SortBy, onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val scroll = rememberLazyListState(column.scrollIndex, column.scrollOffset)
@@ -828,8 +841,8 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
     }
     Row(Modifier.width(228.dp).fillMaxHeight()) {
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            val filtered = remember(column.files, query, descending) {
-                column.files.filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
+            val filtered = remember(column.files, query, descending, sortBy) {
+                finderOrderFiles(column.files.filter { it.name.contains(query, true) }, sortBy, descending)
             }
             LazyColumn(state = scroll, modifier = Modifier.fillMaxSize()
                 .onGloballyPositioned { columnBounds = it.boundsInRoot() }.padding(horizontal = 5.dp), contentPadding = PaddingValues(vertical = 7.dp)) {
