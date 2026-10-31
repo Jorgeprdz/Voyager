@@ -575,6 +575,7 @@ internal fun FinderDesktopScreen(
     var pendingDeletePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var newFolderDialog by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
+    var showAnalytics by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
         val owningColumn = columns.lastOrNull { col -> col.files.any { it.path == file.path } }
@@ -690,7 +691,7 @@ internal fun FinderDesktopScreen(
             previewAvailable = shell.showPreview && mode != DesktopMode.COMPACT)
         Row(Modifier.weight(1f).fillMaxWidth()) {
             if (effectiveSidebarWidth >= 40f) {
-                FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
+                FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot, onAnalytics = { showAnalytics = true },
                     favoriteImages, onRemoveFavorite, onReorderFavorite, onPickFavoriteImage, onRemoveFavoriteImage,
                     dragState, rail = shell.sidebarRail)
             }
@@ -815,6 +816,9 @@ internal fun FinderDesktopScreen(
             }) { Text(stringResource(if (drop.action == FinderDropAction.COPY) R.string.action_copy else R.string.action_move)) } },
             dismissButton = { TextButton(onClick = { dragState.dismiss() }) { Text(stringResource(R.string.action_cancel)) } })
     }
+    if (showAnalytics) FinderAnalyticsDialog(controller.currentPath,
+        onDismiss = { showAnalytics = false },
+        onOpenFolder = { path -> showAnalytics = false; onRoot(path) })
     if (showTrash) FinderTrashDialog(trashEntries, trashLoading, trashError,
         onRestore = onRestoreTrash, onRefresh = onRefreshTrash, onDismiss = { showTrash = false })
     if (newFolderDialog) AlertDialog(
@@ -843,6 +847,7 @@ internal fun finderSidebarGlyph(folder: String): String = when (folder) {
 
 @Composable
 private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit,
+    onAnalytics: () -> Unit,
     favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
     onReorderFavorite: (String, Int) -> Unit,
     onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit,
@@ -883,6 +888,8 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
         Spacer(Modifier.height(20.dp))
         if (!rail) SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
         if (locationsExpanded || rail) {
+            SidebarItem(stringResource(R.string.finderdex_analytics_title), "analytics:storage", "drive",
+                false, { onAnalytics() }, dragState = null, rail = rail)
             volumes.forEach { (name, path) ->
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())
                     SidebarItem(name, path, "drive", path != root && currentPath == path, onRoot, dragState = dragState, rail = rail)

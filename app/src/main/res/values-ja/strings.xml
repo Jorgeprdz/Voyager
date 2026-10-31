@@ -590,4 +590,12 @@
     <string name="finderdex_confirm_drop">%2$d 個の項目を %3$s に%1$sしますか？</string>
     <string name="finderdex_onedrive_disconnected">OneDrive · 未接続</string>
     <string name="finderdex_onedrive_unavailable">未接続です。OneDrive のファイルにアクセスするには、Microsoft へのアプリ登録、OAuth の設定、ユーザーの許可が必要です。</string>
+    <string name="finderdex_analytics_title">ストレージ解析</string>
+    <string name="finderdex_analytics_skipped">スキップまたはアクセス不可の項目: %1$d</string>
+    <string name="finderdex_analytics_summary">確認済み: %1$d ファイル · %2$s</string>
+    <string name="finderdex_analytics_categories">カテゴリ</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">大きなファイル</string>
+    <string name="finderdex_analytics_folders">容量の大きい親フォルダ</string>
+    <string name="finderdex_analytics_nondeleting">推定値はアクセス可能な確認済みファイルだけが対象です。自動削除はしません。</string>
 </resources>

@@ -620,4 +620,12 @@
     <string name="finderdex_onedrive_title" translatable="false">OneDrive</string>
     <string name="finderdex_onedrive_disconnected">OneDrive · disconnected</string>
     <string name="finderdex_onedrive_unavailable">Not connected. OneDrive requires Microsoft app registration, OAuth setup and your authorization before accessing files.</string>
+    <string name="finderdex_analytics_title">Storage analysis</string>
+    <string name="finderdex_analytics_skipped">Skipped or inaccessible entries: %1$d</string>
+    <string name="finderdex_analytics_summary">Scanned: %1$d files · %2$s</string>
+    <string name="finderdex_analytics_categories">Categories</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">Largest files</string>
+    <string name="finderdex_analytics_folders">Largest parent folders</string>
+    <string name="finderdex_analytics_nondeleting">Estimates cover accessible scanned files only. Nothing is deleted automatically.</string>
 </resources>

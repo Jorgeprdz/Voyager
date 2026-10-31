@@ -587,4 +587,12 @@
     <string name="finderdex_confirm_drop">将 %2$d 个项目%1$s到 %3$s？</string>
     <string name="finderdex_onedrive_disconnected">OneDrive · 未连接</string>
     <string name="finderdex_onedrive_unavailable">尚未连接。访问 OneDrive 文件前，必须完成 Microsoft 应用注册、OAuth 配置并取得你的授权。</string>
+    <string name="finderdex_analytics_title">存储分析</string>
+    <string name="finderdex_analytics_skipped">已跳过或无法访问的项目：%1$d</string>
+    <string name="finderdex_analytics_summary">已扫描：%1$d 个文件 · %2$s</string>
+    <string name="finderdex_analytics_categories">类别</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">最大文件</string>
+    <string name="finderdex_analytics_folders">最大的上级文件夹</string>
+    <string name="finderdex_analytics_nondeleting">估算仅包含可访问且已扫描的文件。不会自动删除任何内容。</string>
 </resources>

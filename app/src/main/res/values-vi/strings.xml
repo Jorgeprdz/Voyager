@@ -590,4 +590,12 @@
     <string name="finderdex_confirm_drop">%1$s %2$d mục vào %3$s?</string>
     <string name="finderdex_onedrive_disconnected">OneDrive · chưa kết nối</string>
     <string name="finderdex_onedrive_unavailable">Chưa kết nối. OneDrive yêu cầu đăng ký ứng dụng với Microsoft, cấu hình OAuth và sự cho phép của bạn trước khi truy cập tệp.</string>
+    <string name="finderdex_analytics_title">Phân tích bộ nhớ</string>
+    <string name="finderdex_analytics_skipped">Mục bỏ qua hoặc không truy cập được: %1$d</string>
+    <string name="finderdex_analytics_summary">Đã quét: %1$d tệp · %2$s</string>
+    <string name="finderdex_analytics_categories">Danh mục</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">Tệp lớn nhất</string>
+    <string name="finderdex_analytics_folders">Thư mục cha lớn nhất</string>
+    <string name="finderdex_analytics_nondeleting">Ước tính chỉ gồm tệp đã quét có quyền truy cập. Không tự động xóa.</string>
 </resources>

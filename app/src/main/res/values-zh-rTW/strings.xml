@@ -590,4 +590,12 @@
     <string name="finderdex_confirm_drop">將 %2$d 個項目%1$s到 %3$s？</string>
     <string name="finderdex_onedrive_disconnected">OneDrive · 尚未連線</string>
     <string name="finderdex_onedrive_unavailable">尚未連線。存取 OneDrive 檔案前，必須完成 Microsoft 應用程式註冊、OAuth 設定並取得你的授權。</string>
+    <string name="finderdex_analytics_title">儲存空間分析</string>
+    <string name="finderdex_analytics_skipped">已略過或無法存取的項目：%1$d</string>
+    <string name="finderdex_analytics_summary">已掃描：%1$d 個檔案 · %2$s</string>
+    <string name="finderdex_analytics_categories">類別</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">最大檔案</string>
+    <string name="finderdex_analytics_folders">最大的上層資料夾</string>
+    <string name="finderdex_analytics_nondeleting">估算僅涵蓋可存取且已掃描的檔案。不會自動刪除任何內容。</string>
 </resources>

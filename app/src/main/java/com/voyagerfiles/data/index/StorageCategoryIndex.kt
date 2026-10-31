@@ -63,6 +63,13 @@ class StorageCategoryIndex(
         require(maxResults > 0 && maxDepth > 0)
     }
 
+    /** Index every accessible local file once, sharing the existing traversal and permission checks. */
+    fun scanAll(
+        volumes: List<StorageVolumeInfo>,
+        showHidden: Boolean,
+        hasPermission: () -> Boolean,
+    ): Flow<CategoryIndexState> = scanMatching(volumes, showHidden, hasPermission) { true }
+
     fun scan(
         category: StorageCategory,
         volumes: List<StorageVolumeInfo>,

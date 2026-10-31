@@ -602,4 +602,12 @@
     <string name="finderdex_confirm_drop">%1$s %2$d elementi in %3$s?</string>
     <string name="finderdex_onedrive_disconnected">OneDrive · non connesso</string>
     <string name="finderdex_onedrive_unavailable">Non connesso. OneDrive richiede la registrazione dell\'app presso Microsoft, la configurazione OAuth e la tua autorizzazione prima di accedere ai file.</string>
+    <string name="finderdex_analytics_title">Analisi archiviazione</string>
+    <string name="finderdex_analytics_skipped">Elementi ignorati o inaccessibili: %1$d</string>
+    <string name="finderdex_analytics_summary">Analizzati: %1$d file · %2$s</string>
+    <string name="finderdex_analytics_categories">Categorie</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">File più grandi</string>
+    <string name="finderdex_analytics_folders">Cartelle principali più grandi</string>
+    <string name="finderdex_analytics_nondeleting">Le stime coprono solo i file accessibili analizzati. Nessun file viene eliminato automaticamente.</string>
 </resources>
