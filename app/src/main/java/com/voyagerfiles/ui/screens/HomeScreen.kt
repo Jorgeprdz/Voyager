@@ -73,6 +73,7 @@ import com.voyagerfiles.data.index.StorageCategory
 import com.voyagerfiles.data.model.Bookmark
 import com.voyagerfiles.data.model.FileItem
 import com.voyagerfiles.data.model.FileSource
+import com.voyagerfiles.data.model.HomeLayout
 import com.voyagerfiles.data.model.HomeSection
 import com.voyagerfiles.util.FileUtils
 import com.voyagerfiles.util.StorageInfo
@@ -98,6 +99,14 @@ fun HomeScreen(
     val context = LocalContext.current
     val bookmarks by viewModel.bookmarks.collectAsState()
     val sessions by viewModel.sessions.collectAsState()
+    val homeLayout by viewModel.homeLayout.collectAsState()
+    // Preserve the compact R3.1 default, but honor existing reorder/hide preferences.
+    val orderedSections = if (homeLayout == null || homeLayout == HomeLayout.DEFAULT) {
+        listOf(
+            HomeSection.STORAGE, HomeSection.FOLDERS, HomeSection.BOOKMARKS,
+            HomeSection.ACTIVE_SESSIONS, HomeSection.QUICK_ACCESS, HomeSection.REMOTE_CONNECTIONS,
+        )
+    } else homeLayout!!.visibleSections
     var bookmarkToRemove by remember { mutableStateOf<Bookmark?>(null) }
     var cloud by remember { mutableStateOf<com.voyagerfiles.data.remote.cloud.CloudService?>(null) }
     var analytics by remember { mutableStateOf(false) }
@@ -139,82 +148,98 @@ fun HomeScreen(
                     }
                 }
             }
-            item("primary-storage") {
-                if (hasAllFilesAccess && primary != null) {
-                    val info = primary.path?.let { FileUtils.getStorageInfo(it) }
-                    androidx.compose.material3.Surface(onClick = { primary.path?.let(onNavigateToBrowser) },
-                        shape = FinderMobileTokens.cardShape, color = FinderMobileTokens.navy,
-                        shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-                        Column(Modifier.padding(20.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(46.dp))
-                                Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                                    Text(primary.description, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.titleMedium)
-                                    if (info != null) Text(stringResource(R.string.home_storage_usage,
-                                        FileItem.formatFileSize(info.used), FileItem.formatFileSize(info.total)),
-                                        color = FinderMobileTokens.ice, style = MaterialTheme.typography.bodySmall)
+            orderedSections.forEach { section ->
+                when (section) {
+                HomeSection.STORAGE -> {
+                    item("primary-storage") {
+                        if (hasAllFilesAccess && primary != null) {
+                            val info = primary.path?.let { FileUtils.getStorageInfo(it) }
+                            androidx.compose.material3.Surface(onClick = { primary.path?.let(onNavigateToBrowser) },
+                                shape = FinderMobileTokens.cardShape, color = FinderMobileTokens.navy,
+                                shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+                                Column(Modifier.padding(20.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(46.dp))
+                                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                                            Text(primary.description, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.titleMedium)
+                                            if (info != null) Text(stringResource(R.string.home_storage_usage,
+                                                FileItem.formatFileSize(info.used), FileItem.formatFileSize(info.total)),
+                                                color = FinderMobileTokens.ice, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Text("›", color = androidx.compose.ui.graphics.Color.White)
+                                    }
+                                    if (info != null && info.total > 0) {
+                                        Spacer(Modifier.height(16.dp))
+                                        LinearProgressIndicator(progress = { (info.used.toFloat() / info.total).coerceIn(0f, 1f) },
+                                            modifier = Modifier.fillMaxWidth().height(5.dp), color = androidx.compose.ui.graphics.Color(0xFF85D4FF),
+                                            trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = .15f))
+                                        Text("${FileItem.formatFileSize(info.available)} ${stringResource(R.string.home_storage_available)}",
+                                            Modifier.padding(top = 8.dp), color = FinderMobileTokens.ice, style = MaterialTheme.typography.labelMedium)
+                                    }
                                 }
-                                Text("›", color = androidx.compose.ui.graphics.Color.White)
                             }
-                            if (info != null && info.total > 0) {
-                                Spacer(Modifier.height(16.dp))
-                                LinearProgressIndicator(progress = { (info.used.toFloat() / info.total).coerceIn(0f, 1f) },
-                                    modifier = Modifier.fillMaxWidth().height(5.dp), color = androidx.compose.ui.graphics.Color(0xFF85D4FF),
-                                    trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = .15f))
-                                Text("${FileItem.formatFileSize(info.available)} ${stringResource(R.string.home_storage_available)}",
-                                    Modifier.padding(top = 8.dp), color = FinderMobileTokens.ice, style = MaterialTheme.typography.labelMedium)
+                        } else MobileHomeRow(stringResource(R.string.home_limited_storage_title),
+                            Icons.Filled.PhoneAndroid, onRequestAllFilesAccess)
+                    }
+                }
+                HomeSection.FOLDERS -> {
+                    item("locations-title") { MobileHomeHeading(stringResource(R.string.home_folders_title)) }
+                    if (hasAllFilesAccess) items(directories, key = { "dir:${it.path}" }) { directory ->
+                        MobileHomeRow(stringResource(directory.labelRes), Icons.Filled.Folder,
+                            { onNavigateToBrowser(directory.path) }, folder = true)
+                    }
+                    items(volumes.filter { it != primary }, key = { "volume:${it.path}:${it.description}" }) { volume ->
+                        MobileHomeRow(volume.description, Icons.Filled.SdStorage, { volume.path?.let(onNavigateToBrowser) })
+                    }
+                    item("saf") { MobileHomeRow(stringResource(R.string.home_storage_access_framework), Icons.Filled.FolderOpen, { saf.launch(null) }) }
+                }
+                HomeSection.BOOKMARKS -> {
+                    val localBookmarks = bookmarks.filter { it.source == FileSource.LOCAL }
+                    if (hasAllFilesAccess && localBookmarks.isNotEmpty()) {
+                        item("favorites-title") { MobileHomeHeading(stringResource(R.string.home_bookmarks_title)) }
+                        items(localBookmarks, key = { "bookmark:${it.id}" }) { bookmark ->
+                            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("home-bookmark-${bookmark.id}")
+                                .combinedClickable(onClick = { onNavigateToBrowser(bookmark.path) }, onLongClick = { bookmarkToRemove = bookmark }),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Bookmark, null, tint = FinderMobileTokens.folderBlue, modifier = Modifier.size(22.dp))
+                                Text(bookmark.name, Modifier.weight(1f).padding(start = 14.dp), color = FinderMobileTokens.navy)
+                                IconButton(onClick = { bookmarkToRemove = bookmark }) { Text("⋮") }
                             }
                         }
                     }
-                } else MobileHomeRow(stringResource(R.string.home_limited_storage_title),
-                    Icons.Filled.PhoneAndroid, onRequestAllFilesAccess)
-            }
-            item("locations-title") { MobileHomeHeading(stringResource(R.string.home_folders_title)) }
-            if (hasAllFilesAccess) items(directories, key = { "dir:${it.path}" }) { directory ->
-                MobileHomeRow(stringResource(directory.labelRes), Icons.Filled.Folder,
-                    { onNavigateToBrowser(directory.path) }, folder = true)
-            }
-            items(volumes.filter { it != primary }, key = { "volume:${it.path}:${it.description}" }) { volume ->
-                MobileHomeRow(volume.description, Icons.Filled.SdStorage, { volume.path?.let(onNavigateToBrowser) })
-            }
-            item("saf") { MobileHomeRow(stringResource(R.string.home_storage_access_framework), Icons.Filled.FolderOpen, { saf.launch(null) }) }
-            val localBookmarks = bookmarks.filter { it.source == FileSource.LOCAL }
-            if (hasAllFilesAccess && localBookmarks.isNotEmpty()) {
-                item("favorites-title") { MobileHomeHeading(stringResource(R.string.home_bookmarks_title)) }
-                items(localBookmarks, key = { "bookmark:${it.id}" }) { bookmark ->
-                    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("home-bookmark-${bookmark.id}")
-                        .combinedClickable(onClick = { onNavigateToBrowser(bookmark.path) }, onLongClick = { bookmarkToRemove = bookmark }),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Bookmark, null, tint = FinderMobileTokens.folderBlue, modifier = Modifier.size(22.dp))
-                        Text(bookmark.name, Modifier.weight(1f).padding(start = 14.dp), color = FinderMobileTokens.navy)
-                        IconButton(onClick = { bookmarkToRemove = bookmark }) { Text("⋮") }
+                }
+                HomeSection.ACTIVE_SESSIONS -> {
+                    val visibleSessions = sessions.filter { it.source != FileSource.LOCAL || hasAllFilesAccess }
+                    if (visibleSessions.isNotEmpty()) {
+                        item("sessions-title") { MobileHomeHeading(stringResource(R.string.home_active_sessions_title)) }
+                        items(visibleSessions, key = { "session:${it.id}" }) { session ->
+                            MobileHomeRow(session.title, Icons.Filled.FolderOpen, { onNavigateToSession(session.id, session.currentPath) })
+                        }
                     }
                 }
-            }
-            item("recents") { MobileHomeRow(stringResource(R.string.finderdex_recents_title), Icons.AutoMirrored.Filled.InsertDriveFile, { recents = true }) }
-            val visibleSessions = sessions.filter { it.source != FileSource.LOCAL || hasAllFilesAccess }
-            if (visibleSessions.isNotEmpty()) {
-                item("sessions-title") { MobileHomeHeading(stringResource(R.string.home_active_sessions_title)) }
-                items(visibleSessions, key = { "session:${it.id}" }) { session ->
-                    MobileHomeRow(session.title, Icons.Filled.FolderOpen, { onNavigateToSession(session.id, session.currentPath) })
-                }
-            }
-            item("tools-title") { MobileHomeHeading(stringResource(R.string.r31_tools)) }
-            item("tools") {
-                androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    StorageCategory.entries.forEach { category ->
-                        androidx.compose.material3.AssistChip(onClick = { onNavigateToCategory(category) },
-                            label = { Text(stringResource(category.filter.labelRes)) })
+                HomeSection.QUICK_ACCESS -> {
+                    item("recents") { MobileHomeRow(stringResource(R.string.finderdex_recents_title), Icons.AutoMirrored.Filled.InsertDriveFile, { recents = true }) }
+                    item("tools-title") { MobileHomeHeading(stringResource(R.string.r31_tools)) }
+                    item("tools") {
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StorageCategory.entries.forEach { category ->
+                                androidx.compose.material3.AssistChip(onClick = { onNavigateToCategory(category) },
+                                    label = { Text(stringResource(category.filter.labelRes)) })
+                            }
+                        }
                     }
+                    item("analyzer") { MobileHomeRow(stringResource(R.string.finderdex_analytics_title), Icons.Filled.SdStorage, { analytics = true }) }
+                    item("transfers") { MobileHomeRow(stringResource(R.string.transfer_channel), Icons.Filled.FolderOpen, { transfers = true }) }
+                    item("trash") { MobileHomeRow(stringResource(R.string.home_trash), Icons.Filled.DeleteOutline, onNavigateToTrash) }
+                }
+                HomeSection.REMOTE_CONNECTIONS -> {
+                    item("network") { MobileHomeRow(stringResource(R.string.home_remote_connections_title), Icons.Filled.Cloud, onNavigateToConnections) }
+                    item("cloud-title") { MobileHomeHeading(stringResource(R.string.r31_clouds)) }
+                    item("drive") { MobileHomeRow("Google Drive", Icons.Filled.Cloud, { cloud = com.voyagerfiles.data.remote.cloud.CloudService.GOOGLE_DRIVE }, subtitle = stringResource(R.string.r31_cloud_open)) }
+                    item("onedrive") { MobileHomeRow("OneDrive", Icons.Filled.Cloud, { cloud = com.voyagerfiles.data.remote.cloud.CloudService.ONEDRIVE }, subtitle = stringResource(R.string.r31_cloud_open)) }
+                }
                 }
             }
-            item("analyzer") { MobileHomeRow(stringResource(R.string.finderdex_analytics_title), Icons.Filled.SdStorage, { analytics = true }) }
-            item("transfers") { MobileHomeRow(stringResource(R.string.transfer_channel), Icons.Filled.FolderOpen, { transfers = true }) }
-            item("trash") { MobileHomeRow(stringResource(R.string.home_trash), Icons.Filled.DeleteOutline, onNavigateToTrash) }
-            item("network") { MobileHomeRow(stringResource(R.string.home_remote_connections_title), Icons.Filled.Cloud, onNavigateToConnections) }
-            item("cloud-title") { MobileHomeHeading(stringResource(R.string.r31_clouds)) }
-            item("drive") { MobileHomeRow("Google Drive", Icons.Filled.Cloud, { cloud = com.voyagerfiles.data.remote.cloud.CloudService.GOOGLE_DRIVE }, subtitle = stringResource(R.string.r31_cloud_open)) }
-            item("onedrive") { MobileHomeRow("OneDrive", Icons.Filled.Cloud, { cloud = com.voyagerfiles.data.remote.cloud.CloudService.ONEDRIVE }, subtitle = stringResource(R.string.r31_cloud_open)) }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
