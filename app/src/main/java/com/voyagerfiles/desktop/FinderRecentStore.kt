@@ -25,7 +25,7 @@ internal object FinderRecentPolicy {
 
 internal class FinderRecentStore(context: Context) {
     private val prefs = context.getSharedPreferences("finderdex_recent_opens", Context.MODE_PRIVATE)
-    private val lock = Any()
+    companion object { private val lock = Any() }
     fun list(): List<FinderRecentOpen> = synchronized(lock) {
         val arr = runCatching { JSONArray(prefs.getString("entries", "[]")) }.getOrDefault(JSONArray())
         val entries = (0 until arr.length()).mapNotNull { index ->
@@ -46,6 +46,8 @@ internal class FinderRecentStore(context: Context) {
             persist(entries)
         }
     }
+
+    fun remove(path: String) = synchronized(lock) { persist(list().filterNot { it.path == path }) }
 
     fun clear() = synchronized(lock) { prefs.edit().remove("entries").apply() }
 

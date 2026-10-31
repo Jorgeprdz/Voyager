@@ -6,6 +6,10 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.net.URI
 import java.net.URLEncoder
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -50,13 +54,18 @@ fun interface OneDriveTokenProvider {
     suspend fun token(): String?
 }
 
-data class OneDriveHttpResult(val status: Int, val body: String, val location: String? = null)
+data class OneDriveHttpResult(val status: Int, val body: String, val location: String? = null, val range: String? = null)
 
 interface OneDriveHttp {
     suspend fun request(
         method: String, url: String, bearer: String?,
         body: ByteArray? = null, mimeType: String? = null,
     ): OneDriveHttpResult
+
+    suspend fun requestHeaders(
+        method: String, url: String, bearer: String?, body: ByteArray?, mimeType: String?,
+        headers: Map<String, String>,
+    ): OneDriveHttpResult = throw UnsupportedOperationException("Upload sessions unavailable in this transport")
 
     suspend fun stream(
         url: String, bearer: String?, target: OutputStream,
@@ -70,18 +79,26 @@ class OneDriveOkHttp(
 ) : OneDriveHttp {
     override suspend fun request(
         method: String, url: String, bearer: String?, body: ByteArray?, mimeType: String?,
+    ): OneDriveHttpResult = requestHeaders(method, url, bearer, body, mimeType, emptyMap())
+
+    override suspend fun requestHeaders(
+        method: String, url: String, bearer: String?, body: ByteArray?, mimeType: String?,
+        headers: Map<String, String>,
     ): OneDriveHttpResult = withContext(Dispatchers.IO) {
-        require(URI(url).scheme == "https")
+        currentCoroutineContext().ensureActive()
+        require(CloudUploadPolicy.safeSession(url))
         val payload = body?.toRequestBody((mimeType ?: "application/json").toMediaTypeOrNull())
         val req = Request.Builder().url(url).apply {
             bearer?.let { header("Authorization", "Bearer $it") }
             header("Accept", "application/json")
+            headers.forEach { (key, value) -> header(key, value) }
         }.method(method, payload).build()
         client.newCall(req).execute().use { response ->
             val bytes = response.body?.byteStream()?.use { stream ->
                 val output = ByteArrayOutputStream()
                 val buffer = ByteArray(8192)
                 while (true) {
+                    currentCoroutineContext().ensureActive()
                     val n = stream.read(buffer)
                     if (n < 0) break
                     if (output.size() + n > 1_048_576) throw IOException("Graph response exceeds limit")
@@ -89,7 +106,7 @@ class OneDriveOkHttp(
                 }
                 output.toString(Charsets.UTF_8.name())
             }.orEmpty()
-            OneDriveHttpResult(response.code, bytes, response.header("Location"))
+            OneDriveHttpResult(response.code, bytes, response.header("Location"), response.header("Range"))
         }
     }
 
@@ -114,14 +131,15 @@ class OneDriveOkHttp(
                         dest.port == -1 && dest.userInfo == null) { "Unsafe download redirect" }
                     currentUrl = next
                     // Preauthorized OneDrive URL MUST NOT receive the Graph access token.
-                    token = if (dest.host == "graph.microsoft.com") bearer else null
+                    token = if (dest.host == URI(url).host) bearer else null
                 } else {
                     if (!response.isSuccessful) return@withContext OneDriveHttpResult(response.code, "")
                     var total = 0L
                     response.body?.byteStream()?.use { input ->
                         val buffer = ByteArray(65536)
                         while (true) {
-                            if (cancel.isCancelled()) throw IOException("Transfer cancelled")
+                            currentCoroutineContext().ensureActive()
+                            if (cancel.isCancelled()) throw CancellationException("Transfer cancelled")
                             val n = input.read(buffer)
                             if (n < 0) break
                             target.write(buffer, 0, n)
@@ -152,7 +170,7 @@ class OneDriveGraphProvider(
     override val capabilities: Set<CloudCapability> = setOf(
         CloudCapability.LIST, CloudCapability.SEARCH, CloudCapability.DOWNLOAD,
         CloudCapability.UPLOAD, CloudCapability.CREATE, CloudCapability.RENAME,
-        CloudCapability.MOVE, CloudCapability.TRASH,
+        CloudCapability.MOVE, CloudCapability.COPY, CloudCapability.TRASH,
     )
     @Volatile private var state = CloudConnectionState.AUTHORIZATION_REQUIRED
     @Volatile private var disconnected = false
@@ -183,11 +201,20 @@ class OneDriveGraphProvider(
     }
 
     private suspend fun json(method: String, url: String, body: JSONObject? = null): JSONObject {
-        val reply = validate(http.request(
-            method, url, accessToken(),
-            body?.toString()?.toByteArray(Charsets.UTF_8),
-            if (body != null) "application/json" else null,
-        ))
+        var attempt = 0
+        val reply: OneDriveHttpResult
+        while (true) {
+            currentCoroutineContext().ensureActive()
+            val response = http.request(method, url, accessToken(),
+                body?.toString()?.toByteArray(Charsets.UTF_8),
+                if (body != null) "application/json" else null)
+            if (method == "GET" && CloudFailurePolicy.canRetry(CloudFailurePolicy.fromHttp(response.status), attempt)) {
+                delay(CloudFailurePolicy.retryDelayMillis(attempt++))
+                continue
+            }
+            reply = validate(response)
+            break
+        }
         return if (reply.body.isBlank()) JSONObject() else JSONObject(reply.body)
     }
 
@@ -237,23 +264,22 @@ class OneDriveGraphProvider(
         parentId: String, name: String, mimeType: String, source: InputStream,
         length: Long?, cancel: CloudCancellation, progress: (Long) -> Unit,
     ) = runCatching {
-        require(length != null && length in 0..4_194_304L) {
-            "Resumable large-file upload is not yet implemented"
-        }
+        require(length != null && length >= 0) { "Known source size required" }
+        if (length > 4_194_304L) return@runCatching uploadLarge(parentId, name, mimeType, source, length, cancel, progress)
         val bytes = ByteArrayOutputStream()
         val buffer = ByteArray(32768)
         while (true) {
-            if (cancel.isCancelled()) throw IOException("Upload cancelled")
+            if (cancel.isCancelled()) throw CancellationException("Upload cancelled")
             val read = source.read(buffer)
             if (read < 0) break
             require(bytes.size() + read <= 4_194_304) { "Upload exceeds small-file limit" }
             bytes.write(buffer, 0, read)
-            progress(bytes.size().toLong())
+            // Reading the input is not network progress.
         }
         require(bytes.size().toLong() == length) { "Source length changed during upload" }
-        val reply = validate(http.request("PUT", OneDriveGraphPaths.upload(parentId, name),
+        val reply = validate(http.request("PUT", OneDriveGraphPaths.upload(parentId, name) + "?%40microsoft.graph.conflictBehavior=fail",
             accessToken(), bytes.toByteArray(), mimeType))
-        parse(JSONObject(reply.body))
+        parse(JSONObject(reply.body)).also { check(it.sizeBytes == length) { "Uploaded size not verified" }; progress(length) }
     }
 
     override suspend fun createFolder(parentId: String, name: String) = runCatching {
@@ -269,9 +295,79 @@ class OneDriveGraphProvider(
             JSONObject().put("parentReference", JSONObject().put("id", newParentId))))
     }
 
-    /** Graph copy is asynchronous (202 + monitor URL). Never return false completion. */
-    override suspend fun copy(remoteId: String, newParentId: String): Result<CloudEntry> =
-        Result.failure(UnsupportedOperationException("Graph asynchronous copy not implemented"))
+    /** Preauthorized session URLs never receive the Graph bearer. Server controls resume offset. */
+    private suspend fun uploadLarge(parentId: String, name: String, mimeType: String,
+        source: InputStream, length: Long, cancel: CloudCancellation, progress: (Long) -> Unit): CloudEntry {
+        val payload = JSONObject().put("item", JSONObject().put("name", name)
+            .put("@microsoft.graph.conflictBehavior", "fail"))
+        val session = json("POST", "${OneDriveGraphPaths.item(parentId)}:/${OneDriveGraphPaths.component(name)}:/createUploadSession", payload)
+            .getString("uploadUrl")
+        require(CloudUploadPolicy.safeSession(session))
+        var offset = 0L
+        try {
+            while (offset < length) {
+                currentCoroutineContext().ensureActive()
+                if (cancel.isCancelled()) throw CancellationException("Upload cancelled")
+                val chunk = source.cloudChunk(minOf(CloudUploadPolicy.CHUNK.toLong(), length - offset).toInt())
+                check(chunk.size.toLong() == minOf(CloudUploadPolicy.CHUNK.toLong(), length - offset)) { "Source truncated" }
+                var attempt = 0
+                while (true) {
+                    currentCoroutineContext().ensureActive()
+                    if (cancel.isCancelled()) throw CancellationException("Upload cancelled")
+                    val reply = http.requestHeaders("PUT", session, null, chunk, mimeType,
+                        mapOf("Content-Range" to "bytes $offset-${offset + chunk.size - 1}/$length"))
+                    if (reply.status == 200 || reply.status == 201) {
+                        check(offset + chunk.size == length && source.read() == -1) { "Source size changed" }
+                        val item = parse(JSONObject(reply.body))
+                        check(item.sizeBytes == length) { "Uploaded size not verified" }
+                        progress(length)
+                        return item
+                    }
+                    if (reply.status == 202) {
+                        val ranges = JSONObject(reply.body).getJSONArray("nextExpectedRanges")
+                        val next = CloudUploadPolicy.nextOffset((0 until ranges.length()).map(ranges::getString), length)
+                        check(next == offset + chunk.size) { "Unexpected resume offset" }
+                        offset = next
+                        progress(offset)
+                        break
+                    }
+                    if (!CloudFailurePolicy.canRetry(CloudFailurePolicy.fromHttp(reply.status), attempt)) validate(reply)
+                    delay(CloudFailurePolicy.retryDelayMillis(attempt++))
+                }
+            }
+            error("Upload not committed")
+        } catch (error: Throwable) {
+            // Best effort abort; preserve cancellation and original failure.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+                runCatching { http.request("DELETE", session, null) }
+            }
+            throw error
+        }
+    }
+
+    /** 202 is acceptance only. Poll a bounded official monitor until a new item is confirmed. */
+    override suspend fun copy(remoteId: String, newParentId: String): Result<CloudEntry> = runCatching {
+        val reply = validate(http.request("POST", "${OneDriveGraphPaths.item(remoteId)}/copy", accessToken(),
+            JSONObject().put("parentReference", JSONObject().put("id", newParentId))
+                .put("@microsoft.graph.conflictBehavior", "fail").toString().toByteArray(), "application/json"))
+        val monitor = reply.location ?: error("Missing copy monitor")
+        require(CloudUploadPolicy.safeSession(monitor))
+        repeat(120) {
+            delay(1000)
+            val status = http.request("GET", monitor, null)
+            if (status.status in 400..599) validate(status)
+            if (status.body.isNotBlank()) {
+                val report = JSONObject(status.body)
+                if (report.optString("status") in listOf("failed", "deleteFailed")) error("Cloud copy failed")
+                if (report.optString("status") == "completed") {
+                    val id = report.optString("resourceId").takeIf { it.isNotBlank() }
+                        ?: error("Copy finished without verifiable item ID")
+                    return@runCatching parse(json("GET", OneDriveGraphPaths.item(id)))
+                }
+            }
+        }
+        error("Copy still pending; inspect destination before retrying")
+    }
 
     /** Graph DELETE on driveItem moves it to its recycle bin when supported by the drive. */
     override suspend fun trash(remoteId: String) = runCatching {

@@ -21,6 +21,8 @@ class TransferOperationController(
     val state = mutableState.asStateFlow()
     private val mutableResult = MutableStateFlow<OperationResult?>(null)
     val lastResult = mutableResult.asStateFlow()
+    private val mutableHistory = MutableStateFlow<List<OperationResult>>(emptyList())
+    val history = mutableHistory.asStateFlow()
     val conflicts = TransferConflictDecisions()
     private var archiveReport: ArchiveExtractionReport? = null
 
@@ -99,7 +101,9 @@ class TransferOperationController(
 
     private fun finish(outcome: OperationOutcome) {
         val progress = (mutableState.value as? OperationState.Running)?.progress ?: return
-        mutableResult.value = OperationResult(progress.copy(currentItemName = null), outcome, archiveReport)
+        val result = OperationResult(progress.copy(currentItemName = null), outcome, archiveReport)
+        mutableResult.value = result
+        mutableHistory.value = (listOf(result) + mutableHistory.value).take(50)
     }
 
     fun update(progress: TransferProgress) {

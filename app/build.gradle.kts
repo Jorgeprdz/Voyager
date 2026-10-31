@@ -28,8 +28,16 @@ android {
         applicationId = "com.finderdex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 24
-        versionName = "0.2.0-shell-preview"
+        versionCode = 25
+        versionName = "3.1-polish-preview"
+
+        // Public OAuth registration values only; never embed client secrets.
+        listOf("DRIVE_CLIENT_ID", "ONEDRIVE_CLIENT_ID").forEach { key ->
+            buildConfigField("String", key, "\"" + providers.gradleProperty("finderdex.$key").orElse(providers.environmentVariable("FINDERDEX_$key")).getOrElse("").replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
+        }
+        val oauthScheme = providers.gradleProperty("finderdex.oauthScheme").orElse(providers.environmentVariable("FINDERDEX_OAUTH_SCHEME").filter { it.isNotBlank() }).getOrElse("com.finderdex.preview.oauth")
+        manifestPlaceholders["appAuthRedirectScheme"] = oauthScheme
+        buildConfigField("String", "OAUTH_REDIRECT", "\"$oauthScheme:/callback\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -176,6 +184,8 @@ dependencies {
         exclude(group = "xpp3", module = "xpp3")
     }
 
+    implementation("net.openid:appauth:0.11.1")
+
     // Microsoft Graph HTTP transport (MIT/Apache2), no embedded OAuth secrets
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
@@ -194,6 +204,7 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
     testImplementation("org.apache.sshd:sshd-core:2.14.0")
     testImplementation("org.apache.sshd:sshd-sftp:2.14.0")
     testImplementation("org.apache.ftpserver:ftpserver-core:1.2.1")

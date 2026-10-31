@@ -157,3 +157,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Artefacto ZIP descargado a contenedor de trabajo, APK extraída a `/mnt/data/FinderDex-R3-debug.apk`, hash local coincide exactamente, ZIP íntegro y APK contiene `AndroidManifest.xml` y `classes.dex`. No se instaló, ni se copió directamente a Descargas del teléfono.
 - Artifact de pruebas `13038446846` y reportes de verificación `13038387084`. Build de **evaluación**, NO producción: Drive/OneDrive `BLOCKED_EXTERNAL`, doble panel/nube/centro transferencias `PARTIAL`, DeX `PENDING_PHYSICAL_DEX`, móvil `PENDING_USER_VISUAL_REVIEW`.
 - No se ejecutaron tests instrumentados en hardware pese a compilar/empaquetar `androidTest`; no se realizaron operaciones en archivos reales del usuario. Rama estable R2.2 protegida en SHA `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`.
+
+### R3.1 — implementación integrada en validación
+- Base verificada `c2899c2`, árbol inicial limpio; R2.2 remota conserva `a5bd2dc`.
+- Bloques A/B implementados con límites explícitos en `R3.1-FULL-POLISH-REPORT.md`; bloque C en validación integral.
+- STATUS R3.1: `PARTIAL_PENDING_FINAL_CI`; OAuth real `BLOCKED_EXTERNAL`, aceptación `PENDING_PHYSICAL_DEX/PENDING_USER_VISUAL_REVIEW`.
+- No declarar nueve etapas completas; faltan reanudación cloud tras proceso, centro cloud integrado, red Desktop de escritura y aceptación física.

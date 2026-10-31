@@ -140,6 +140,14 @@ internal class FinderDragDropState(
             springFolder = null
         } else cancel()
     }
+    fun requestTransfer(paths: List<String>, destination: String, action: FinderDropAction): Boolean {
+        if (!enabled || paths.isEmpty() || !withinRoot(destination) || !isWritableDirectory(destination)) return false
+        val sources = paths.distinct()
+        if (sources.any { !withinRoot(it) || it == destination || destination.startsWith("$it/") || File(it).parent == destination }) return false
+        pending = FinderPendingMove(sources, destination, action)
+        return true
+    }
+
     fun acceptPending() {
         if (pending != null) {
             awaitingTransfer = true

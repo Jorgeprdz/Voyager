@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,12 +54,17 @@ internal fun FinderAnalyticsDialog(
         else ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) ==
             PackageManager.PERMISSION_GRANTED
     }
-    LaunchedEffect(volumes) {
+    var scanRequest by remember { mutableIntStateOf(0) }
+    var scanJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var duplicateJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    LaunchedEffect(volumes, scanRequest) {
+        scanJob = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
         indexer.scanAll(volumes, showHidden = false, hasPermission = hasPermission)
             .collectLatest { state -> snapshot = state }
     }
     LaunchedEffect(duplicateRequest) {
         if (duplicateRequest == 0) return@LaunchedEffect
+        duplicateJob = kotlinx.coroutines.currentCoroutineContext()[kotlinx.coroutines.Job]
         duplicateRunning = true
         duplicateScan = null
         duplicateError = false
@@ -73,23 +79,33 @@ internal fun FinderAnalyticsDialog(
         }
     }
 
-    val report = remember(snapshot.status, snapshot.files) {
-        if (snapshot.status in setOf(CategoryScanStatus.COMPLETE,
-                CategoryScanStatus.PARTIAL, CategoryScanStatus.LIMITED)) {
-            StorageAnalyticsSummary.fromFiles(snapshot.files, limit = 12)
-        } else null
-    }
+    val report = remember(snapshot.files) { StorageAnalyticsSummary.fromFiles(snapshot.files, limit = 12) }
+    val capacities = remember(volumes) { volumes.mapNotNull { volume ->
+        volume.path?.takeIf { volume.isAvailable }?.let { volume.description to FileUtils.getStorageInfo(it) }
+    } }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.finderdex_analytics_title)) },
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 520.dp)
                 .verticalScroll(rememberScrollState())) {
+                capacities.forEach { (name, space) ->
+                    Text(name, style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+                    Text(stringResource(R.string.home_storage_usage, FileItem.formatFileSize(space.used), FileItem.formatFileSize(space.total)))
+                    LinearProgressIndicator(progress = { space.usedPercentage.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), color = com.voyagerfiles.ui.theme.FinderMobileTokens.folderBlue)
+                    Text("${FileItem.formatFileSize(space.available)} ${stringResource(R.string.home_storage_available)}")
+                }
+                Spacer(Modifier.height(12.dp))
                 Text(stringResource(snapshot.status.labelRes))
+                if (snapshot.status in listOf(CategoryScanStatus.SCANNING, CategoryScanStatus.PENDING)) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    TextButton(onClick = { scanJob?.cancel(); snapshot = snapshot.copy(status = CategoryScanStatus.CANCELLED) }) { Text(stringResource(R.string.action_cancel)) }
+                } else TextButton(onClick = { scanRequest++ }) { Text(stringResource(R.string.r31_retry)) }
                 Text(stringResource(R.string.category_scope))
                 val skipped = snapshot.coverage.sumOf { it.skippedEntries + it.inaccessibleEntries }
                 if (skipped > 0) Text(stringResource(R.string.finderdex_analytics_skipped, skipped))
-                if (report != null) {
+                if (report.scannedFiles > 0) {
                     Text(stringResource(R.string.finderdex_analytics_summary,
                         report.scannedFiles, FileItem.formatFileSize(report.scannedBytes)))
                     Spacer(Modifier.height(12.dp))
@@ -106,6 +122,8 @@ internal fun FinderAnalyticsDialog(
                         }
                         Text(stringResource(R.string.finderdex_analytics_entry,
                             stringResource(title), FileItem.formatFileSize(item.bytes)))
+                        LinearProgressIndicator(progress = { if (report.scannedBytes > 0) (item.bytes.toFloat() / report.scannedBytes).coerceIn(0f, 1f) else 0f },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), color = com.voyagerfiles.ui.theme.FinderMobileTokens.folderBlue)
                     }
                     Spacer(Modifier.height(12.dp))
                     Text(stringResource(R.string.finderdex_analytics_largest))
@@ -132,11 +150,12 @@ internal fun FinderAnalyticsDialog(
                     Text(stringResource(if (duplicateRunning) R.string.duplicates_scanning
                         else R.string.duplicates_scan))
                 }
+                if (duplicateRunning) TextButton(onClick = { duplicateJob?.cancel() }) { Text(stringResource(R.string.action_cancel)) }
                 duplicateScan?.let { result ->
                     Text(stringResource(R.string.duplicates_summary,
                         result.groups.size, result.groups.sumOf { it.files.size }))
                     result.groups.take(12).forEach { group ->
-                        group.files.firstOrNull()?.let { example ->
+                        group.files.take(5).forEach { example ->
                             TextButton(onClick = {
                                 onOpenFolder(example.path.substringBeforeLast('/', "/"))
                             }) {

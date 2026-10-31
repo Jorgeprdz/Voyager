@@ -22,6 +22,8 @@ class FinderColumnController(
     val session: BrowserSession,
     private val listDirectory: suspend (String) -> Result<List<FileItem>>,
     private val parentOf: (String) -> String? = { java.io.File(it).parent },
+    private val initialScroll: (String) -> Pair<Int, Int> = { 0 to 0 },
+    private val onScroll: (String, Int, Int) -> Unit = { _, _, _ -> },
     private val onLocation: (String, Set<String>) -> Unit = { _, _ -> },
 ) {
     private val _columns = MutableStateFlow<List<FinderColumn>>(emptyList())
@@ -56,7 +58,8 @@ class FinderColumnController(
         val paths = chain(path) ?: return
         cancelLoads()
         _columns.value = paths.mapIndexed { i, p ->
-            FinderColumn(++nextId, p, selected = if (i == paths.lastIndex) selected else setOf(paths[i + 1]))
+            FinderColumn(++nextId, p, selected = if (i == paths.lastIndex) selected else setOf(paths[i + 1]),
+                scrollIndex = initialScroll(p).first, scrollOffset = initialScroll(p).second)
         }
         _columns.value.forEach(::load)
     }
@@ -208,6 +211,7 @@ class FinderColumnController(
         restore(_columns.value)
     }
     fun rememberScroll(index: Int, first: Int, offset: Int) {
+        _columns.value.getOrNull(index)?.let { onScroll(it.path, first, offset) }
         _columns.update { columns -> columns.mapIndexed { i, c ->
             if (i == index) c.copy(scrollIndex = first, scrollOffset = offset) else c
         } }

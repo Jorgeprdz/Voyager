@@ -27,4 +27,12 @@ class FinderBulkRenamePlannerTest {
             FinderBulkRenameOption(FinderRenameRule.PREFIX,value="🚀".repeat(100)))
         assertFalse(b.valid)
     }
+    @Test fun directoryDotsAreNotExtensions() {
+        val result = FinderBulkRenamePlanner.preview(listOf(FinderRenameCandidate("/x/folder.old", "folder.old", true)), emptySet(),
+            FinderBulkRenameOption(FinderRenameRule.SUFFIX, value = "-new"))
+        assertEquals("folder.old-new", result.rows.single().newName)
+    }
+    @Test(expected = IllegalArgumentException::class) fun numberingDoesNotOverflow() {
+        FinderBulkRenamePlanner.preview(sample, emptySet(), FinderBulkRenameOption(FinderRenameRule.NUMBER, firstNumber = Int.MAX_VALUE))
+    }
 }

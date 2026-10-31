@@ -450,7 +450,7 @@ fun BrowserScreen(
                 }
             }
             ArchiveTapAction.OPEN_EXTERNALLY -> {
-                FileUtils.openFile(context, file).onFailure { error ->
+                FileUtils.openFile(context, file).onSuccess { com.voyagerfiles.desktop.FinderRecentStore(context).record(file) }.onFailure { error ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
                             if (error is ActivityNotFoundException) {
@@ -734,7 +734,13 @@ fun BrowserScreen(
                             IconButton(onClick = ::navigateUpOrLeave) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back))
                             }
-                            Spacer(modifier = Modifier.weight(1f))
+                            Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                                Text(state.currentPath.substringAfterLast('/').ifBlank { "FinderDex" },
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleMedium)
+                                Text(state.files.size.toString(),
+                                    color = FinderMobileTokens.secondaryInk, style = MaterialTheme.typography.labelSmall)
+                            }
                             if (searchBarMode == SearchBarMode.COMPACT) {
                                 IconButton(onClick = { compactSearchExpanded = true }) {
                                     Icon(Icons.Filled.Search, stringResource(R.string.action_search))
@@ -847,6 +853,7 @@ fun BrowserScreen(
                         }
                         PathBreadcrumb(
                             path = state.currentPath,
+                            rootPath = activeSession?.rootPath ?: "/",
                             onNavigate = ::navigateTo,
                             modifier = Modifier
                                 .fillMaxWidth()

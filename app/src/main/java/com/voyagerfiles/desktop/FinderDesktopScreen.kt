@@ -232,6 +232,7 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
 @Composable
 fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobile: () -> Unit) {
     val session by viewModel.activeSession.collectAsState()
+    val restoringSessions by viewModel.restoringSessions.collectAsState()
     val browser by viewModel.browseState.collectAsState()
     val operation by viewModel.operationState.collectAsState()
     val conflict by viewModel.transferConflict.collectAsState()
@@ -242,9 +243,10 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val savedConnections by viewModel.connections.collectAsState()
     val localTabSessions by viewModel.sessions.collectAsState()
     val context = LocalContext.current
+    var showTransfers by remember { mutableStateOf(false) }
     val rootView = LocalView.current
-    LaunchedEffect(session?.id) {
-        if (session == null) viewModel.openLocalRoot(Environment.getExternalStorageDirectory().path)
+    LaunchedEffect(session?.id, restoringSessions) {
+        if (session == null && !restoringSessions) viewModel.openLocalRoot(Environment.getExternalStorageDirectory().path)
     }
     val controller = remember(session?.id) { viewModel.finderColumns() }
     LaunchedEffect(controller) { controller?.start() }
@@ -278,7 +280,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         val listener = android.view.View.OnDragListener { _, event ->
             val target = sharedDragState.externalTargetAt(Offset(event.x, event.y))
                 ?: controller.currentPath
-            val ready = viewModel.browseState.value.currentPath == controller.currentPath &&
+            val ready = controller.session.source == FileSource.LOCAL && viewModel.browseState.value.currentPath == controller.currentPath &&
                 FinderCrossAppTransfer.writableLocalFolder(target) &&
                 viewModel.operationState.value !is com.voyagerfiles.viewmodel.OperationState.Running
             when (event.action) {
@@ -353,18 +355,21 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     LaunchedEffect(browser.files, controller) {
         if (!browser.isLoading) controller.refresh()
     }
+    if (showTransfers) com.voyagerfiles.ui.components.TransferCenterDialog(viewModel) { showTransfers = false }
     FinderDesktopScreen(controller, mode, bookmarks = orderedFavorites.map { it.name to it.path },
         volumes = volumes.map { it.name to it.path },
         savedConnections = savedConnections,
-        onConnectNetwork = { conn -> viewModel.connectToRemote(conn); onMobile() },
+        onConnectNetwork = { conn -> viewModel.connectToRemote(conn) },
         externalDragState = sharedDragState,
         onRoot = viewModel::openLocalRoot,
         onMobile = onMobile,
+        onTransfers = { showTransfers = true },
         tabSessions = FinderDesktopTabPolicy.visible(localTabSessions),
         activeTabId = session?.id,
         onNewTab = { viewModel.openLocalTab(controller.currentPath) },
         onActivateTab = viewModel::activateSession,
         onCloseTab = viewModel::closeSession,
+        onReorderTab = viewModel::reorderSession,
         favoriteImages = customImages,
         trashEntries = trash.entries,
         trashLoading = trash.isLoading,
@@ -395,10 +400,11 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             imagePrefs.edit().remove(path).apply()
             customImages = customImages - path
         },
-        onOpen = { file -> FileUtils.openFile(context, file)
+        onOpen = { file -> if (file.source != FileSource.LOCAL) viewModel.downloadFile(file.path)
+            else FileUtils.openFile(context, file)
             .onSuccess { recentStore.record(file) }
             .onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
-        operationsAvailable = true,
+        operationsAvailable = session?.source == FileSource.LOCAL,
         clipboardAvailable = clipboardPaths.isNotEmpty(),
         onPaste = {
             if (viewModel.browseState.value.currentPath == controller.currentPath) viewModel.paste()
@@ -500,6 +506,7 @@ internal fun FinderDesktopScreen(
     onNewTab: () -> Unit = {},
     onActivateTab: (String) -> Unit = {},
     onCloseTab: (String) -> Unit = {},
+    onReorderTab: (String, Int) -> Unit = { _, _ -> },
     onOpen: (FileItem) -> Unit = {},
     message: String? = null,
     onDismissMessage: () -> Unit = {},
@@ -518,6 +525,7 @@ internal fun FinderDesktopScreen(
     onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
     onBulkRename: (List<Pair<String, String>>) -> Unit = {},
+    onTransfers: () -> Unit = {},
     onFileAction: (FinderFileAction, FileItem) -> Unit = { _, _ -> },
 ) {
     val columns by controller.columns.collectAsState()
@@ -525,21 +533,11 @@ internal fun FinderDesktopScreen(
     val fallbackDragState = remember(controller.session.id) { FinderDragDropState() }
     val dragState = externalDragState ?: fallbackDragState
     val androidView = LocalView.current
-    SideEffect {
-        dragState.externalError = { /* Unsupported MIME or missing URI access; no source mutation. */ }
-        dragState.externalStart = { paths ->
-            val indexed = columns.flatMap { it.files }.associateBy { it.path }
-            val selectedFiles = paths.mapNotNull { indexed[it] }
-            selectedFiles.size == paths.size &&
-                runCatching { FinderCrossAppTransfer.start(androidView, selectedFiles) }.getOrDefault(false)
-        }
-    }
-    LaunchedEffect(dragState, operationsAvailable) { dragState.enabled = operationsAvailable }
+    LaunchedEffect(dragState, operationsAvailable, operationRunning) { dragState.enabled = operationsAvailable && !operationRunning }
     LaunchedEffect(controller.session.rootPath) {
         dragState.allowedRoot = controller.session.rootPath
     }
     LaunchedEffect(controller.currentPath) {
-        dragState.clearTargets()
         if (dragState.draggingPaths.isEmpty()) {
             dragState.cancel()
             dragState.dismiss()
@@ -615,11 +613,21 @@ internal fun FinderDesktopScreen(
             parentOf = secondaryProvider::getParentPath)
     }
     val secondaryColumns by secondaryController.columns.collectAsState()
-    val secondaryDrag = remember(secondarySession.id) {
-        FinderDragDropState { false }.apply { enabled = false }
+    SideEffect {
+        dragState.externalError = { /* Unsupported MIME or missing URI access; no source mutation. */ }
+        dragState.externalStart = { paths ->
+            val indexed = (columns + secondaryColumns).flatMap { it.files }.associateBy { it.path }
+            val selectedFiles = paths.mapNotNull { indexed[it] }
+            selectedFiles.size == paths.size &&
+                runCatching { FinderCrossAppTransfer.start(androidView, selectedFiles) }.getOrDefault(false)
+        }
     }
+
     LaunchedEffect(splitEnabled, secondaryController) {
         if (splitEnabled) secondaryController.start()
+    }
+    LaunchedEffect(operationResult) {
+        if (splitEnabled && operationResult != null && !operationRunning) secondaryController.refresh()
     }
     DisposableEffect(secondaryController) {
         onDispose { secondaryController.close() }
@@ -643,7 +651,7 @@ internal fun FinderDesktopScreen(
                 val col = owningColumn
                 if (col != null && selectedPaths.size > 1) {
                     bulkRenameItems = col.files.filter { it.path in selectedPaths }
-                        .map { FinderRenameCandidate(it.path, it.name) }
+                        .map { FinderRenameCandidate(it.path, it.name, it.isDirectory) }
                     bulkSiblingNames = col.files.map { it.name }.toSet()
                 }
             }
@@ -707,6 +715,10 @@ internal fun FinderDesktopScreen(
                 event.key == Key.Spacebar && !focusTracker.hasFocusedControl && !searching && quickLook == null && controller.selectedFile?.isDirectory == false -> {
                     quickLook = controller.selectedFile; true
                 }
+                (event.isCtrlPressed || event.isMetaPressed) && event.isShiftPressed &&
+                    event.key in listOf(Key.PageUp, Key.PageDown) && !focusTracker.hasFocusedControl -> {
+                    activeTabId?.let { onReorderTab(it, if (event.key == Key.PageUp) -1 else 1) }; true
+                }
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.T && !focusTracker.hasFocusedControl -> {
                     onNewTab(); true
                 }
@@ -717,7 +729,7 @@ internal fun FinderDesktopScreen(
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.Tab &&
                     tabSessions.size > 1 && !focusTracker.hasFocusedControl -> {
                     val index = tabSessions.indexOfFirst { it.id == activeTabId }
-                    onActivateTab(tabSessions[(index + 1).mod(tabSessions.size)].id)
+                    onActivateTab(tabSessions[(index + if (event.isShiftPressed) -1 else 1).mod(tabSessions.size)].id)
                     true
                 }
                 (event.isCtrlPressed || event.isMetaPressed) && event.isShiftPressed &&
@@ -763,7 +775,7 @@ internal fun FinderDesktopScreen(
             onNewFolder = { newFolderName = ""; newFolderDialog = true },
             onTrash = { onRefreshTrash(); showTrash = true },
             previewAvailable = shell.showPreview && mode != DesktopMode.COMPACT)
-        if (tabSessions.size > 1) Row(
+        if (tabSessions.isNotEmpty()) Row(
             Modifier.fillMaxWidth().height(32.dp).background(palette.toolbar)
                 .horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically
@@ -782,14 +794,14 @@ internal fun FinderDesktopScreen(
             Label("+", Modifier.clickable(onClick = onNewTab).padding(6.dp), color = palette.ink)
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
-            val splitVisible = splitEnabled && availableWindowWidth >= 1000f &&
+            val splitVisible = splitEnabled && controller.session.source == FileSource.LOCAL && availableWindowWidth >= 1000f &&
                 !shell.compactToolbar && mode != DesktopMode.COMPACT
             if (effectiveSidebarWidth >= 40f) {
                 FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
                     onAnalytics = { showAnalytics = true }, onRecents = { showRecents = true },
                     connections = savedConnections, onConnection = onConnectNetwork,
                     favoriteImages, onRemoveFavorite, onReorderFavorite, onPickFavoriteImage, onRemoveFavoriteImage,
-                    dragState, rail = shell.sidebarRail)
+                    dragState, rail = shell.sidebarRail, onTransfers = onTransfers)
             }
             // The original resize gesture remains authoritative; hover is visual only.
             val resizeInteraction = remember { MutableInteractionSource() }
@@ -831,9 +843,28 @@ internal fun FinderDesktopScreen(
                                 .coerceIn(.25f, .75f)
                         }
                     })
-                FinderIconView(secondaryController, secondaryColumns, "", false, SortBy.NAME,
-                    Modifier.weight(1f - splitRatio), onOpen, false, false,
-                    { _, _ -> }, secondaryDrag, zoomDensity)
+                Column(Modifier.weight(1f - splitRatio)) {
+                    Row(Modifier.fillMaxWidth().background(palette.toolbar), verticalAlignment = Alignment.CenterVertically) {
+                        Label(secondaryController.currentPath.substringAfterLast('/'), Modifier.weight(1f).padding(8.dp), color = palette.ink)
+                        val primarySelection = columns.lastOrNull()?.selected.orEmpty().toList()
+                        val secondarySelection = secondaryColumns.lastOrNull()?.selected.orEmpty().toList()
+                        TextButton(enabled = !operationRunning && primarySelection.isNotEmpty(), onClick = {
+                            dragState.requestTransfer(primarySelection, secondaryController.currentPath, FinderDropAction.COPY)
+                        }) { Text("${stringResource(R.string.action_copy)} →") }
+                        TextButton(enabled = !operationRunning && primarySelection.isNotEmpty(), onClick = {
+                            dragState.requestTransfer(primarySelection, secondaryController.currentPath, FinderDropAction.MOVE)
+                        }) { Text("${stringResource(R.string.action_move)} →") }
+                        TextButton(enabled = !operationRunning && secondarySelection.isNotEmpty(), onClick = {
+                            dragState.requestTransfer(secondarySelection, controller.currentPath, FinderDropAction.COPY)
+                        }) { Text("← ${stringResource(R.string.action_copy)}") }
+                        TextButton(enabled = !operationRunning && secondarySelection.isNotEmpty(), onClick = {
+                            dragState.requestTransfer(secondarySelection, controller.currentPath, FinderDropAction.MOVE)
+                        }) { Text("← ${stringResource(R.string.action_move)}") }
+                    }
+                    FinderIconView(secondaryController, secondaryColumns, "", false, SortBy.NAME,
+                        Modifier.weight(1f), onOpen, false, false,
+                        { _, _ -> }, dragState, zoomDensity)
+                }
             }
             if (!splitVisible && showPreview && shell.showPreview && mode != DesktopMode.COMPACT)
                 FinderPreview(controller.selectedFile, onOpen)
@@ -971,7 +1002,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
     onReorderFavorite: (String, Int) -> Unit,
     onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit,
-    dragState: FinderDragDropState, rail: Boolean = false) {
+    dragState: FinderDragDropState, rail: Boolean = false, onTransfers: () -> Unit = {}) {
     val root = Environment.getExternalStorageDirectory().path
     val glass = LocalFinderMaterials.current.palette
     val sidebarScroll = rememberScrollState()
@@ -988,6 +1019,8 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
         var locationsExpanded by remember { mutableStateOf(true) }
         if (!rail) SidebarHeading("Favoritos", favoritesExpanded) { favoritesExpanded = !favoritesExpanded }
         if (favoritesExpanded || rail) {
+            SidebarItem(stringResource(R.string.transfer_channel), "transfers:local", "download",
+                false, { onTransfers() }, dragState = null, rail = rail)
             SidebarItem(stringResource(R.string.finderdex_recents_title), "recent:local", "document",
                 false, { onRecents() }, dragState = null, rail = rail)
             SidebarItem("Inicio", root, "home", currentPath == root, onRoot, dragState = dragState, rail = rail)
@@ -1018,9 +1051,9 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
             }
             // Connection is intentionally unavailable until user-authorized OAuth is configured.
             // Never route a cloud item into the local filesystem or accept local folder drops here.
-            SidebarItem(stringResource(R.string.finderdex_cloud_drive_disconnected), "cloud:google-drive", "drive",
+            SidebarItem(stringResource(R.string.finderdex_cloud_drive_title), "cloud:google-drive", "drive",
                 false, { showDriveStatus = true }, dragState = null, rail = rail)
-            SidebarItem(stringResource(R.string.finderdex_onedrive_disconnected), "cloud:onedrive", "drive",
+            SidebarItem(stringResource(R.string.finderdex_onedrive_title), "cloud:onedrive", "drive",
                 false, { showOneDriveStatus = true }, dragState = null, rail = rail)
             connections.forEach { connection ->
                 SidebarItem(connection.name, "network:${connection.id}", "drive",
@@ -1030,18 +1063,11 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     }
     FinderVerticalScrollbar(sidebarScroll, Modifier.align(Alignment.CenterEnd))
     }
-    if (showDriveStatus) AlertDialog(
-        onDismissRequest = { showDriveStatus = false },
-        title = { Text(stringResource(R.string.finderdex_cloud_drive_title)) },
-        text = { Text(stringResource(R.string.finderdex_cloud_drive_unavailable)) },
-        confirmButton = { TextButton(onClick = { showDriveStatus = false }) { Text(stringResource(R.string.finderdex_cloud_drive_ok)) } },
-    )
-    if (showOneDriveStatus) AlertDialog(
-        onDismissRequest = { showOneDriveStatus = false },
-        title = { Text(stringResource(R.string.finderdex_onedrive_title)) },
-        text = { Text(stringResource(R.string.finderdex_onedrive_unavailable)) },
-        confirmButton = { TextButton(onClick = { showOneDriveStatus = false }) { Text(stringResource(R.string.finderdex_cloud_drive_ok)) } },
-    )
+    if (showDriveStatus) com.voyagerfiles.ui.components.CloudBrowserDialog(
+        com.voyagerfiles.data.remote.cloud.CloudService.GOOGLE_DRIVE) { showDriveStatus = false }
+    if (showOneDriveStatus) com.voyagerfiles.ui.components.CloudBrowserDialog(
+        com.voyagerfiles.data.remote.cloud.CloudService.ONEDRIVE) { showOneDriveStatus = false }
+
 }
 
 @Composable
@@ -1129,7 +1155,19 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
         finderOrderFiles(column?.files.orEmpty().filter { it.name.contains(query, true) }, sortBy, descending)
     }
     val marquee = remember(column?.path) { FinderMarqueeState() }
-    val gridState = rememberLazyGridState()
+    val savedScroll = remember(controller.session.id, column?.path) { (column?.scrollIndex ?: 0) to (column?.scrollOffset ?: 0) }
+    var scrollRestored by remember(controller.session.id, column?.path) { mutableStateOf(false) }
+    val gridState = key(controller.session.id, column?.path) { rememberLazyGridState() }
+    LaunchedEffect(gridState, column?.loading, files.size) {
+        if (!scrollRestored && column?.loading == false && files.isNotEmpty()) {
+            gridState.scrollToItem(savedScroll.first.coerceAtMost(files.lastIndex), savedScroll.second)
+            scrollRestored = true
+        }
+    }
+    LaunchedEffect(gridState, scrollRestored) {
+        if (scrollRestored) snapshotFlow { gridState.firstVisibleItemIndex to gridState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) -> controller.rememberScroll(columns.lastIndex, index, offset) }
+    }
     LaunchedEffect(gridState) {
         snapshotFlow { gridState.layoutInfo.visibleItemsInfo.maxOfOrNull { item -> item.column }?.plus(1) ?: 1 }
             .collect { controller.iconColumns = it.coerceAtLeast(1) }
@@ -1139,6 +1177,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
     val glass = LocalFinderMaterials.current
     val colors = glass.palette
     Box(modifier.fillMaxHeight().background(colors.content).testTag("finder-icons")
+        .finderFolderDropTarget("pane:${controller.session.id}", column?.path ?: controller.currentPath, dragState)
         .finderMarqueeGesture(controller, marquee, dragState)) {
         key(column?.path) {
             LazyVerticalGrid(columns = GridCells.Adaptive(zoom.gridMinimumDp.dp),
@@ -1173,7 +1212,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         .finderMarqueeItem(file.path, marquee)
                         .finderDragVisual(file.path, file.isDirectory, dragState)
                         .finderDragSource(file.path, column?.selected.orEmpty(), dragState, ctrl, alt)
-                        .then(if (file.isDirectory) Modifier.finderFolderDropTarget("icon:${file.path}", file.path, dragState) else Modifier)
+                        .then(if (file.isDirectory) Modifier.finderFolderDropTarget("icon:${controller.session.id}:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh, a -> ctrl = c; shift = sh; alt = a }
                         .finderRightClick(secondaryClick) {
                             controller.selectForContextMenu(columns.lastIndex, file)

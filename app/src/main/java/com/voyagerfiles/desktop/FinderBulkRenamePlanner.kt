@@ -13,7 +13,7 @@ internal data class FinderBulkRenameOption(
     val digits: Int = 3,
     val changeExtension: Boolean = false,
 )
-internal data class FinderRenameCandidate(val path: String, val name: String)
+internal data class FinderRenameCandidate(val path: String, val name: String, val isDirectory: Boolean = false)
 internal data class FinderRenameRow(
     val path: String,
     val oldName: String,
@@ -30,13 +30,13 @@ internal object FinderBulkRenamePlanner {
         siblingNames: Set<String>,
         option: FinderBulkRenameOption,
     ): FinderRenamePreview {
-        require(items.size in 1..1000 && option.digits in 1..8)
+        require(items.size in 1..1000 && option.digits in 1..8 && option.firstNumber >= 0 && option.firstNumber <= Int.MAX_VALUE - items.size)
         val ordered = items.distinctBy { it.path }.sortedBy { it.path }
         val oldNames = ordered.mapTo(mutableSetOf()) { it.name.lowercase(Locale.ROOT) }
         val collisions = siblingNames.map { it.lowercase(Locale.ROOT) }.toSet()
         val planned = ordered.mapIndexed { i, item ->
             val dot = item.name.lastIndexOf('.')
-            val split = if (!option.changeExtension && dot > 0) dot else item.name.length
+            val split = if (!item.isDirectory && !option.changeExtension && dot > 0) dot else item.name.length
             val stem = item.name.substring(0, split)
             val extension = item.name.substring(split)
             val nextStem = when (option.rule) {

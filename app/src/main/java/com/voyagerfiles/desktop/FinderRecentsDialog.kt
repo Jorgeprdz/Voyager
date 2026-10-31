@@ -3,6 +3,7 @@ package com.voyagerfiles.desktop
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -26,6 +27,10 @@ internal fun FinderRecentsDialog(
     val context = LocalContext.current
     val store = remember(context) { FinderRecentStore(context) }
     var opened by remember { mutableStateOf(store.list()) }
+    var query by remember { mutableStateOf("") }
+    var recentWeek by remember { mutableStateOf(false) }
+    val filtered = opened.filter { (query.isBlank() || it.path.contains(query, ignoreCase = true)) &&
+        (!recentWeek || it.openedAt >= System.currentTimeMillis() - 7L * 86400000) }
     val modified = remember(lastModifiedInCurrentFolder) {
         lastModifiedInCurrentFolder.filter { !it.isDirectory }
             .sortedByDescending { it.lastModified.time }.take(30)
@@ -35,14 +40,24 @@ internal fun FinderRecentsDialog(
         title = { Text(stringResource(R.string.finderdex_recents_title)) },
         text = {
             Column(Modifier.heightIn(max = 500.dp)) {
+                OutlinedTextField(query, { query = it }, label = { Text(stringResource(R.string.action_search)) }, singleLine = true)
+                Row {
+                    androidx.compose.material3.Checkbox(recentWeek, { recentWeek = it })
+                    Text(stringResource(R.string.r31_last_week))
+                }
                 Text(stringResource(R.string.finderdex_recents_opened))
-                if (opened.isEmpty()) Text(stringResource(R.string.finderdex_recents_empty))
+                if (filtered.isEmpty()) Text(stringResource(R.string.finderdex_recents_empty))
                 LazyColumn(Modifier.weight(1f, fill = false)) {
-                    items(opened, key = { it.path }) { item ->
-                        TextButton(onClick = { onOpenLocation(File(item.path).parent ?: "/") }) {
-                            Text(stringResource(R.string.finderdex_recents_entry,
-                                File(item.path).name,
-                                DateFormat.getDateTimeInstance().format(Date(item.openedAt))))
+                    items(filtered, key = { it.path }) { item ->
+                        Row {
+                            TextButton(modifier = Modifier.weight(1f), onClick = { onOpenLocation(File(item.path).parent ?: "/") }) {
+                                Text(stringResource(R.string.finderdex_recents_entry,
+                                    File(item.path).name,
+                                    DateFormat.getDateTimeInstance().format(Date(item.openedAt))))
+                            }
+                            TextButton(onClick = { store.remove(item.path); opened = store.list() }) {
+                                Text(stringResource(R.string.r31_remove_history))
+                            }
                         }
                     }
                 }

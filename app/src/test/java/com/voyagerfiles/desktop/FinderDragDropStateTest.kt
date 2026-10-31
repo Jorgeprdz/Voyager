@@ -55,4 +55,13 @@ class FinderDragDropStateTest {
         assertNull(state.externalHoveredDestination)
         assertTrue(state.draggingPaths.isEmpty())
     }
+    @Test fun panelRequestsRequireSafeWritableDestinationAndExplicitAction() {
+        val state = FinderDragDropState { it != "/root/denied" }.apply { enabled = true; allowedRoot = "/root" }
+        assertFalse(state.requestTransfer(listOf("/root/folder"), "/root/folder/child", FinderDropAction.MOVE))
+        assertFalse(state.requestTransfer(listOf("/root/file"), "/outside", FinderDropAction.COPY))
+        assertFalse(state.requestTransfer(listOf("/root/file"), "/root/denied", FinderDropAction.MOVE))
+        assertTrue(state.requestTransfer(listOf("/root/file"), "/root/other", FinderDropAction.COPY))
+        assertEquals(FinderDropAction.COPY, state.pending!!.action)
+        assertFalse(state.awaitingTransfer)
+    }
 }

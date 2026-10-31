@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -140,6 +141,10 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val rootEditor: StateFlow<RootTextEditorState?> = _rootEditor.asStateFlow()
 
     private val _sessions = MutableStateFlow<List<BrowserSession>>(emptyList())
+    val transferHistory = operationController.history
+    private val _renameResults = MutableStateFlow<List<Pair<String, Boolean>>>(emptyList())
+    val renameResults = _renameResults.asStateFlow()
+
     val sessions: StateFlow<List<BrowserSession>> = _sessions.asStateFlow()
 
     private val _activeSession = MutableStateFlow<BrowserSession?>(null)
@@ -200,6 +205,10 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val connections = connectionRepository.connections.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val bookmarks = bookmarkDao.getAllBookmarks().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    private val _restoringSessions = MutableStateFlow(true)
+    val restoringSessions = _restoringSessions.asStateFlow()
+    private val tabStore = com.voyagerfiles.desktop.FinderTabStore(application)
+
     init {
         viewModelScope.launch {
             operationState.collect { state ->
@@ -242,8 +251,18 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
         // Load initial path
         initialNavigationJob = viewModelScope.launch {
-            val defaultPath = prefs.defaultPath.first()
-            navigateToPath(defaultPath)
+            try {
+                val (restored, active) = withContext(Dispatchers.IO) { tabStore.read() }
+                restored.forEach { sessionProviders[it.id] = FileProviderFactory.createLocal() }
+                _sessions.value = restored
+                if (restored.isNotEmpty()) activateSessionInternal(restored.firstOrNull { it.id == active }?.id ?: restored.first().id)
+                else navigateToPath(prefs.defaultPath.first())
+            } finally { _restoringSessions.value = false }
+        }
+        viewModelScope.launch {
+            restoringSessions.first { !it }
+            combine(_sessions, _activeSession) { sessions, selected -> sessions to selected?.id }
+                .collect { (sessions, selected) -> tabStore.write(sessions, selected) }
         }
     }
 
@@ -255,7 +274,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
     /** Read-only binding captured for one local session; never navigates browseState to list a column. */
     fun finderColumns(): com.voyagerfiles.desktop.FinderColumnController? {
         val session = _activeSession.value ?: return null
-        if (session.source != FileSource.LOCAL) return null
+        if (session.source != FileSource.LOCAL && !session.source.isNetwork) return null
         desktopColumnsBySession[session.id]?.let { return it }
         val provider = sessionProviders[session.id] ?: return null
         return com.voyagerfiles.desktop.FinderColumnController(
@@ -268,6 +287,8 @@ class FileBrowserViewModel @JvmOverloads constructor(
                 else provider.listFiles(path)
             },
             parentOf = provider::getParentPath,
+            initialScroll = { path -> tabStore.scroll(session.id, path) },
+            onScroll = { path, index, offset -> tabStore.scroll(session.id, path, index, offset) },
             onLocation = { path, selection ->
                 viewModelScope.launch {
                     if (_activeSession.value?.id == session.id) {
@@ -298,6 +319,16 @@ class FileBrowserViewModel @JvmOverloads constructor(
     }
 
     /** A new tab has its own session even if its initial path matches another tab. */
+    fun reorderSession(id: String, delta: Int) {
+        _sessions.update { values ->
+            val next = values.toMutableList()
+            val index = next.indexOfFirst { it.id == id }
+            val target = index + delta
+            if (index >= 0 && target in next.indices) java.util.Collections.swap(next, index, target)
+            next
+        }
+    }
+
     fun openLocalTab(path: String) {
         cancelInitialNavigation()
         viewModelScope.launch {
@@ -828,7 +859,8 @@ class FileBrowserViewModel @JvmOverloads constructor(
         if (names.size != names.toSet().size) return
         val provider = fileProvider
         val dest = state.currentPath
-        launchOperation(R.string.progress_renaming, R.string.operation_rename) {
+        launchOperation(R.string.progress_renaming, R.string.operation_rename, onFinished = { refreshFiles(); desktopColumns?.refresh() }) {
+            _renameResults.value = emptyList()
             val latest = provider.listFiles(dest).getOrThrow()
             val selected = normalized.map { it.first }.toSet()
             val occupied = latest.filterNot { it.path in selected }
@@ -845,18 +877,24 @@ class FileBrowserViewModel @JvmOverloads constructor(
             var completed = 0
             var failed = 0
             for ((path, name) in normalized) {
+                com.voyagerfiles.data.repository.TransferCancellation.check()
                 updateOperationProgress(TransferProgress(
                     label = UiText.Resource(R.string.progress_renaming),
                     completedItems = completed,
                     totalItems = normalized.size,
                     currentItemName = name
                 ))
-                provider.rename(path, name).onSuccess { completed++ }.onFailure {
+                provider.rename(path, name).onSuccess {
+                    completed++
+                    _renameResults.value = _renameResults.value + ("${path.substringAfterLast('/')} → $name" to true)
+                }.onFailure {
                     if (it is CancellationException) throw it
                     operationController.recordFailure(it)
+                    _renameResults.value = _renameResults.value + ("${path.substringAfterLast('/')} → $name" to false)
                     failed++
                 }
             }
+            updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_renaming), completedItems = completed, totalItems = normalized.size))
             refreshFiles()
             showSnackbar(UiText.Dynamic("$completed renamed; $failed failed"))
         }
