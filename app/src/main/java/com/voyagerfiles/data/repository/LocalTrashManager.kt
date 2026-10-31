@@ -54,7 +54,9 @@ class LocalTrashManager(
                     throw IOException("Could not finalize Trash entry")
                 }
             } catch (error: Throwable) {
-                if (source.exists()) pendingDirectory.deleteRecursively()
+                // A failed recursive source deletion can leave a partial source.
+                // Never discard the complete payload copy in that case.
+                if (source.exists() && !payload.exists()) pendingDirectory.deleteRecursively()
                 throw error
             }
 
@@ -192,8 +194,9 @@ class LocalTrashManager(
         copyPath(source, target)
         val deleted = if (source.isDirectory) source.deleteRecursively() else source.delete()
         if (!deleted) {
-            target.deleteRecursively()
-            throw IOException("Could not remove the original after copying")
+            // Source deletion may have been partial. Keep the destination copy as
+            // the only complete remaining copy instead of risking data loss.
+            throw IOException("Could not remove the original after copying; destination copy retained at ${target.path}")
         }
     }
 
