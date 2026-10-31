@@ -19,7 +19,8 @@
 | 05 Recientes/red/Quick Share | PLANNED | — | — | PENDING | — |
 | 06 Pestañas y doble panel | PLANNED | — | — | PENDING | — |
 | 07 Renombrado/transferencias | PLANNED | — | — | PENDING | — |
-| 08 End-to-end y APK | PLANNED | — | — | PENDING | — |
+| 08 Rediseño móvil FinderDex | PLANNED | — | — | PENDING | Revisión visual en teléfono |
+| 09 End-to-end y APK | PLANNED | — | — | PENDING | — |
 
 ## Registro cronológico
 Agregar nuevas entradas a continuación, con fecha UTC, SHA, evidencias y decisiones. No borrar ni reemplazar registros anteriores. Nunca guardar datos sensibles.
