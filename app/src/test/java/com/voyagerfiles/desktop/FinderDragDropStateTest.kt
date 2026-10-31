@@ -1,0 +1,44 @@
+package com.voyagerfiles.desktop
+
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import org.junit.Assert.*
+import org.junit.Test
+
+class FinderDragDropStateTest {
+    @Test fun dropOnAnotherFolderProducesConfirmedMoveRequest() {
+        val state = FinderDragDropState()
+        state.register("folder", "/root/destination", Rect(0f, 0f, 100f, 100f))
+        state.start(listOf("/root/source/file.txt"), Offset(25f, 25f))
+        assertEquals("/root/destination", state.hoveredDestination)
+        state.end()
+        assertEquals(FinderPendingMove(listOf("/root/source/file.txt"), "/root/destination"), state.pending)
+        state.dismiss()
+        assertNull(state.pending)
+    }
+
+    @Test fun refusesSelfDescendantsAndSameParentDrops() {
+        val state = FinderDragDropState()
+        state.register("self", "/root/Folder", Rect(0f, 0f, 100f, 100f))
+        state.start(listOf("/root/Folder"), Offset(25f, 25f))
+        state.end()
+        assertNull(state.pending)
+        state.unregister("self")
+        state.register("child", "/root/Folder/Child", Rect(0f, 0f, 100f, 100f))
+        state.start(listOf("/root/Folder"), Offset(25f, 25f))
+        state.end()
+        assertNull(state.pending)
+        state.unregister("child")
+        state.register("parent", "/root", Rect(0f, 0f, 100f, 100f))
+        state.start(listOf("/root/file.txt"), Offset(25f, 25f))
+        state.end()
+        assertNull(state.pending)
+    }
+
+    @Test fun emptyDropAreaDoesNotMoveAnything() {
+        val state = FinderDragDropState()
+        state.start(listOf("/root/source/file.txt"), Offset(100f, 100f))
+        state.end()
+        assertNull(state.pending)
+    }
+}
