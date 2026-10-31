@@ -182,3 +182,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Tema móvil propio claro/oscuro, búsqueda/filtros, botón crear, densidad visual y traducción ES. Desktop R2.2 no editado.
 - Estado: `R3.2_CODE_PENDING_CI_AND_PHYSICAL`. Pendientes aún abiertos: aceptación visual con capturas, instrumentación física Android 17/DeX, pruebas de tablet/split y OAuth real externo.
 - Ver `R3.2-MOBILE-PREMIUM-REPORT.md` y `R3.2-CONTINUE-PROMPT.md`.
+
+### 2026-10-31 UTC — R3.2 final automated gate completed
+- Implementación final `54f851d2c7e3c51aa313c972ccf2b47478f9616f`, [CI 41213278060](https://github.com/Jorgeprdz/Voyager/actions/runs/41213278060) SUCCESS.
+- Compilación Kotlin/app/androidTest PASS; XML 564 unit tests: **550 passed, 14 skipped, 0 failed, 0 errors**. Lint: **0 errors, 193 warnings**. AssembleDebug, apksigner, launcher resources/package verification PASS.
+- APK real `FinderDex-R3.2-APK` artifact ID `13047322810`, package `com.finderdex.preview`; SHA256 `346bf16b19053ad4483f099b344752b3ff493a67f0084101487a5db8b4693e63` validado en log y descarga extraída localmente.
+- Descarga sin prueba de instalación en el teléfono; compatibilidad con APK R3.1 esperada por pipeline de firma estable, instalación/actualización física aún no comprobada. No declarar FULL_POLISH, no dar PASS Android 17/DeX, no declarar E2E OAuth.
+- Continuación de pendientes documentada en `R3.2-MOBILE-PREMIUM-REPORT.md` y `R3.2-CONTINUE-PROMPT.md`.
