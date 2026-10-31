@@ -27,12 +27,12 @@ internal fun FinderTrashDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Papelera") },
+        title = { Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_trash_title)) },
         text = {
             Column {
-                if (loading) Text("Leyendo elementos…")
+                if (loading) Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_trash_loading))
                 if (error != null) Text(error)
-                if (!loading && error == null && entries.isEmpty()) Text("La papelera está vacía")
+                if (!loading && error == null && entries.isEmpty()) Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_trash_empty))
                 LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
                     items(entries, key = { it.id }) { item ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -44,13 +44,13 @@ internal fun FinderTrashDialog(
                                 Text(DateFormat.getDateTimeInstance().format(Date(item.deletedAt)),
                                     fontSize = 10.sp)
                             }
-                            TextButton(onClick = { onRestore(item.id) }) { Text("Restaurar") }
+                            TextButton(onClick = { onRestore(item.id) }) { Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_restore)) }
                         }
                     }
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } },
-        dismissButton = { TextButton(onClick = onRefresh) { Text("Actualizar") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_close)) } },
+        dismissButton = { TextButton(onClick = onRefresh) { Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_refresh)) } },
     )
 }
