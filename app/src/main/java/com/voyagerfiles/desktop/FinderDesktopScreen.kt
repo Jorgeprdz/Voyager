@@ -261,6 +261,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         },
         onRename = { file, name -> viewModel.rename(file.path, name) },
         onCreateFolder = viewModel::createDirectory,
+        onMovePaths = viewModel::moveDesktopPaths,
         onDeletePaths = { paths, permanent ->
             viewModel.deletePaths(paths, if (permanent) com.voyagerfiles.viewmodel.DeleteMode.PERMANENT
                 else com.voyagerfiles.viewmodel.DeleteMode.TRASH)
@@ -336,6 +337,7 @@ fun FinderDesktopScreen(
     canCancelOperation: Boolean = false,
     onCancelOperation: () -> Unit = {},
     onCreateFolder: (String) -> Unit = {},
+    onMovePaths: (List<String>, String) -> Unit = { _, _ -> },
     onDeletePaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
@@ -343,6 +345,8 @@ fun FinderDesktopScreen(
 ) {
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
+    val dragState = remember { FinderDragDropState() }
+    LaunchedEffect(controller.currentPath) { dragState.clearTargets() }
     var sidebarWidth by rememberSaveable { mutableFloatStateOf(208f) }
     var viewStyle by rememberSaveable { mutableStateOf(FinderViewStyle.ICONS) }
     var showPreview by rememberSaveable { mutableStateOf(false) }
@@ -431,15 +435,15 @@ fun FinderDesktopScreen(
             singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
         Row(Modifier.weight(1f)) {
             FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
-                favoriteImages, onRemoveFavorite, onPickFavoriteImage, onRemoveFavoriteImage)
+                favoriteImages, onRemoveFavorite, onPickFavoriteImage, onRemoveFavoriteImage, dragState)
             Box(Modifier.fillMaxHeight().width(4.dp).background(Sidebar).pointerInput(density) {
                 detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
             }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
             when (viewStyle) {
-                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute)
-                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute)
-                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, ::execute)
-                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute)
+                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
             }
             if (showPreview && mode == DesktopMode.FULL) FinderPreview(controller.selectedFile, onOpen)
         }
@@ -453,6 +457,13 @@ fun FinderDesktopScreen(
             operationProgress.percentageText?.let { Label(it, color = Accent, bold = true) }
             if (canCancelOperation) Label("Cancelar",
                 Modifier.clickable { onCancelOperation() }.padding(horizontal = 9.dp), color = Accent)
+        }
+        if (dragState.draggingPaths.isNotEmpty()) Row(
+            Modifier.fillMaxWidth().background(Color(0xffe4f1ff)).padding(7.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Label(dragState.hoveredDestination?.let { "Soltar para mover a ${it.substringAfterLast('/')}" }
+                ?: "Arrastra a una carpeta para mover · Se pedirá confirmación",
+                color = Accent)
         }
         FinderStatusBar(controller, columns)
     }
@@ -493,6 +504,16 @@ fun FinderDesktopScreen(
                 pendingDeletePaths = emptyList()
             }) { Text(if (permanentDelete) "Eliminar" else "Mover") } },
             dismissButton = { TextButton(onClick = { deleteFile = null }) { Text("Cancelar") } })
+    }
+    dragState.pending?.let { drop ->
+        AlertDialog(onDismissRequest = { dragState.dismiss() },
+            title = { Text("Mover elementos") },
+            text = { Text("¿Mover ${drop.paths.size} elemento(s) a ${drop.destination}?") },
+            confirmButton = { TextButton(onClick = {
+                onMovePaths(drop.paths, drop.destination)
+                dragState.dismiss()
+            }) { Text("Mover") } },
+            dismissButton = { TextButton(onClick = { dragState.dismiss() }) { Text("Cancelar") } })
     }
     if (showTrash) FinderTrashDialog(trashEntries, trashLoading, trashError,
         onRestore = onRestoreTrash, onRefresh = onRefreshTrash, onDismiss = { showTrash = false })
@@ -563,32 +584,35 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
 @Composable
 private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit,
     favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
-    onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit) {
+    onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit,
+    dragState: FinderDragDropState) {
     val root = Environment.getExternalStorageDirectory().path
     Column(Modifier.width(width).fillMaxHeight().background(Sidebar).verticalScroll(rememberScrollState()).padding(12.dp, 14.dp)) {
         var favoritesExpanded by remember { mutableStateOf(true) }
         var locationsExpanded by remember { mutableStateOf(true) }
         SidebarHeading("Favoritos", favoritesExpanded) { favoritesExpanded = !favoritesExpanded }
         if (favoritesExpanded) {
-            SidebarItem("Inicio", root, "home", currentPath == root, onRoot)
+            SidebarItem("Inicio", root, "home", currentPath == root, onRoot, dragState = dragState)
             listOf("Descargas" to "Download", "Documentos" to "Documents", "Imágenes" to "Pictures", "Música" to "Music", "Películas" to "Movies").forEach { (name, folder) ->
                 val path = java.io.File(root, folder).path
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())
-                    SidebarItem(name, path, "folder-outline", currentPath == path || currentPath.startsWith("$path/"), onRoot)
+                    SidebarItem(name, path, "folder-outline", currentPath == path || currentPath.startsWith("$path/"), onRoot,
+                        dragState = dragState)
             }
             bookmarks.forEach { (name, path) ->
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())
                     SidebarItem(name, path, "folder-outline", currentPath == path, onRoot,
                         pinned = true, imageUri = favoriteImages[path],
                         onRemoveFavorite = onRemoveFavorite,
-                        onPickImage = onPickFavoriteImage, onClearImage = onRemoveFavoriteImage)
+                        onPickImage = onPickFavoriteImage, onClearImage = onRemoveFavoriteImage,
+                        dragState = dragState)
             }
         }
         Spacer(Modifier.height(20.dp))
         SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
         if (locationsExpanded) volumes.forEach { (name, path) ->
             if (java.io.File(path).isDirectory && java.io.File(path).canRead())
-                SidebarItem(name, path, "drive", currentPath == path, onRoot)
+                SidebarItem(name, path, "drive", currentPath == path, onRoot, dragState = dragState)
         }
     }
 }
@@ -604,13 +628,15 @@ private fun SidebarHeading(text: String, expanded: Boolean, onClick: () -> Unit)
 @Composable
 private fun SidebarItem(name: String, path: String, glyph: String, selected: Boolean, onRoot: (String) -> Unit,
     pinned: Boolean = false, imageUri: String? = null, onRemoveFavorite: (String) -> Unit = {},
-    onPickImage: (String) -> Unit = {}, onClearImage: (String) -> Unit = {}) {
+    onPickImage: (String) -> Unit = {}, onClearImage: (String) -> Unit = {},
+    dragState: FinderDragDropState? = null) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().height(32.dp).clip(RoundedCornerShape(6.dp))
         .background(if (selected) Color(0xffdcdfe6) else if (hovered) Color(0xffe6e7ec) else Color.Transparent)
         .hoverable(interaction)
+        .then(if (dragState != null) Modifier.finderFolderDropTarget("sidebar:$path", path, dragState) else Modifier)
         .finderRightClick { if (pinned) menu = true }
         .clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (imageUri != null) AsyncImage(model = Uri.parse(imageUri), contentDescription = null,
@@ -633,7 +659,8 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
 @Composable
 private fun FinderIconView(controller: FinderColumnController, columns: List<FinderColumn>, query: String,
     descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
-    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit) {
+    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
+    dragState: FinderDragDropState) {
     val column = columns.lastOrNull()
     val files = remember(column?.files, query, descending) {
         column?.files.orEmpty().filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
@@ -653,6 +680,8 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                     Column(Modifier.fillMaxWidth().height(151.dp).clip(RoundedCornerShape(11.dp))
                         .background(if (hovered && !selected) Color(0xfff7f8fa) else Color.Transparent)
                         .hoverable(interaction)
+                        .finderDragSource(file.path, column?.selected.orEmpty(), dragState)
+                        .then(if (file.isDirectory) Modifier.finderFolderDropTarget("icon:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                         .finderRightClick {
                             if (file.path !in column?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
@@ -690,14 +719,15 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
 
 @Composable
 private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
-    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit) {
+    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
+    dragState: FinderDragDropState) {
     val horizontal = rememberScrollState()
     LaunchedEffect(columns.size) { horizontal.animateScrollTo(horizontal.maxValue) }
     Row(modifier.fillMaxHeight().testTag("finder-columns").horizontalScroll(horizontal)) {
         columns.forEachIndexed { index, column ->
             key(column.id) {
                 ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, onOpen,
-                    operationsAvailable && index == columns.lastIndex, onFileAction)
+                    operationsAvailable && index == columns.lastIndex, onFileAction, dragState)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -707,7 +737,8 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, onOpen: (FileItem) -> Unit,
-    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit) {
+    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
+    dragState: FinderDragDropState) {
     val scroll = rememberLazyListState(column.scrollIndex, column.scrollOffset)
     LaunchedEffect(scroll) {
         snapshotFlow { scroll.firstVisibleItemIndex to scroll.firstVisibleItemScrollOffset }.collect { (i, offset) -> controller.rememberScroll(index, i, offset) }
@@ -729,6 +760,8 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         .background(if (selected) { if (active) Accent else Color(0xffdedee3) }
                             else if (hovered) Color(0xffefeff2) else Color.Transparent)
                         .hoverable(interaction)
+                        .finderDragSource(file.path, column.selected, dragState)
+                        .then(if (file.isDirectory) Modifier.finderFolderDropTarget("column:${index}:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                         .finderRightClick { menuOpen = true }
                         .combinedClickable(
