@@ -24,10 +24,10 @@ class IconResourceContractTest {
     @Test
     fun approvedLauncherAndStoreAssetsAreInstalledExactly() {
         val repositoryRoot = repositoryRoot()
-        approvedHashes.forEach { (path, expectedHash) ->
+        approvedGitBlobs.forEach { (path, expectedHash) ->
             val file = File(repositoryRoot, path)
             assertTrue("Approved icon asset is missing: $path", file.isFile)
-            assertEquals("Approved icon asset changed: $path", expectedHash, sha256(file))
+            assertEquals("Approved icon asset changed: $path", expectedHash, gitBlobIdentity(file))
         }
     }
 
@@ -70,28 +70,42 @@ class IconResourceContractTest {
             .first { File(it, "app/src/main/res").isDirectory && File(it, "fastlane").isDirectory }
     }
 
-    private fun sha256(file: File): String = MessageDigest.getInstance("SHA-256")
-        .digest(file.readBytes())
-        .joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+    /** Git blob identity of the artwork explicitly approved at 77631b0.
+     * SHA-1 is calculated over "blob <byte-length>\\0" plus file bytes, as Git does;
+     * this accepts no substitutions from Voyager or later redesign phases.
+     */
+    private fun gitBlobIdentity(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-1")
+        digest.update("blob ${file.length()}\u0000".toByteArray(Charsets.UTF_8))
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            while (true) {
+                val size = input.read(buffer)
+                if (size < 0) break
+                if (size > 0) digest.update(buffer, 0, size)
+            }
+        }
+        return digest.digest().joinToString("") { byte -> "%02x".format(byte.toInt() and 0xff) }
+    }
 
     private companion object {
-        val approvedHashes = mapOf(
-            "app/src/main/res/drawable/ic_launcher_background.xml" to "050aaa60959707bf93881e30988ac33c591f29a5e2550d9533f2c4722ba6f4ec",
-            "app/src/main/res/drawable/ic_launcher_foreground.xml" to "37988bdbc7d663316685ea6e72ea8c669b4a41d680b3f6cdbce2ff82dd2f901a",
-            "app/src/main/res/drawable/ic_launcher_monochrome.xml" to "74107e2dd0ba5de423fec028b6d8fca456741ab05b9aa639bd48659ff3ae7afb",
-            "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" to "ada31da9e23f4520f3753e71ca23799a107431473daa3774b6cecac26847260c",
-            "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" to "ada31da9e23f4520f3753e71ca23799a107431473daa3774b6cecac26847260c",
-            "app/src/main/res/mipmap-hdpi/ic_launcher.png" to "b96d5ddbdadf2b370ee5df049420624460a4b2e84f075a4d8a5677169c65f819",
-            "app/src/main/res/mipmap-hdpi/ic_launcher_round.png" to "e1f02e988530075b89f26012b5cd30ed1d9ae1896fd2e1c4adc7206c464bb3a9",
-            "app/src/main/res/mipmap-mdpi/ic_launcher.png" to "2e8dc6d6c0d609546229e32dbf7ab7a10fb15fa9a090a8abd347dcd236131163",
-            "app/src/main/res/mipmap-mdpi/ic_launcher_round.png" to "631237135b7cacc44fcbfce8e87190b8dd4ffb624b3bab7966df9e62bb56ec5b",
-            "app/src/main/res/mipmap-xhdpi/ic_launcher.png" to "08ecd436c4090d1a274298a1775f90416c3de809a93450197ba0f3d11f04755a",
-            "app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" to "6fcdf9b371d5f3549cc89a4546ae47cf54d6052781b1079132f7fc0344bbc1d9",
-            "app/src/main/res/mipmap-xxhdpi/ic_launcher.png" to "19e18b63453b48090169a6a5b0981b6dc8c5bb013f9a20cae9ddb622202e7101",
-            "app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" to "6f13a7d22c8b27b09a1a96d67e58d0b3e695fba794e0c7a2b12cfae6237cc7b0",
-            "app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" to "fa8077c48d3cbc2f759303668243bca9e7e627a86c9a14d3bb76155376832f68",
-            "app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" to "ead980c83bc44cddc6595053137deee24dfc91aeb774d0f74159664995c42405",
-            "fastlane/metadata/android/en-US/images/icon.png" to "73cb88c01bc366cb8f793e904f909cb6f8d479a4ceedd3d0f72b85577e6f61f4",
+        private val approvedGitBlobs = mapOf(
+            "app/src/main/res/drawable-nodpi/finderdex_icon_art.webp" to "34c8d844abeaec4d881ae6ea05fe03e945971d82",
+            "app/src/main/res/drawable/ic_launcher_background.xml" to "119da5ba310cd901c2666decc1f87ede02659f1e",
+            "app/src/main/res/drawable/ic_launcher_foreground.xml" to "ba9e62ea9a4b0fd71ba43cbaf3fe5fe851270a61",
+            "app/src/main/res/drawable/ic_launcher_monochrome.xml" to "5d584bcaf23ee158f79830eed1c68c2ee604f01b",
+            "app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml" to "8fde45638ac86d7eaeea3d6cc170ab0bf8587dd4",
+            "app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" to "8fde45638ac86d7eaeea3d6cc170ab0bf8587dd4",
+            "app/src/main/res/mipmap-hdpi/ic_launcher_round.png" to "4a65a314c11e397aae892596d80bd8c424136fee",
+            "app/src/main/res/mipmap-hdpi/ic_launcher.png" to "29509932831176be8e1f6ba070c9534ff4d86f87",
+            "app/src/main/res/mipmap-mdpi/ic_launcher_round.png" to "f21d438a452add4884ddf434155ac8ef1b76f7ed",
+            "app/src/main/res/mipmap-mdpi/ic_launcher.png" to "194fafd5e380b4e44aff06c959cbf2e9df1b4d01",
+            "app/src/main/res/mipmap-xhdpi/ic_launcher_round.png" to "1a6d42d9b6a0df1175c908c5f905b7b2ff06d058",
+            "app/src/main/res/mipmap-xhdpi/ic_launcher.png" to "8057d813af5c41a6257d89bbf7265f5c7aa861f7",
+            "app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png" to "6d21049ac72dcd06c00e6b5881e9271fab687946",
+            "app/src/main/res/mipmap-xxhdpi/ic_launcher.png" to "a63c7d32f611c23b606e21f8bba5b766cd21331b",
+            "app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" to "cd750c25766d7be480cf8460e06cd42e96a80b98",
+            "app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" to "423355fac8a56021e8dcc6e9927410f6f2bbc91c",
+            "fastlane/metadata/android/en-US/images/icon.png" to "f00f2fa99cbcafc1bcd625107351539436a16a27",
         )
     }
-}

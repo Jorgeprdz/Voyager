@@ -212,16 +212,16 @@ internal fun FinderToolbarOverflow(
                 text = { Text(currentPath, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 enabled = false, onClick = {})
             if (!plan.showForward) DropdownMenuItem(
-                text = { Text("Adelante") }, enabled = canForward,
+                text = { Text(stringResource(R.string.finderdex_toolbar_forward)) }, enabled = canForward,
                 onClick = { menu = false; onForward() })
             if (!plan.directFileActions) {
-                DropdownMenuItem(text = { Text("Nueva carpeta") }, enabled = canCreateFolder,
+                DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_toolbar_new_folder)) }, enabled = canCreateFolder,
                     onClick = { menu = false; onNewFolder() })
-                DropdownMenuItem(text = { Text("Papelera") }, enabled = canCreateFolder,
+                DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_toolbar_trash)) }, enabled = canCreateFolder,
                     onClick = { menu = false; onTrash() })
             }
             if (!plan.directAdvancedActions) {
-                DropdownMenuItem(text = { Text("Ordenar por", fontWeight = FontWeight.SemiBold) },
+                DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_toolbar_sort_by), fontWeight = FontWeight.SemiBold) },
                     enabled = false, onClick = {})
                 listOf(SortBy.NAME to "Nombre", SortBy.TYPE to "Tipo",
                     SortBy.DATE to "Fecha", SortBy.SIZE to "Tamaño").forEach { (option, title) ->
@@ -229,11 +229,14 @@ internal fun FinderToolbarOverflow(
                         leadingIcon = { if (sortBy == option) Text("✓") },
                         onClick = { menu = false; onSort(option) })
                 }
-                DropdownMenuItem(text = { Text(if (descending) "Orden ascendente" else "Orden descendente") },
+                DropdownMenuItem(text = { Text(stringResource(if (descending) R.string.finderdex_toolbar_sort_ascending
+                        else R.string.finderdex_toolbar_sort_descending)) },
                     onClick = { menu = false; onToggleDirection() })
                 DropdownMenuItem(
-                    text = { Text(if (!previewAvailable) "Vista previa (ampliar ventana)"
-                        else if (preview) "Ocultar vista previa" else "Mostrar vista previa") },
+                    text = { Text(stringResource(
+                        if (!previewAvailable) R.string.finderdex_toolbar_preview_resize
+                        else if (preview) R.string.finderdex_toolbar_preview_hide
+                        else R.string.finderdex_toolbar_preview_show)) },
                     enabled = previewAvailable,
                     onClick = { menu = false; onTogglePreview() })
             }

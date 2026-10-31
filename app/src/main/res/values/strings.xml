@@ -582,4 +582,13 @@
     <string name="finderdex_column_modified">Modified</string>
     <string name="finderdex_select_file">Select a file</string>
     <string name="finderdex_double_click_open">Double-click to open</string>
+    <string name="finderdex_toolbar_forward">Forward</string>
+    <string name="finderdex_toolbar_new_folder">New folder</string>
+    <string name="finderdex_toolbar_trash">Trash</string>
+    <string name="finderdex_toolbar_sort_by">Sort by</string>
+    <string name="finderdex_toolbar_sort_ascending">Sort ascending</string>
+    <string name="finderdex_toolbar_sort_descending">Sort descending</string>
+    <string name="finderdex_toolbar_preview_resize">Preview (enlarge window)</string>
+    <string name="finderdex_toolbar_preview_hide">Hide preview</string>
+    <string name="finderdex_toolbar_preview_show">Show preview</string>
 </resources>
