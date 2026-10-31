@@ -64,9 +64,9 @@ internal fun FinderListView(
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().height(31.dp).background(Color(0xfff5f5f7))
             .padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Nombre", Modifier.weight(1f), color = ink, fontSize = 11.sp)
-            Text("Tamaño", Modifier.width(100.dp), color = ink, fontSize = 11.sp)
-            Text("Modificado", Modifier.width(128.dp), color = ink, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_name), Modifier.weight(1f), color = ink, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_size), Modifier.width(100.dp), color = ink, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_modified), Modifier.width(128.dp), color = ink, fontSize = 11.sp)
         }
         LazyColumn(state = listState,
             modifier = Modifier.onGloballyPositioned { listBounds = it.boundsInRoot() },
@@ -145,7 +145,7 @@ internal fun FinderGalleryView(
         Column(Modifier.weight(1f).fillMaxWidth().padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             if (selected == null) {
-                Text("Selecciona un archivo", fontSize = 13.sp, color = ink)
+                Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_select_file), fontSize = 13.sp, color = ink)
             } else {
                 if (selected.isDirectory) FinderGlyph("folder", modifier = Modifier.size(188.dp))
                 else FileThumbnailOrIcon(selected, 220.dp)
@@ -153,7 +153,7 @@ internal fun FinderGalleryView(
                 Text(selected.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = ink)
                 Spacer(Modifier.height(5.dp))
                 Text(selected.formattedSize, fontSize = 12.sp, color = Color.Gray)
-                if (!selected.isDirectory) Text("Doble clic para abrir", fontSize = 11.sp, color = Color.Gray)
+                if (!selected.isDirectory) Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_double_click_open), fontSize = 11.sp, color = Color.Gray)
             }
         }
         LazyRow(Modifier.fillMaxWidth().height(144.dp).background(Color(0xfff5f5f7))
