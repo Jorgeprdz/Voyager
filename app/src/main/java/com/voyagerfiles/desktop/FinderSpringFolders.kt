@@ -28,14 +28,15 @@ import kotlinx.coroutines.withContext
 internal fun FinderSpringFolderPanel(drag: FinderDragDropState, modifier: Modifier = Modifier) {
     val folder = drag.springFolder ?: return
     if (drag.draggingPaths.isEmpty()) return
-    val children by produceState<Result<List<FileItem>>?>(null, folder) {
+    var children by remember(folder) { mutableStateOf<Result<List<FileItem>>?>(null) }
+    LaunchedEffect(folder) {
         val loaded = withContext(Dispatchers.IO) {
             LocalFileProvider().listFiles(folder).map { items ->
                 items.filter { it.isDirectory && !it.isHidden }
                     .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
             }
         }
-        value = loaded
+        children = loaded
     }
     Column(modifier.width(300.dp).heightIn(max = 390.dp)
         .shadow(14.dp, RoundedCornerShape(16.dp))
@@ -43,11 +44,11 @@ internal fun FinderSpringFolderPanel(drag: FinderDragDropState, modifier: Modifi
         .background(Color(0xfff9fafd))
         .border(1.dp, Color(0xffdae3f1), RoundedCornerShape(16.dp))
         .padding(12.dp)) {
-        Text("Carpeta abierta temporalmente", color = Color(0xff667386), fontSize = 10.sp)
+        Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_spring_opened), color = Color(0xff667386), fontSize = 10.sp)
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(folder.substringAfterLast('/'), modifier = Modifier.weight(1f), maxLines = 1,
                 overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-            Text("Cerrar", Modifier.clickable { drag.closeSpringFolder() }.padding(5.dp),
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_close), Modifier.clickable { drag.closeSpringFolder() }.padding(5.dp),
                 color = Color(0xff087cf1), fontSize = 11.sp)
         }
         Spacer(Modifier.height(8.dp))
@@ -56,15 +57,15 @@ internal fun FinderSpringFolderPanel(drag: FinderDragDropState, modifier: Modifi
             .finderFolderDropTarget("spring-current:$folder", folder, drag)
             .finderDragVisual(folder, true, drag)
             .padding(9.dp)) {
-            Text("Soltar aquí para ${if (drag.copyRequested) "copiar" else "mover"}",
+            Text(androidx.compose.ui.res.stringResource(if (drag.copyRequested) com.voyagerfiles.R.string.finderdex_drop_copy_here else com.voyagerfiles.R.string.finderdex_drop_move_here),
                 color = Color(0xff285e9e), fontSize = 11.sp)
         }
         Spacer(Modifier.height(8.dp))
         when (val result = children) {
-            null -> Text("Abriendo…", color = Color.Gray, fontSize = 12.sp)
+            null -> Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_opening), color = Color.Gray, fontSize = 12.sp)
             else -> result.fold(
                 onSuccess = { directories ->
-                    if (directories.isEmpty()) Text("No hay subcarpetas", color = Color.Gray, fontSize = 12.sp)
+                    if (directories.isEmpty()) Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_no_subfolders), color = Color.Gray, fontSize = 12.sp)
                     else LazyColumn(Modifier.heightIn(max = 260.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         items(directories, key = { it.path }) { item ->
@@ -83,7 +84,7 @@ internal fun FinderSpringFolderPanel(drag: FinderDragDropState, modifier: Modifi
                         }
                     }
                 },
-                onFailure = { Text(it.localizedMessage ?: "No se puede leer esta carpeta",
+                onFailure = { Text(it.localizedMessage ?: androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_cannot_read_folder),
                     color = Color(0xffa12e32), fontSize = 12.sp) },
             )
         }
