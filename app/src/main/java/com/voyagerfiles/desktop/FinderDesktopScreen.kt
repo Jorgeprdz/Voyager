@@ -350,7 +350,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     LaunchedEffect(browser.files, controller) {
         if (!browser.isLoading) controller.refresh()
     }
-    FinderDesktopScreen(controller, mode, orderedFavorites.map { it.name to it.path },
+    FinderDesktopScreen(controller, mode, bookmarks = orderedFavorites.map { it.name to it.path },
         volumes = volumes.map { it.name to it.path },
         externalDragState = sharedDragState,
         onRoot = viewModel::openLocalRoot,
