@@ -99,7 +99,8 @@ private fun decodeQuickLook(file: FileItem): QuickLookContent {
 }
 
 @Composable
-internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit) {
+internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
+    onNavigate: (Int) -> Unit = {}) {
     val focus = remember { FocusRequester() }
     val content by produceState<QuickLookContent>(QuickLookContent.Loading, file.path) {
         value = withContext(Dispatchers.IO) { decodeQuickLook(file) }
@@ -111,9 +112,13 @@ internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit) {
                 .background(Color(0xfff8f8fb))
                 .focusRequester(focus)
                 .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && (event.key == Key.Escape || event.key == Key.Spacebar)) {
-                        onDismiss(); true
-                    } else false
+                    if (event.type != KeyEventType.KeyDown) false
+                    else when (event.key) {
+                        Key.Escape, Key.Spacebar -> { onDismiss(); true }
+                        Key.DirectionRight, Key.DirectionDown -> { onNavigate(1); true }
+                        Key.DirectionLeft, Key.DirectionUp -> { onNavigate(-1); true }
+                        else -> false
+                    }
                 }
                 .focusable()
                 .padding(20.dp),
