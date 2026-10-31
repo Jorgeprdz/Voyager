@@ -39,7 +39,7 @@ internal fun FinderFileMenu(
 ) {
     val count = selectionCount.coerceAtLeast(1)
     fun many(single: String, plural: String) = if (count == 1) single else "$plural $count elementos"
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+    FinderGlassMenu(expanded = expanded, onDismissRequest = onDismiss) {
         if (count == 1) funAction(FinderFileAction.OPEN, "Abrir", onDismiss, onAction)
         if (!isDirectory && count == 1) {
             funAction(FinderFileAction.OPEN_WITH, "Abrir con…", onDismiss, onAction)
@@ -67,7 +67,25 @@ internal fun FinderFileMenu(
 @Composable
 private fun funAction(action: FinderFileAction, name: String, onDismiss: () -> Unit,
     callback: (FinderFileAction) -> Unit) {
-    DropdownMenuItem(text = { Text(name) }, onClick = { onDismiss(); callback(action) })
+    val p = LocalFinderMaterials.current.palette
+    val destructive = action == FinderFileAction.DELETE
+    DropdownMenuItem(
+        text = { Text(name, color = if (destructive) androidx.compose.ui.graphics.Color(0xffc94958) else p.ink) },
+        leadingIcon = {
+            FinderGlyph(when(action) {
+                FinderFileAction.COPY, FinderFileAction.CUT -> "document"
+                FinderFileAction.PASTE_INTO, FinderFileAction.DUPLICATE -> "folder-outline"
+                FinderFileAction.RENAME, FinderFileAction.INFO -> "document"
+                FinderFileAction.ZIP, FinderFileAction.EXTRACT -> "file"
+                FinderFileAction.TRASH, FinderFileAction.DELETE -> "trash"
+                FinderFileAction.SHARE -> "forward"
+                FinderFileAction.FAVORITE -> "folder"
+                FinderFileAction.QUICK_LOOK -> "preview"
+                else -> "file"
+            }, modifier = Modifier.size(18.dp))
+        },
+        onClick = { onDismiss(); callback(action) }
+    )
 }
 
 /** Reads keyboard modifiers from the actual Android pointer event, not a stale key press. */

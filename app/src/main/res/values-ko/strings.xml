@@ -564,4 +564,15 @@
     <string name="finderdex_toolbar_preview_resize">미리보기(창 확대)</string>
     <string name="finderdex_toolbar_preview_hide">미리보기 숨기기</string>
     <string name="finderdex_toolbar_preview_show">미리보기 표시</string>
+    <string name="finderdex_path_copy">전체 경로 복사</string>
+    <string name="finderdex_path_parent">상위 폴더로 이동</string>
+    <string name="finderdex_zoom_very_small">아주 작게</string>
+    <string name="finderdex_zoom_small">작게</string>
+    <string name="finderdex_zoom_medium">보통</string>
+    <string name="finderdex_zoom_large">크게</string>
+    <string name="finderdex_zoom_giant">아주 크게</string>
+    <string name="finderdex_zoom_compact">아이콘 크기</string>
+    <string name="finderdex_zoom_decrease">A−</string>
+    <string name="finderdex_zoom_increase">A+</string>
+    <string name="finderdex_column_type">유형</string>
 </resources>

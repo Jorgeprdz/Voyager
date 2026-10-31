@@ -7,7 +7,7 @@ class FinderContentTokensTest {
     @Test fun listKeepsSizeAndDateOnlyWhenUseful() {
         assertEquals(FinderListColumns(false, false), FinderContentTokens.listColumns(430f))
         assertEquals(FinderListColumns(true, false), FinderContentTokens.listColumns(530f))
-        assertEquals(FinderListColumns(true, true), FinderContentTokens.listColumns(920f))
+        assertEquals(FinderListColumns(true, true, true), FinderContentTokens.listColumns(920f))
     }
 
     @Test fun heroFitsSmallPanelsWithoutGrowingBeyondLargeDisplayLimit() {

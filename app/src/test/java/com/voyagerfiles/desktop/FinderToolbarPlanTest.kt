@@ -4,6 +4,15 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class FinderToolbarPlanTest {
+    @Test fun gestureExclusionCoversViewModesWithoutStealingNativeTrailingButtons() {
+        val wide = FinderToolbarPlan.resolve(1020f,false)
+        assertTrue(wide.interactiveTrailingDp(1020f) >= 500f)
+        val medium = FinderToolbarPlan.resolve(700f,false)
+        assertTrue(medium.interactiveTrailingDp(700f) >= 390f)
+        val compact = FinderToolbarPlan.resolve(390f,false)
+        assertTrue(compact.interactiveTrailingDp(390f) >= 180f)
+        assertTrue(FinderToolbarPlan.resolve(110f,false).interactiveTrailingDp(110f) <= 110f)
+    }
     @Test fun wideShowsAllDirectGroups() {
         val p = FinderToolbarPlan.resolve(1040f, false)
         assertEquals(FinderToolbarMode.WIDE, p.mode)

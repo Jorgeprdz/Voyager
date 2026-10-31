@@ -561,4 +561,15 @@
     <string name="finderdex_toolbar_preview_resize">预览（放大窗口）</string>
     <string name="finderdex_toolbar_preview_hide">隐藏预览</string>
     <string name="finderdex_toolbar_preview_show">显示预览</string>
+    <string name="finderdex_path_copy">复制完整路径</string>
+    <string name="finderdex_path_parent">前往上级文件夹</string>
+    <string name="finderdex_zoom_very_small">极小</string>
+    <string name="finderdex_zoom_small">小</string>
+    <string name="finderdex_zoom_medium">中</string>
+    <string name="finderdex_zoom_large">大</string>
+    <string name="finderdex_zoom_giant">超大</string>
+    <string name="finderdex_zoom_compact">图标大小</string>
+    <string name="finderdex_zoom_decrease">A−</string>
+    <string name="finderdex_zoom_increase">A+</string>
+    <string name="finderdex_column_type">类型</string>
 </resources>

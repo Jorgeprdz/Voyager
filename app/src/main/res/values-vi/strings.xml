@@ -564,4 +564,15 @@
     <string name="finderdex_toolbar_preview_resize">Xem trước (phóng to cửa sổ)</string>
     <string name="finderdex_toolbar_preview_hide">Ẩn xem trước</string>
     <string name="finderdex_toolbar_preview_show">Hiện xem trước</string>
+    <string name="finderdex_path_copy">Sao chép đường dẫn đầy đủ</string>
+    <string name="finderdex_path_parent">Đi đến thư mục cha</string>
+    <string name="finderdex_zoom_very_small">Rất nhỏ</string>
+    <string name="finderdex_zoom_small">Nhỏ</string>
+    <string name="finderdex_zoom_medium">Vừa</string>
+    <string name="finderdex_zoom_large">Lớn</string>
+    <string name="finderdex_zoom_giant">Rất lớn</string>
+    <string name="finderdex_zoom_compact">Kích thước biểu tượng</string>
+    <string name="finderdex_zoom_decrease">A−</string>
+    <string name="finderdex_zoom_increase">A+</string>
+    <string name="finderdex_column_type">Loại</string>
 </resources>

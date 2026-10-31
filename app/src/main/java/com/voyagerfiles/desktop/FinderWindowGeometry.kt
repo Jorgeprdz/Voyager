@@ -13,18 +13,18 @@ internal object FinderWindowGeometry {
     const val SHADOW_ELEVATION_DP = 14f
 
     const val SIDEBAR_DEFAULT_WIDTH_DP = 250f
-    const val SIDEBAR_MIN_WIDTH_DP = 240f
-    const val SIDEBAR_MAX_WIDTH_DP = 280f
+    const val SIDEBAR_MIN_WIDTH_DP = 190f
+    const val SIDEBAR_MAX_WIDTH_DP = 420f
     const val SIDEBAR_RAIL_WIDTH_DP = 64f
     const val SIDEBAR_COLLAPSE_BELOW_DP = 700f
     const val CONTENT_MIN_WIDTH_DP = 340f
     const val NARROW_CONTENT_MIN_WIDTH_DP = 180f
-    const val DIVIDER_HIT_WIDTH_DP = 8f
+    const val DIVIDER_HIT_WIDTH_DP = 12f
 
     const val TOOLBAR_HEIGHT_DP = 54f
     const val TOOLBAR_GAP_DP = 12f
     const val CAPTION_CLEARANCE_DP = 10f
-    const val STATUS_BAR_HEIGHT_DP = 30f
+    const val STATUS_BAR_HEIGHT_DP = 38f
     const val STATUS_HORIZONTAL_PADDING_DP = 14f
 
     const val COMPACT_TOOLBAR_BELOW_DP = 1150f

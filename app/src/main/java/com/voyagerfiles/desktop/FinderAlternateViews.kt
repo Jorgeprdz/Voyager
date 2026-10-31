@@ -47,6 +47,7 @@ internal fun FinderListView(
     clipboardAvailable: Boolean,
     onAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState,
+    zoom: FinderViewDensity,
 ) {
     val last = columns.lastOrNull()
     val files = remember(last?.files, query, descending, sortBy) {
@@ -72,6 +73,9 @@ internal fun FinderListView(
             if (listColumns.showSize) Text(
                 androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_size),
                 Modifier.width(100.dp), color = palette.secondaryInk, fontSize = 11.sp)
+            if (listColumns.showType) Text(
+                androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_type),
+                Modifier.width(82.dp), color = palette.secondaryInk, fontSize = 11.sp)
             if (listColumns.showDate) Text(
                 androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_modified),
                 Modifier.width(128.dp), color = palette.secondaryInk, fontSize = 11.sp)
@@ -93,7 +97,7 @@ internal fun FinderListView(
                 val surface = finderAnimatedMaterial(if (pressed) palette.pressed
                     else if (selected) palette.selection(false, glass.windowFocused)
                     else if (hovered) palette.hover else Color.Transparent, selected)
-                Row(Modifier.fillMaxWidth().height(FinderContentTokens.LIST_ROW_HEIGHT_DP.dp)
+                Row(Modifier.fillMaxWidth().height(zoom.rowHeightDp.dp)
                     .padding(horizontal = 9.dp, vertical = 1.dp)
                     .clip(RoundedCornerShape(FinderContentTokens.LIST_ROW_CORNER_DP.dp))
                     .background(surface).hoverable(hoverSource)
@@ -116,14 +120,17 @@ internal fun FinderListView(
                     .finderFocusOutline(keyboardFocused)
                     .semantics { this.selected = selected }
                     .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(24.dp))
-                    else FileThumbnailOrIcon(file, 24.dp)
+                    if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(zoom.iconDp.dp))
+                    else FileThumbnailOrIcon(file, zoom.iconDp.dp)
                     Spacer(Modifier.width(9.dp))
                     val rowInk = if (selected) palette.selectionText(false, glass.windowFocused) else palette.ink
                     Text(file.name, Modifier.weight(1f), color = rowInk, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, fontSize = 12.sp)
                     if (listColumns.showSize) Text(if (file.isDirectory) "—" else file.formattedSize,
                         Modifier.width(100.dp), color = rowInk, fontSize = 11.sp, maxLines = 1)
+                    if (listColumns.showType) Text(
+                        if (file.isDirectory) "DIR" else file.extension.uppercase().ifBlank { "—" },
+                        Modifier.width(82.dp), color = rowInk, fontSize = 11.sp, maxLines = 1)
                     if (listColumns.showDate) Text(
                         DateFormat.getDateInstance(DateFormat.SHORT).format(file.lastModified),
                         Modifier.width(128.dp), color = rowInk, fontSize = 11.sp, maxLines = 1)
@@ -155,6 +162,7 @@ internal fun FinderGalleryView(
     clipboardAvailable: Boolean,
     onAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState,
+    zoom: FinderViewDensity,
 ) {
     val last = columns.lastOrNull()
     val files = remember(last?.files, query, descending, sortBy) {
@@ -194,7 +202,7 @@ internal fun FinderGalleryView(
                 }
             }
         }
-        LazyRow(Modifier.fillMaxWidth().height(FinderContentTokens.GALLERY_STRIP_HEIGHT_DP.dp)
+        LazyRow(Modifier.fillMaxWidth().height(zoom.stripHeightDp.dp)
             .background(palette.footer)
             .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -210,7 +218,7 @@ internal fun FinderGalleryView(
                 val surface = finderAnimatedMaterial(if (pressed) palette.pressed
                     else if (active) palette.selection(false, glass.windowFocused)
                     else if (hovered) palette.hover else Color.Transparent, active)
-                Column(Modifier.width(FinderContentTokens.GALLERY_THUMB_CELL_DP.dp)
+                Column(Modifier.width((zoom.iconDp + 36f).dp)
                     .fillMaxHeight().clip(RoundedCornerShape(10.dp))
                     .background(surface).hoverable(interaction)
                     .onFocusChanged { keyboardFocused = it.isFocused }
@@ -232,8 +240,8 @@ internal fun FinderGalleryView(
                         onLongClick = { menu = true })
                     .padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (file.isDirectory) FinderGlyph("folder",
-                        modifier = Modifier.size(FinderContentTokens.GALLERY_THUMB_DP.dp))
-                    else FileThumbnailOrIcon(file, FinderContentTokens.GALLERY_THUMB_DP.dp)
+                        modifier = Modifier.size(zoom.iconDp.dp))
+                    else FileThumbnailOrIcon(file, zoom.iconDp.dp)
                     Spacer(Modifier.height(4.dp))
                     Text(file.name, color = if (active) palette.selectionText(false, glass.windowFocused) else palette.ink,
                         fontSize = 11.sp, maxLines = 2,

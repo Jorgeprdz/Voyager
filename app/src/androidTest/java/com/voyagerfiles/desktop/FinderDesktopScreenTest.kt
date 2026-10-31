@@ -2,6 +2,8 @@ package com.voyagerfiles.desktop
 
 import android.app.Application
 import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.core.app.ApplicationProvider
@@ -46,6 +48,33 @@ class FinderDesktopScreenTest {
         compose.runOnIdle { assertEquals(File(root, "Documents/notes.txt").path, opened) }
     }
 
+
+    @Test fun compactSelectorUsesRealCallbacksForEveryMode() {
+        val controller = FinderColumnController(scope,
+            BrowserSession("compact-selector","Test",FileSource.LOCAL,root.path,root.path),
+            LocalFileProvider()::listFiles)
+        compose.setContent {
+            androidx.compose.foundation.layout.Box(
+                androidx.compose.ui.Modifier.width(560.dp).height(600.dp)) {
+                FinderDesktopScreen(controller,DesktopMode.FULL)
+            }
+        }
+        compose.runOnIdle { controller.start() }
+        compose.waitUntil(10_000) { controller.columns.value.lastOrNull()?.loading == false }
+        fun choose(title:String) {
+            compose.onNodeWithContentDescription("Elegir vista").performClick()
+            compose.onNodeWithText(title).performClick()
+        }
+        choose("Vista de lista")
+        compose.onNodeWithTag("finder-list").assertExists()
+        choose("Vista de galería")
+        compose.onNodeWithTag("finder-gallery").assertExists()
+        choose("Column view")
+        compose.onNodeWithTag("finder-columns").assertExists()
+        choose("Icon view")
+        compose.onNodeWithTag("finder-icons").assertExists()
+        compose.runOnIdle { assertEquals(root.path,controller.currentPath) }
+    }
 
     @Test fun listAndGalleryHaveRealNavigationAndPreserveSelectedFile() {
         val controller = FinderColumnController(scope,

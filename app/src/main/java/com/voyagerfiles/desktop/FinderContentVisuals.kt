@@ -43,6 +43,7 @@ internal object FinderContentTokens {
     fun listColumns(widthDp: Float): FinderListColumns = FinderListColumns(
         showSize = widthDp >= 450f,
         showDate = widthDp >= 645f,
+        showType = widthDp >= 770f,
     )
 
     fun galleryHeroSize(widthDp: Float, heightDp: Float): Float =
@@ -63,7 +64,8 @@ internal object FinderContentTokens {
     }
 }
 
-internal data class FinderListColumns(val showSize: Boolean, val showDate: Boolean)
+internal data class FinderListColumns(val showSize: Boolean, val showDate: Boolean,
+    val showType: Boolean = false)
 
 /** Original folder artwork colors; no system launcher assets or proprietary Apple resources. */
 internal data class FinderFolderColors(

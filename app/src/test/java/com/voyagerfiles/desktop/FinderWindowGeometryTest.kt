@@ -16,7 +16,7 @@ class FinderWindowGeometryTest {
 
     @Test fun resizeToMediumKeepsContentAndClampsSidebar() {
         val shell = FinderWindowGeometry.resolve(850f, 620f, 400f, 180f)
-        assertEquals(280f, shell.sidebarWidthDp, 0.001f)
+        assertEquals(400f, shell.sidebarWidthDp, 0.001f)
         assertFalse(shell.sidebarRail)
         assertTrue(shell.compactToolbar)
         assertFalse(shell.showPreview)
@@ -40,6 +40,18 @@ class FinderWindowGeometryTest {
         assertTrue(shell.sidebarRail)
         assertTrue(shell.minimalToolbar)
         assertEquals(26f, shell.statusBarHeightDp, 0.001f)
+    }
+
+    @Test fun sidebarRespectsNewLimitsAndPreservesMainContent() {
+        val wide = FinderWindowGeometry.resolve(1600f,900f,500f)
+        assertEquals(420f,wide.sidebarWidthDp,0.001f)
+        val minimum = FinderWindowGeometry.resolve(950f,800f,130f)
+        assertEquals(190f,minimum.sidebarWidthDp,0.001f)
+        val tight = FinderWindowGeometry.resolve(730f,700f,420f)
+        assertTrue(730f - tight.sidebarWidthDp - FinderWindowGeometry.DIVIDER_HIT_WIDTH_DP >=
+            FinderWindowGeometry.CONTENT_MIN_WIDTH_DP)
+        assertEquals(64f,FinderWindowGeometry.resolve(690f,800f,420f).sidebarWidthDp,0.001f)
+        assertEquals(250f,FinderWindowGeometry.resolve(1400f,800f,250f).sidebarWidthDp,0.001f)
     }
 
     @Test fun preferredSidebarIsPreservedAcrossReasonableDesktopResizes() {

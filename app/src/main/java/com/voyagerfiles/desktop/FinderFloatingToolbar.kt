@@ -65,6 +65,19 @@ internal data class FinderToolbarPlan(
     val inlineSearch: Boolean,
     val overflow: Boolean,
 ) {
+    /** Width consumed by real interactive trailing controls in the DeX caption strip.
+     * The prior fixed 220dp exclusion left the four-mode selector under window dragging.
+     */
+    fun interactiveTrailingDp(available: Float): Float {
+        val groupWidth = when(mode) {
+            FinderToolbarMode.WIDE -> 548f
+            FinderToolbarMode.MEDIUM -> 428f
+            FinderToolbarMode.COMPACT -> 222f
+            FinderToolbarMode.TIGHT -> available
+        }
+        return (groupWidth + if(inlineSearch)170f else 0f)
+            .coerceIn(0f,available.coerceAtLeast(0f))
+    }
     companion object {
         fun resolve(widthDp: Float, searching: Boolean): FinderToolbarPlan {
             val width = widthDp.coerceAtLeast(0f)
@@ -169,6 +182,8 @@ internal fun FinderToolbarButton(
 internal fun FinderToolbarViewSelector(
     style: FinderViewStyle, onStyle: (FinderViewStyle) -> Unit, expanded: Boolean,
 ) {
+    // A stable set of modes shared by segmented and compact controls.
+    // No independent view state: the source of truth is FinderDesktopScreen.viewStyle.
     val modes = listOf(
         Triple(FinderViewStyle.ICONS, "icons", stringResource(R.string.finderdex_view_icons)),
         Triple(FinderViewStyle.LIST, "list", "Vista de lista"),
@@ -183,7 +198,7 @@ internal fun FinderToolbarViewSelector(
         Box {
             FinderToolbarButton("Elegir vista", modes.first { it.first == style }.second,
                 standalone = true) { menu = true }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            FinderGlassMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 modes.forEach { (kind, _, title) ->
                     DropdownMenuItem(text = { Text(title) },
                         leadingIcon = { if (kind == style) Text("✓") },
@@ -207,7 +222,7 @@ internal fun FinderToolbarOverflow(
     var menu by remember { mutableStateOf(false) }
     Box {
         FinderToolbarButton("Más acciones", "more", standalone = true) { menu = true }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        FinderGlassMenu(expanded = menu, onDismissRequest = { menu = false }) {
             if (!plan.showTitle) DropdownMenuItem(
                 text = { Text(currentPath, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 enabled = false, onClick = {})
@@ -270,7 +285,7 @@ internal fun FinderToolbarSearch(
                 LaunchedEffect(Unit) { requester.requestFocus() }
             }
         }
-        if (searching && !inline) DropdownMenu(expanded = true, onDismissRequest = onToggle) {
+        if (searching && !inline) FinderGlassMenu(expanded = true, onDismissRequest = onToggle) {
             BasicTextField(value, onValue,
                 Modifier.width(FinderToolbarTokens.SEARCH_POPUP_DP.dp)
                     .padding(horizontal = 8.dp, vertical = 6.dp)
@@ -307,13 +322,16 @@ internal fun FinderToolbar(
     val freeWidth = (windowWidth - sidebarWidth - dividerWidth - leftGap - trailing - 14f)
         .coerceAtLeast(0f)
     val plan = FinderToolbarPlan.resolve(freeWidth, searching)
+    // Reserve every interactive toolbar group from DeX's caption dragging area.
+    // Previously only 220dp were excluded, leaving view segments under native hit testing.
+    val interactiveTrailingWidth = plan.interactiveTrailingDp(freeWidth)
     val rootTitle = stringResource(R.string.home_storage)
     val currentTitle = if (controller.currentPath == Environment.getExternalStorageDirectory().path)
         rootTitle else controller.currentPath.substringAfterLast('/').ifEmpty { rootTitle }
     val height = maxOf(FinderWindowGeometry.TOOLBAR_HEIGHT_DP, chrome.captionHeight / chrome.density)
     Row(Modifier.fillMaxWidth().height(height.dp).background(p.toolbar)
         .onGloballyPositioned { chrome.reserveInput(it, sidebarWidth + dividerWidth + leftGap,
-            if (searching) 380f else 220f) }
+            interactiveTrailingWidth.coerceAtMost(freeWidth)) }
         .padding(end = trailing.dp), verticalAlignment = Alignment.CenterVertically) {
         Row(Modifier.width((sidebarWidth + dividerWidth).dp).fillMaxHeight()
             .background(p.titlebar)
@@ -352,7 +370,7 @@ internal fun FinderToolbar(
                     FinderToolbarCapsule {
                         Box {
                             FinderToolbarButton("Ordenar: " + sortBy.name.lowercase(), "sort") { sortMenu = true }
-                            DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                            FinderGlassMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
                                 listOf(SortBy.NAME to "Nombre", SortBy.TYPE to "Tipo",
                                     SortBy.DATE to "Fecha", SortBy.SIZE to "Tamaño").forEach { (opt, label) ->
                                     DropdownMenuItem(text = { Text(label) },

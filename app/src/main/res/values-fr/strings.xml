@@ -576,4 +576,15 @@
     <string name="finderdex_toolbar_preview_resize">Aperçu (agrandir la fenêtre)</string>
     <string name="finderdex_toolbar_preview_hide">Masquer l’aperçu</string>
     <string name="finderdex_toolbar_preview_show">Afficher l’aperçu</string>
+    <string name="finderdex_path_copy">Copier le chemin complet</string>
+    <string name="finderdex_path_parent">Ouvrir le dossier parent</string>
+    <string name="finderdex_zoom_very_small">Très petit</string>
+    <string name="finderdex_zoom_small">Petit</string>
+    <string name="finderdex_zoom_medium">Moyen</string>
+    <string name="finderdex_zoom_large">Grand</string>
+    <string name="finderdex_zoom_giant">Très grand</string>
+    <string name="finderdex_zoom_compact">Taille des icônes</string>
+    <string name="finderdex_zoom_decrease">A−</string>
+    <string name="finderdex_zoom_increase">A+</string>
+    <string name="finderdex_column_type">Type</string>
 </resources>

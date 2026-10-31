@@ -564,4 +564,15 @@
     <string name="finderdex_toolbar_preview_resize">プレビュー（ウィンドウを拡大）</string>
     <string name="finderdex_toolbar_preview_hide">プレビューを非表示</string>
     <string name="finderdex_toolbar_preview_show">プレビューを表示</string>
+    <string name="finderdex_path_copy">フルパスをコピー</string>
+    <string name="finderdex_path_parent">親フォルダーへ移動</string>
+    <string name="finderdex_zoom_very_small">極小</string>
+    <string name="finderdex_zoom_small">小</string>
+    <string name="finderdex_zoom_medium">中</string>
+    <string name="finderdex_zoom_large">大</string>
+    <string name="finderdex_zoom_giant">特大</string>
+    <string name="finderdex_zoom_compact">アイコンサイズ</string>
+    <string name="finderdex_zoom_decrease">A−</string>
+    <string name="finderdex_zoom_increase">A+</string>
+    <string name="finderdex_column_type">種類</string>
 </resources>
