@@ -240,6 +240,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val trash by viewModel.trashState.collectAsState()
     val clipboardPaths by viewModel.clipboardPaths.collectAsState()
     val savedConnections by viewModel.connections.collectAsState()
+    val localTabSessions by viewModel.sessions.collectAsState()
     val context = LocalContext.current
     val rootView = LocalView.current
     LaunchedEffect(session?.id) {
@@ -359,6 +360,11 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         externalDragState = sharedDragState,
         onRoot = viewModel::openLocalRoot,
         onMobile = onMobile,
+        tabSessions = localTabSessions,
+        activeTabId = session?.id,
+        onNewTab = { viewModel.openLocalTab(controller.currentPath) },
+        onActivateTab = viewModel::activateSession,
+        onCloseTab = viewModel::closeSession,
         favoriteImages = customImages,
         trashEntries = trash.entries,
         trashLoading = trash.isLoading,
@@ -488,6 +494,11 @@ internal fun FinderDesktopScreen(
     onRemoveFavoriteImage: (String) -> Unit = {},
     onRoot: (String) -> Unit = {},
     onMobile: () -> Unit = {},
+    tabSessions: List<com.voyagerfiles.viewmodel.BrowserSession> = emptyList(),
+    activeTabId: String? = null,
+    onNewTab: () -> Unit = {},
+    onActivateTab: (String) -> Unit = {},
+    onCloseTab: (String) -> Unit = {},
     onOpen: (FileItem) -> Unit = {},
     message: String? = null,
     onDismissMessage: () -> Unit = {},
@@ -585,6 +596,30 @@ internal fun FinderDesktopScreen(
     var showTrash by remember { mutableStateOf(false) }
     var showAnalytics by remember { mutableStateOf(false) }
     var showRecents by remember { mutableStateOf(false) }
+    var splitEnabled by rememberSaveable { mutableStateOf(false) }
+    var splitRatio by rememberSaveable { mutableFloatStateOf(0.5f) }
+    val secondaryScope = rememberCoroutineScope()
+    val secondaryProvider = remember(controller.session.id) {
+        com.voyagerfiles.data.repository.FileProviderFactory.createLocal()
+    }
+    val secondarySession = remember(controller.session.id) {
+        controller.session.copy(id = "${controller.session.id}:dual", currentPath = controller.currentPath)
+    }
+    val secondaryController = remember(secondarySession.id) {
+        FinderColumnController(secondaryScope, secondarySession,
+            listDirectory = { path -> secondaryProvider.listFiles(path) },
+            parentOf = secondaryProvider::getParentPath)
+    }
+    val secondaryColumns by secondaryController.columns.collectAsState()
+    val secondaryDrag = remember(secondarySession.id) {
+        FinderDragDropState { false }.apply { enabled = false }
+    }
+    LaunchedEffect(splitEnabled, secondaryController) {
+        if (splitEnabled) secondaryController.start()
+    }
+    DisposableEffect(secondaryController) {
+        onDispose { secondaryController.close() }
+    }
     var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
         val owningColumn = columns.lastOrNull { col -> col.files.any { it.path == file.path } }
@@ -660,6 +695,24 @@ internal fun FinderDesktopScreen(
                 event.key == Key.Spacebar && !focusTracker.hasFocusedControl && !searching && quickLook == null && controller.selectedFile?.isDirectory == false -> {
                     quickLook = controller.selectedFile; true
                 }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.T && !focusTracker.hasFocusedControl -> {
+                    onNewTab(); true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.W &&
+                    tabSessions.size > 1 && !focusTracker.hasFocusedControl -> {
+                    activeTabId?.let(onCloseTab); true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.Tab &&
+                    tabSessions.size > 1 && !focusTracker.hasFocusedControl -> {
+                    val index = tabSessions.indexOfFirst { it.id == activeTabId }
+                    onActivateTab(tabSessions[(index + 1).mod(tabSessions.size)].id)
+                    true
+                }
+                (event.isCtrlPressed || event.isMetaPressed) && event.isShiftPressed &&
+                    event.key == Key.D && !focusTracker.hasFocusedControl -> {
+                    splitEnabled = !splitEnabled
+                    true
+                }
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C && operationsAvailable && !focusTracker.hasFocusedControl -> {
                     controller.columns.value.lastOrNull()?.selected.orEmpty().toList()
                         .takeIf { it.isNotEmpty() }?.let { onCopyPaths(it, false) }; true
@@ -698,7 +751,27 @@ internal fun FinderDesktopScreen(
             onNewFolder = { newFolderName = ""; newFolderDialog = true },
             onTrash = { onRefreshTrash(); showTrash = true },
             previewAvailable = shell.showPreview && mode != DesktopMode.COMPACT)
+        if (tabSessions.size > 1) Row(
+            Modifier.fillMaxWidth().height(32.dp).background(palette.toolbar)
+                .horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            tabSessions.forEach { tab ->
+                Row(Modifier.padding(horizontal = 5.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(if (tab.id == activeTabId) palette.selected else palette.toolbar),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Label(tab.title, Modifier.clickable { onActivateTab(tab.id) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp), color = palette.ink)
+                    Label("×", Modifier.clickable { onCloseTab(tab.id) }
+                        .padding(end = 8.dp), color = palette.secondaryInk)
+                }
+            }
+            Label("+", Modifier.clickable(onClick = onNewTab).padding(6.dp), color = palette.ink)
+        }
         Row(Modifier.weight(1f).fillMaxWidth()) {
+            val splitVisible = splitEnabled && availableWindowWidth >= 1000f &&
+                !shell.compactToolbar && mode != DesktopMode.COMPACT
             if (effectiveSidebarWidth >= 40f) {
                 FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
                     onAnalytics = { showAnalytics = true }, onRecents = { showRecents = true },
@@ -732,12 +805,26 @@ internal fun FinderDesktopScreen(
                 Box(Modifier.fillMaxHeight().width(1.dp).align(Alignment.CenterEnd).background(palette.separator))
             }
             when (viewStyle) {
-                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
-                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
-                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(1f).background(palette.content), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
-                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f).background(palette.content), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
             }
-            if (showPreview && shell.showPreview && mode != DesktopMode.COMPACT) FinderPreview(controller.selectedFile, onOpen)
+            if (splitVisible) {
+                Box(Modifier.fillMaxHeight().width(8.dp).background(palette.separator)
+                    .pointerInput(availableWindowWidth) {
+                        detectHorizontalDragGestures { change, delta ->
+                            change.consume()
+                            splitRatio = (splitRatio + delta / size.width.coerceAtLeast(1))
+                                .coerceIn(.25f, .75f)
+                        }
+                    })
+                FinderIconView(secondaryController, secondaryColumns, "", false, SortBy.NAME,
+                    Modifier.weight(1f - splitRatio), onOpen, false, false,
+                    { _, _ -> }, secondaryDrag, zoomDensity)
+            }
+            if (!splitVisible && showPreview && shell.showPreview && mode != DesktopMode.COMPACT)
+                FinderPreview(controller.selectedFile, onOpen)
         }
         if (message != null) Row(Modifier.fillMaxWidth().background(palette.feedback).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
             Label(message, Modifier.weight(1f)); Label("Cerrar", Modifier.clickable(onClick = onDismissMessage).padding(4.dp), color = Accent)

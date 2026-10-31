@@ -247,14 +247,16 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
-    private var desktopColumns: com.voyagerfiles.desktop.FinderColumnController? = null
+    /** Keep an independent column controller (history/selection/scroll) for each local tab session. */
+    private val desktopColumnsBySession = mutableMapOf<String, com.voyagerfiles.desktop.FinderColumnController>()
+    private val desktopColumns: com.voyagerfiles.desktop.FinderColumnController?
+        get() = _activeSession.value?.id?.let(desktopColumnsBySession::get)
 
     /** Read-only binding captured for one local session; never navigates browseState to list a column. */
     fun finderColumns(): com.voyagerfiles.desktop.FinderColumnController? {
         val session = _activeSession.value ?: return null
         if (session.source != FileSource.LOCAL) return null
-        desktopColumns?.takeIf { it.session.id == session.id }?.let { return it }
-        desktopColumns?.close()
+        desktopColumnsBySession[session.id]?.let { return it }
         val provider = sessionProviders[session.id] ?: return null
         return com.voyagerfiles.desktop.FinderColumnController(
             scope = viewModelScope,
@@ -275,7 +277,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     }
                 }
             },
-        ).also { desktopColumns = it }
+        ).also { desktopColumnsBySession[session.id] = it }
     }
 
     fun navigateTo(path: String) {
@@ -292,6 +294,30 @@ class FileBrowserViewModel @JvmOverloads constructor(
                 return@launch
             }
             navigateToPath(normalizedPath)
+        }
+    }
+
+    /** A new tab has its own session even if its initial path matches another tab. */
+    fun openLocalTab(path: String) {
+        cancelInitialNavigation()
+        viewModelScope.launch {
+            val normalized = BrowserNavigationBounds.normalizePath(path)
+            val root = Environment.getExternalStorageDirectory().absolutePath
+            if (!BrowserNavigationBounds.isPathAtOrInsideRoot(normalized, root)) {
+                showSnackbar(UiText.Resource(R.string.location_outside_session))
+                return@launch
+            }
+            if (_sessions.value.count { it.source == FileSource.LOCAL } >= 12) return@launch
+            val sessionId = "local:desktop-tab:${java.util.UUID.randomUUID()}"
+            sessionProviders[sessionId] = FileProviderFactory.createLocal()
+            _sessions.update { sessions ->
+                sessions + BrowserSession(
+                    id = sessionId, title = titleForLocalPath(normalized),
+                    source = FileSource.LOCAL, rootPath = root,
+                    currentPath = normalized
+                )
+            }
+            activateSessionInternal(sessionId)
         }
     }
 
@@ -1772,6 +1798,8 @@ class FileBrowserViewModel @JvmOverloads constructor(
     }
 
     override fun onCleared() {
+        desktopColumnsBySession.values.forEach { it.close() }
+        desktopColumnsBySession.clear()
         remoteImageThumbnailSessions.values.forEach(RemoteImageThumbnailSession::close)
         remoteImageThumbnailSessions.clear()
         // viewModelScope is cancelled at this point, so close privileged pipes synchronously.
@@ -1810,6 +1838,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
     }
 
     private suspend fun closeSessionInternal(sessionId: String) {
+        desktopColumnsBySession.remove(sessionId)?.close()
         val closedSession = _sessions.value.firstOrNull { it.id == sessionId } ?: return
         remoteImageThumbnailSessions.remove(sessionId)?.close()
         sessionProviders.remove(sessionId)?.disconnect()
