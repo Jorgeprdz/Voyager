@@ -360,7 +360,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         externalDragState = sharedDragState,
         onRoot = viewModel::openLocalRoot,
         onMobile = onMobile,
-        tabSessions = localTabSessions,
+        tabSessions = FinderDesktopTabPolicy.visible(localTabSessions),
         activeTabId = session?.id,
         onNewTab = { viewModel.openLocalTab(controller.currentPath) },
         onActivateTab = viewModel::activateSession,
@@ -815,7 +815,7 @@ internal fun FinderDesktopScreen(
                     .pointerInput(availableWindowWidth) {
                         detectHorizontalDragGestures { change, delta ->
                             change.consume()
-                            splitRatio = (splitRatio + delta / size.width.coerceAtLeast(1))
+                            splitRatio = (splitRatio + delta / (availableWindowWidth * density).coerceAtLeast(1f))
                                 .coerceIn(.25f, .75f)
                         }
                     })
