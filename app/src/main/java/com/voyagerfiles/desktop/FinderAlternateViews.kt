@@ -96,7 +96,7 @@ internal fun FinderListView(
                     Text(DateFormat.getDateInstance(DateFormat.SHORT).format(file.lastModified),
                         Modifier.width(128.dp), color = ink, fontSize = 11.sp, maxLines = 1)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
-                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1) {
+                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive) {
                         onAction(it, file)
                     }
                 }
@@ -171,7 +171,7 @@ internal fun FinderGalleryView(
                     Text(file.name, color = ink, fontSize = 11.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
-                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1) {
+                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive) {
                         onAction(it, file)
                     }
                 }
