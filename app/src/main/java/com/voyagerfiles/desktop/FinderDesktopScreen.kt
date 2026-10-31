@@ -787,6 +787,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     val root = Environment.getExternalStorageDirectory().path
     val glass = LocalFinderMaterials.current.palette
     val sidebarScroll = rememberScrollState()
+    var showDriveStatus by remember { mutableStateOf(false) }
     Box(Modifier.width(width).fillMaxHeight()
         // Light layered glass, without blur on file content or extra pointer interceptors.
         .shadow(3.dp, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp), clip = false)
@@ -817,13 +818,25 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
         }
         Spacer(Modifier.height(20.dp))
         if (!rail) SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
-        if (locationsExpanded || rail) volumes.forEach { (name, path) ->
-            if (java.io.File(path).isDirectory && java.io.File(path).canRead())
-                SidebarItem(name, path, "drive", path != root && currentPath == path, onRoot, dragState = dragState, rail = rail)
+        if (locationsExpanded || rail) {
+            volumes.forEach { (name, path) ->
+                if (java.io.File(path).isDirectory && java.io.File(path).canRead())
+                    SidebarItem(name, path, "drive", path != root && currentPath == path, onRoot, dragState = dragState, rail = rail)
+            }
+            // Connection is intentionally unavailable until user-authorized OAuth is configured.
+            // Never route a cloud item into the local filesystem or accept local folder drops here.
+            SidebarItem("Google Drive · sin conectar", "cloud:google-drive", "drive",
+                false, { showDriveStatus = true }, dragState = null, rail = rail)
         }
     }
     FinderVerticalScrollbar(sidebarScroll, Modifier.align(Alignment.CenterEnd))
     }
+    if (showDriveStatus) AlertDialog(
+        onDismissRequest = { showDriveStatus = false },
+        title = { Text("Google Drive") },
+        text = { Text("Sin conectar. La integración requiere configurar el OAuth oficial de FinderDex y autorizar el acceso desde tu cuenta. No se ha accedido a ningún archivo.") },
+        confirmButton = { TextButton(onClick = { showDriveStatus = false }) { Text("Entendido") } },
+    )
 }
 
 @Composable
