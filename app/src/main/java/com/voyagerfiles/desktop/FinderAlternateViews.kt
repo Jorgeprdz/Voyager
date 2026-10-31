@@ -46,6 +46,7 @@ internal fun FinderListView(
     modifier: Modifier,
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
+    clipboardAvailable: Boolean,
     onAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState,
 ) {
@@ -108,7 +109,7 @@ internal fun FinderListView(
                     Text(DateFormat.getDateInstance(DateFormat.SHORT).format(file.lastModified),
                         Modifier.width(128.dp), color = ink, fontSize = 11.sp, maxLines = 1)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
-                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive) {
+                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                         onAction(it, file)
                     }
                 }
@@ -130,6 +131,7 @@ internal fun FinderGalleryView(
     modifier: Modifier,
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
+    clipboardAvailable: Boolean,
     onAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState,
 ) {
@@ -184,7 +186,7 @@ internal fun FinderGalleryView(
                     Text(file.name, color = ink, fontSize = 11.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
-                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive) {
+                        if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                         onAction(it, file)
                     }
                 }
