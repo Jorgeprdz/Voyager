@@ -594,6 +594,6 @@
     <string name="finderdex_favorite_remove">Retirer des favoris</string>
     <string name="finderdex_zoom_accessibility">Taille des icônes</string>
     <string name="finderdex_cloud_drive_disconnected">Google Drive · non connecté</string>
-    <string name="finderdex_cloud_drive_unavailable">Non connecté. FinderDex nécessite une configuration OAuth officielle et votre autorisation avant d&apos;accéder aux fichiers Drive. Aucun fichier n&apos;a été consulté.</string>
+    <string name="finderdex_cloud_drive_unavailable">Non connecté. FinderDex nécessite une configuration OAuth officielle et votre autorisation avant d\'accéder aux fichiers Drive. Aucun fichier n&apos;a été consulté.</string>
     <string name="finderdex_cloud_drive_ok">Compris</string>
 </resources>
