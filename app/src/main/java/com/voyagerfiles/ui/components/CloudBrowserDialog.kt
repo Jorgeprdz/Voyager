@@ -106,7 +106,7 @@ internal fun CloudBrowserDialog(cloud: CloudService, onDismiss: () -> Unit) {
     LaunchedEffect(auth) { if (authorized) launch { load() } }
     DisposableEffect(auth) { onDispose { auth.dispose() } }
     AlertDialog(onDismissRequest = { job?.cancel(); onDismiss() },
-        title = { Text(if (cloud == CloudService.GOOGLE_DRIVE) "Google Drive" else "OneDrive") },
+        title = { Text(stringResource(if (cloud == CloudService.GOOGLE_DRIVE) R.string.finderdex_cloud_drive_title else R.string.finderdex_onedrive_title)) },
         text = {
             Column(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
                 if (!authorized) {

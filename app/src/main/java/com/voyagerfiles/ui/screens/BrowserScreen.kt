@@ -735,7 +735,7 @@ fun BrowserScreen(
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back))
                             }
                             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
-                                Text(state.currentPath.substringAfterLast('/').ifBlank { "FinderDex" },
+                                Text(state.currentPath.substringAfterLast('/').ifBlank { context.getString(R.string.finderdex_mobile_title) },
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                                     color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleMedium)
                                 Text(state.files.size.toString(),

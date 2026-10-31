@@ -119,7 +119,7 @@ fun HomeScreen(
     Scaffold(containerColor = FinderMobileTokens.background,
         topBar = {
             TopAppBar(title = { Column {
-                Text("FinderDex", color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.finderdex_mobile_title), color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.r31_your_files), color = FinderMobileTokens.secondaryInk,
                     style = MaterialTheme.typography.labelMedium)
             } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = FinderMobileTokens.background),
