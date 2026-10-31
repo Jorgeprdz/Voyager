@@ -4,10 +4,10 @@
 - IMPLEMENTATION_BRANCH: `feat/finderdex-r3-implementation` (crear sólo cuando Codex inicie)
 - BASELINE_BRANCH: `feat/finder-dex-foundation-01`
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
-- CURRENT_STAGE: `07-BULK-RENAME-TRANSFERS.md`
-- LAST_COMPLETED_STAGE: `06-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_07_IMPLEMENTED_CI_RUNNING`
-- NEXT_ACTION: `Verificar workflow 41186542130 para SHA 9d8d8df; corregir build/tests/lint, registrar resultados y avanzar a 08-MOBILE-REDESIGN.md sólo tras gate`
+- CURRENT_STAGE: `08-MOBILE-REDESIGN.md`
+- LAST_COMPLETED_STAGE: `07-PARTIAL-PASS_AUTOMATED`
+- STATUS: `STAGE_07_PARTIAL_PASS_AUTOMATED_STAGE_08_READY`
+- NEXT_ACTION: `Ejecutar 08-MOBILE-REDESIGN.md: integrar identidad mobile sobre HomeScreen/BrowserScreen sin modificar Desktop R2.2; probar CI y registrar revisión visual pendiente`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -18,7 +18,7 @@
 | 04 Analizador | PARTIAL/PASS_AUTOMATED (panel nativo, escaneo acotado de categorías, revisión de duplicados) | `b2c439f` | [Run 41185041348](https://github.com/Jorgeprdz/Voyager/actions/runs/41185041348) SUCCESS: build, unit, lint, signing; SHA256 `b7587debcd418ac480ba1ef44b5ec96c542eec6194e8934f5af999fd84ff0bde` | PENDING_PHYSICAL_DEX | No se estima espacio de carpetas inaccesibles ni se borran datos; revisión pendiente |
 | 05 Recientes/red/Quick Share | PARTIAL/PASS_AUTOMATED (historial local, mtime separado, conexiones guardadas en sidebar, system share sheet existente) | `b7f4bc4` | [Run 41185601902](https://github.com/Jorgeprdz/Voyager/actions/runs/41185601902) SUCCESS: build, unit, lint, APK; SHA256 `f6d40cae291fa45eadee609b6d596b355539856eb40ba3a77928dc4ff163cd34` | PENDING_PHYSICAL_DEX | Red usa browser Voyager tras cambiar a vista móvil; Quick Share depende del receptor del sistema |
 | 06 Pestañas y doble panel | PARTIAL/PASS_AUTOMATED (pestañas locales y panel secundario sólo navegación) | `7bda48a` | [Run 41186030196](https://github.com/Jorgeprdz/Voyager/actions/runs/41186030196) SUCCESS: build, unit, lint, signed APK; SHA256 `e95c84dbdf1f94fc39ff82e8888385f62f1ffa5e1155275e302c449362b75a90` | PENDING_PHYSICAL_DEX | Sin cross-panel copy/verify; pestañas no persistidas tras proceso; requiere prueba de selección/resize |
-| 07 Renombrado/transferencias | PARTIAL / CI_PENDING (preview seguro y batch local, centro de transferencias existente con progreso/cancelación) | `9d8d8df` | [Run 41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) IN_PROGRESS | PENDING_PHYSICAL_DEX | No pause/resume/retry universal; UI preview solo prefijo/numero aunque planner incluye más reglas |
+| 07 Renombrado/transferencias | PARTIAL/PASS_AUTOMATED (preview, lotes locales y progreso/cancelación existentes) | `9d8d8df` | [Run 41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) SUCCESS: build, unit, lint, signed APK; SHA256 `f30fcd04e5a697876698504c8eed8bf3ba99fc9e3247bf5e6d8c4767efcaf379` | PENDING_PHYSICAL_DEX | No pause/resume/retry universal; UI preview solo prefijo/numero aunque planner incluye más reglas |
 | 08 Rediseño móvil FinderDex | PLANNED | — | — | PENDING | Revisión visual en teléfono |
 | 09 End-to-end y APK | PLANNED | — | — | PENDING | — |
 
@@ -123,3 +123,8 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Commit `9d8d8df`: planner de renombrado masivo con preview obligatorio, extensiones preservadas, límites de nombres y colisiones; acción de selección múltiple y batch sobre `FileProvider.rename` con progreso/cancelación y errores parciales; reusa motor de transferencias.
 - UI expone prefijo y numeración; planner soporta sufijo/reemplazar/mayúsculas/minúsculas todavía sin controles propios. Sin pause/resume/retry universal, sin tests físicos DeX.
 - Run [41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) activo; no declarar PASS hasta veredicto.
+
+### 2026-10-31 UTC — cierre gate etapa 07
+- [Run 41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) **SUCCESS** en compile, unit, lint, APK y firma. Artifact `FinderDex-R3-APK` ID `13036949755`, SHA256 `f30fcd04e5a697876698504c8eed8bf3ba99fc9e3247bf5e6d8c4767efcaf379`.
+- Etapa 07 **PARTIAL**: renombrado masivo implementado/validado CI con preview y operaciones locales; UI cubre prefijo/numeración, no todas las reglas; motor de progreso/cancelación existe, falta transfer center completo, pausa/retry y pruebas físicas.
+- Avanza a etapa 08 sin declarar R3 completo.
