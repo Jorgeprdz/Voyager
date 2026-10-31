@@ -29,12 +29,13 @@ internal fun FinderSpringFolderPanel(drag: FinderDragDropState, modifier: Modifi
     val folder = drag.springFolder ?: return
     if (drag.draggingPaths.isEmpty()) return
     val children by produceState<Result<List<FileItem>>?>(null, folder) {
-        value = withContext(Dispatchers.IO) {
+        val loaded = withContext(Dispatchers.IO) {
             LocalFileProvider().listFiles(folder).map { items ->
                 items.filter { it.isDirectory && !it.isHidden }
                     .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
             }
         }
+        value = loaded
     }
     Column(modifier.width(300.dp).heightIn(max = 390.dp)
         .shadow(14.dp, RoundedCornerShape(16.dp))
