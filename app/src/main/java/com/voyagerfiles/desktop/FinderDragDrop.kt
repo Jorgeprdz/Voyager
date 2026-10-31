@@ -21,7 +21,9 @@ internal data class FinderPendingMove(
 private data class FinderDropTarget(val path: String, val rect: Rect, val allowed: Boolean)
 
 /** Pointer coordinates and visual state are separate from Voyager's real transfer lifecycle. */
-internal class FinderDragDropState {
+internal class FinderDragDropState(
+    private val isWritableDirectory: (String) -> Boolean = { File(it).isDirectory && File(it).canWrite() },
+) {
     private val targets = mutableStateMapOf<String, FinderDropTarget>()
     var allowedRoot: String = "/"
     var draggingPaths by mutableStateOf<List<String>>(emptyList())
@@ -51,7 +53,7 @@ internal class FinderDragDropState {
         allowedRoot == "/" || path == allowedRoot || path.startsWith("$allowedRoot/")
 
     private fun canTarget(path: String): Boolean =
-        withinRoot(path) && File(path).isDirectory && File(path).canWrite()
+        withinRoot(path) && isWritableDirectory(path)
 
     fun register(id: String, path: String, rect: Rect) {
         val candidate = FinderDropTarget(path, rect, canTarget(path))
