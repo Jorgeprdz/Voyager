@@ -6,15 +6,15 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `03-ONEDRIVE.md`
 - LAST_COMPLETED_STAGE: `02-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_02_PARTIAL_PASS_AUTOMATED_STAGE_03_READY`
-- NEXT_ACTION: `Leer 03-ONEDRIVE.md e implementar adaptador Graph seguro; registrar BLOCKED_EXTERNAL para registro de Microsoft/OAuth y continuar con etapas independientes tras validar CI`
+- STATUS: `STAGE_03_PARTIAL_CI_RUNNING`
+- NEXT_ACTION: `Verificar CI 41177638059 para OneDrive Graph adapter; corregir errores; registrar PARTIAL/BLOCKED_EXTERNAL y seguir etapa 04 independiente sólo tras gate`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive OAuth/client registration, user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
 |---|---|---|---|---|---|
 | 01 Google Drive | PARTIAL/PASS_AUTOMATED (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) SUCCESS: compile,  unit, lint, debug APK, signing checks; SHA256 `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
 | 02 Drag & drop externo | PARTIAL/PASS_AUTOMATED (global Alt+drag, content URI receive, hovered folder/sidebar destinations) | `d44d96a0` | [Run 41176885241](https://github.com/Jorgeprdz/Voyager/actions/runs/41176885241) SUCCESS: build, unit, lint, APK, signed package; SHA256 `35b4a53819c07365255ff87c4320b3c52ef9cdb59ed72f915f4937a20199ef37` | PENDING_PHYSICAL_DEX | Folder-as-source unsupported; external app acceptance and URI grants unverified physically |
-| 03 OneDrive | PLANNED | — | — | PENDING | Registro Microsoft por verificar |
+| 03 OneDrive | PARTIAL / CI_PENDING (Graph adapter + disconnected sidebar, no OAuth) | `2df8dfe` | [Run 41177638059](https://github.com/Jorgeprdz/Voyager/actions/runs/41177638059) IN_PROGRESS | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: Microsoft app registration/MSAL OAuth/consent; resumable uploads and async copy not implemented |
 | 04 Analizador | PLANNED | — | — | PENDING | — |
 | 05 Recientes/red/Quick Share | PLANNED | — | — | PENDING | — |
 | 06 Pestañas y doble panel | PLANNED | — | — | PENDING | — |
@@ -74,3 +74,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Seguridad: drag externo COPY solamente, jamás borra origen; permisos de drop se liberan al concluir el motor existente. Se preservan las rutas de drag interno R2.2 y los tokens visuales.
 - **PARTIAL** pese a gate automatizado: sin prueba real entre dos ventanas DeX, no se garantiza compatibilidad de cada app/MIME ni arrastre directo de carpetas como fuente. No se declara PASS_PHYSICAL.
 - Se pasa a etapa 03 porque no hay bloqueo P0 automatizado; la deuda física de etapa 02 queda explícita para etapa 09.
+
+### 2026-10-31 UTC — etapa 03 implementación parcial
+- Código `2df8dfe`: adapter real de Microsoft Graph con IDs opacos, continuación estricta de paginación, acceso condicionado a bearer autorizado, list/search/download, upload pequeño, rename/move/trash y errores explícitos. `copy` devuelve unsupported en vez de fingir finalización de operación asíncrona; uploads grandes requieren upload-session todavía no implementado.
+- Sidebar de OneDrive con estado real desconectado y mensaje claro; no hay cuentas falsas. Infraestructura HTTP OkHttp de producción y tests de URLs/HTTP policy.
+- `BLOCKED_EXTERNAL`: app registration, redirect URI, MSAL public client ID, consentimiento. No usar credenciales ajenas. Sin integración real de inicio de sesión.
+- CI [41177638059](https://github.com/Jorgeprdz/Voyager/actions/runs/41177638059) en curso; no avanzar la etapa prematuramente ni asumir pruebas físicas.
