@@ -102,9 +102,10 @@ private fun decodeQuickLook(file: FileItem): QuickLookContent {
 internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
     onNavigate: (Int) -> Unit = {}) {
     val focus = remember { FocusRequester() }
-    val content by produceState<QuickLookContent>(QuickLookContent.Loading, file.path) {
+    var content by remember(file.path) { mutableStateOf<QuickLookContent>(QuickLookContent.Loading) }
+    LaunchedEffect(file.path) {
         val decoded = withContext(Dispatchers.IO) { decodeQuickLook(file) }
-        value = decoded
+        content = decoded
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
@@ -127,12 +128,12 @@ internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(file.name, color = Color(0xff292933), fontWeight = FontWeight.SemiBold, fontSize = 17.sp,
                     maxLines = 1, modifier = Modifier.weight(1f))
-                Text("Cerrar  Esc", color = Color(0xff006fe4), modifier = Modifier.padding(start = 12.dp).clickable(onClick = onDismiss), fontSize = 12.sp)
+                Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_quicklook_close), color = Color(0xff006fe4), modifier = Modifier.padding(start = 12.dp).clickable(onClick = onDismiss), fontSize = 12.sp)
             }
             Spacer(Modifier.height(16.dp))
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 when (val preview = content) {
-                    is QuickLookContent.Loading -> Text("Cargando vista previa…")
+                    is QuickLookContent.Loading -> Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_quicklook_loading))
                     is QuickLookContent.Picture -> Image(preview.bitmap.asImageBitmap(), null,
                         modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     is QuickLookContent.Document -> Box(Modifier.fillMaxSize()
