@@ -7,7 +7,7 @@ import org.junit.Test
 
 class FinderDragDropStateTest {
     @Test fun dropOnAnotherFolderProducesConfirmedMoveRequest() {
-        val state = FinderDragDropState { true }
+        val state = FinderDragDropState { true }.apply { enabled = true }
         state.register("folder", "/root/destination", Rect(0f, 0f, 100f, 100f))
         state.start(listOf("/root/source/file.txt"), Offset(25f, 25f))
         assertEquals("/root/destination", state.hoveredDestination)
@@ -18,7 +18,7 @@ class FinderDragDropStateTest {
     }
 
     @Test fun refusesSelfDescendantsAndSameParentDrops() {
-        val state = FinderDragDropState { true }
+        val state = FinderDragDropState { true }.apply { enabled = true }
         state.register("self", "/root/Folder", Rect(0f, 0f, 100f, 100f))
         state.start(listOf("/root/Folder"), Offset(25f, 25f))
         state.end()
@@ -36,7 +36,7 @@ class FinderDragDropStateTest {
     }
 
     @Test fun emptyDropAreaDoesNotMoveAnything() {
-        val state = FinderDragDropState { true }
+        val state = FinderDragDropState { true }.apply { enabled = true }
         state.start(listOf("/root/source/file.txt"), Offset(100f, 100f))
         state.end()
         assertNull(state.pending)
