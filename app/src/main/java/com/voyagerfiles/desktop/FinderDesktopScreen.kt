@@ -13,6 +13,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +36,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
@@ -732,10 +736,14 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
         column?.files.orEmpty().filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
     }
     val marquee = remember(column?.path) { FinderMarqueeState() }
+    val gridState = rememberLazyGridState()
+    var gridBounds by remember { mutableStateOf(Rect.Zero) }
+    FinderEdgeAutoScroll(marquee, dragState, gridBounds) { gridState.scrollBy(it) }
     Box(modifier.fillMaxHeight().background(Paper).testTag("finder-icons")
         .finderMarqueeGesture(controller, marquee, dragState)) {
         key(column?.path) {
-            LazyVerticalGrid(columns = GridCells.Adaptive(140.dp), modifier = Modifier.fillMaxSize(),
+            LazyVerticalGrid(columns = GridCells.Adaptive(140.dp),
+                state = gridState, modifier = Modifier.fillMaxSize().onGloballyPositioned { gridBounds = it.boundsInRoot() },
                 contentPadding = PaddingValues(24.dp, 22.dp), horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(files, key = { it.path }) { file ->
@@ -812,6 +820,9 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
     operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val scroll = rememberLazyListState(column.scrollIndex, column.scrollOffset)
+    val marqueeForEdge = remember(column.id) { FinderMarqueeState() }
+    var columnBounds by remember { mutableStateOf(Rect.Zero) }
+    FinderEdgeAutoScroll(marqueeForEdge, dragState, columnBounds) { scroll.scrollBy(it) }
     LaunchedEffect(scroll) {
         snapshotFlow { scroll.firstVisibleItemIndex to scroll.firstVisibleItemScrollOffset }.collect { (i, offset) -> controller.rememberScroll(index, i, offset) }
     }
@@ -820,7 +831,8 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
             val filtered = remember(column.files, query, descending) {
                 column.files.filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
             }
-            LazyColumn(state = scroll, modifier = Modifier.fillMaxSize().padding(horizontal = 5.dp), contentPadding = PaddingValues(vertical = 7.dp)) {
+            LazyColumn(state = scroll, modifier = Modifier.fillMaxSize()
+                .onGloballyPositioned { columnBounds = it.boundsInRoot() }.padding(horizontal = 5.dp), contentPadding = PaddingValues(vertical = 7.dp)) {
                 itemsIndexed(filtered, key = { _, f -> f.path }) { _, file ->
                     val selected = file.path in column.selected
                     val interaction = remember { MutableInteractionSource() }
