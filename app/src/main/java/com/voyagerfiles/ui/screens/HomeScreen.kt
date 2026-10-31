@@ -125,26 +125,26 @@ fun HomeScreen(
             onOpenSafTree(uri)
         }
     }
-    Scaffold(containerColor = FinderMobileTokens.background,
+    Scaffold(containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(title = { Column {
-                Text(stringResource(R.string.finderdex_mobile_title), color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleLarge)
-                Text(stringResource(R.string.r31_your_files), color = FinderMobileTokens.secondaryInk,
+                Text(stringResource(R.string.finderdex_mobile_title), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.r31_your_files), color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelMedium)
-            } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = FinderMobileTokens.background),
+            } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 actions = { IconButton(onClick = onNavigateToSettings) {
-                    Icon(Icons.Filled.Settings, stringResource(R.string.content_desc_settings), tint = FinderMobileTokens.secondaryInk)
+                    Icon(Icons.Filled.Settings, stringResource(R.string.content_desc_settings), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 } })
         }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             item("search") {
                 androidx.compose.material3.Surface(onClick = onNavigateToSearch,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), color = FinderMobileTokens.ice,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+                    shape = FinderMobileTokens.controlShape, color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Row(Modifier.heightIn(min = 52.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Search, null, tint = FinderMobileTokens.folderBlue)
-                        Text(stringResource(R.string.search_storage_title), Modifier.padding(start = 12.dp), color = FinderMobileTokens.secondaryInk)
+                        Icon(Icons.Filled.Search, null, tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.action_search), Modifier.padding(start = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -157,7 +157,7 @@ fun HomeScreen(
                             androidx.compose.material3.Surface(onClick = { primary.path?.let(onNavigateToBrowser) },
                                 shape = FinderMobileTokens.cardShape, color = FinderMobileTokens.navy,
                                 shadowElevation = 3.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
-                                Column(Modifier.padding(20.dp)) {
+                                Column(Modifier.padding(18.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(46.dp))
                                         Column(Modifier.weight(1f).padding(start = 14.dp)) {
@@ -169,7 +169,7 @@ fun HomeScreen(
                                         Text("›", color = androidx.compose.ui.graphics.Color.White)
                                     }
                                     if (info != null && info.total > 0) {
-                                        Spacer(Modifier.height(16.dp))
+                                        Spacer(Modifier.height(12.dp))
                                         LinearProgressIndicator(progress = { (info.used.toFloat() / info.total).coerceIn(0f, 1f) },
                                             modifier = Modifier.fillMaxWidth().height(5.dp), color = androidx.compose.ui.graphics.Color(0xFF85D4FF),
                                             trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = .15f))
@@ -201,7 +201,7 @@ fun HomeScreen(
                             Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("home-bookmark-${bookmark.id}")
                                 .combinedClickable(onClick = { onNavigateToBrowser(bookmark.path) }, onLongClick = { bookmarkToRemove = bookmark }),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Filled.Bookmark, null, tint = FinderMobileTokens.folderBlue, modifier = Modifier.size(22.dp))
+                                Icon(Icons.Filled.Bookmark, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                                 Text(bookmark.name, Modifier.weight(1f).padding(start = 14.dp), color = FinderMobileTokens.navy)
                                 IconButton(onClick = { bookmarkToRemove = bookmark }) { Text("⋮") }
                             }
@@ -223,8 +223,11 @@ fun HomeScreen(
                     item("tools") {
                         androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             StorageCategory.entries.forEach { category ->
-                                androidx.compose.material3.AssistChip(onClick = { onNavigateToCategory(category) },
-                                    label = { Text(stringResource(category.filter.labelRes)) })
+                                com.voyagerfiles.ui.components.FinderMobileFilterPill(
+                                    label = stringResource(category.filter.labelRes),
+                                    selected = false,
+                                    onClick = { onNavigateToCategory(category) },
+                                )
                             }
                         }
                     }
@@ -258,20 +261,20 @@ fun HomeScreen(
 
 @Composable
 private fun MobileHomeHeading(title: String) {
-    Text(title, Modifier.padding(top = 18.dp, bottom = 6.dp), style = MaterialTheme.typography.titleSmall, color = FinderMobileTokens.secondaryInk)
+    Text(title, Modifier.padding(top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable
 private fun MobileHomeRow(title: String, icon: ImageVector, onClick: () -> Unit, folder: Boolean = false, subtitle: String? = null) {
-    Row(Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable(onClick = onClick).padding(vertical = 8.dp),
+    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically) {
         if (folder) com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(34.dp))
-        else Icon(icon, null, Modifier.size(28.dp), tint = FinderMobileTokens.folderBlue)
+        else Icon(icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
         Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = FinderMobileTokens.navy, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelSmall, color = FinderMobileTokens.secondaryInk)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text("›", color = FinderMobileTokens.secondaryInk)
+        Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -341,7 +344,7 @@ internal fun StorageVolumeCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isInternal)
                 FinderMobileTokens.ice
-            else FinderMobileTokens.surface,
+            else MaterialTheme.colorScheme.surface,
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -350,19 +353,19 @@ internal fun StorageVolumeCard(
                     if (isInternal) Icons.Filled.PhoneAndroid else Icons.Filled.SdStorage,
                     contentDescription = null,
                     modifier = Modifier.size(32.dp),
-                    tint = FinderMobileTokens.folderBlue,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         volume.description,
                         style = MaterialTheme.typography.titleMedium,
-                        color = FinderMobileTokens.navy,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         statusLabel ?: storageUsage ?: volume.path.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = FinderMobileTokens.secondaryInk,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -373,7 +376,7 @@ internal fun StorageVolumeCard(
                 LinearProgressIndicator(
                     progress = { storageInfo.usedPercentage },
                     modifier = Modifier.fillMaxWidth(),
-                    color = FinderMobileTokens.folderBlue,
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = FinderMobileTokens.edge,
                 )
             }
@@ -449,7 +452,7 @@ private fun QuickAccessCard(
         modifier = modifier.heightIn(min = 94.dp).clickable(onClick = onClick),
         shape = FinderMobileTokens.cardShape,
         colors = CardDefaults.cardColors(
-            containerColor = FinderMobileTokens.surface,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
     ) {
         Column(
@@ -462,13 +465,13 @@ private fun QuickAccessCard(
                 icon,
                 contentDescription = label,
                 modifier = Modifier.size(28.dp),
-                tint = FinderMobileTokens.folderBlue,
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = FinderMobileTokens.navy,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
