@@ -4,15 +4,15 @@
 - IMPLEMENTATION_BRANCH: `feat/finderdex-r3-implementation` (crear sólo cuando Codex inicie)
 - BASELINE_BRANCH: `feat/finder-dex-foundation-01`
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
-- CURRENT_STAGE: `01-GOOGLE-DRIVE.md`
-- LAST_COMPLETED_STAGE: `NONE`
-- STATUS: `STAGE_01_PARTIAL_CI_VALIDATION`
-- NEXT_ACTION: `Verificar workflow 41174902301 para SHA 3a30ebc; corregir cualquier error; si pasa, registrar PASS_AUTOMATED y avanzar a 02-CROSS-APP-DRAG-DROP.md`
+- CURRENT_STAGE: `02-CROSS-APP-DRAG-DROP.md`
+- LAST_COMPLETED_STAGE: `01-PARTIAL-PASS_AUTOMATED`
+- STATUS: `STAGE_01_PARTIAL_PASS_AUTOMATED_STAGE_02_READY`
+- NEXT_ACTION: `Ejecutar 02-CROSS-APP-DRAG-DROP.md; validar con CI, registrar bloqueos y pruebas físicas DeX; no declarar interoperabilidad sin pruebas reales`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive OAuth/client registration, user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
 |---|---|---|---|---|---|
-| 01 Google Drive | PARTIAL (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) IN_PROGRESS; prior `a2f6c6a` compile/tests PASS, lint failed; `9fb6506` AAPT failed on French apostrophes (fixed in `3a30ebc`) | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
+| 01 Google Drive | PARTIAL/PASS_AUTOMATED (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) SUCCESS: compile,  unit, lint, debug APK, signing checks; SHA256 `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
 | 02 Drag & drop externo | PLANNED | — | — | PENDING | Compatibilidad receptores |
 | 03 OneDrive | PLANNED | — | — | PENDING | Registro Microsoft por verificar |
 | 04 Analizador | PLANNED | — | — | PENDING | — |
@@ -39,3 +39,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - `9fb6506`: compilación fallida en resources (secuencia de apóstrofos en `values-fr`).
 - `96fd7a7` y `3a30ebc`: escape corregido de todos los apóstrofos de las nuevas cadenas francesas; solo `3a30ebc` es el HEAD de código vigente.
 - Run 41174902301 en curso. No avanzar `CURRENT_STAGE` mientras no finalice la validación. Sin APK integrada.
+
+### 2026-10-31 UTC — gate automatizado etapa 01 aprobado, funcionalidad incompleta
+- GitHub Actions run [41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301): SUCCESS en compilación `compileDebugKotlin`, pruebas unitarias `testDebugUnitTest`, lint `lintDebug`, ensamblado y verificación de APK/firma.
+- Archivo generado: artifact `FinderDex-R3-APK` (id `13032554272`, nombre interno `app-debug.apk`); test artifact `FinderDex-R3-Tests` (id `13033065391`); paquete `com.finderdex.preview`; SHA256 del binario según log `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c`.
+- `01` es PARTIAL, no integrada: contrato, políticas y UI de estado no conectado, NO OAuth, NO listados/subidas/bajadas reales de Drive; `BLOCKED_EXTERNAL` para credenciales y consentimiento.
+- `PENDING_PHYSICAL_DEX`: ninguna prueba en dispositivo; APK no descargada en Android por ausencia de conexión a Termux en este entorno.
+- El orquestador permite avanzar con etapas independientes tras dejar registradas dependencias externas. Se habilita `CURRENT_STAGE=02-CROSS-APP-DRAG-DROP.md` sin declarar stage 01 funcionalmente completo.
