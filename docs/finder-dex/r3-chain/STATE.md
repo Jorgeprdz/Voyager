@@ -7,13 +7,13 @@
 - CURRENT_STAGE: `02-CROSS-APP-DRAG-DROP.md`
 - LAST_COMPLETED_STAGE: `01-PARTIAL-PASS_AUTOMATED`
 - STATUS: `STAGE_02_IMPLEMENTED_CI_RUNNING`
-- NEXT_ACTION: `Verificar run 41176324671 para commit 91231779 de etapa 02; corregir cualquier fallo sin tocar R2.2, actualizar evidencias y continuar con 03-ONEDRIVE.md sólo después del gate`
+- NEXT_ACTION: `Verificar run 41176428850 para commit c7f22a59 de etapa 02; corregir cualquier fallo sin tocar R2.2, actualizar evidencias y continuar con 03-ONEDRIVE.md sólo después del gate`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive OAuth/client registration, user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
 |---|---|---|---|---|---|
 | 01 Google Drive | PARTIAL/PASS_AUTOMATED (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) SUCCESS: compile,  unit, lint, debug APK, signing checks; SHA256 `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
-| 02 Drag & drop externo | PARTIAL / CI_PENDING (Android global Alt+drag saliente + content:// entrante al directorio activo) | `91231779` | [Run 41176324671](https://github.com/Jorgeprdz/Voyager/actions/runs/41176324671) IN_PROGRESS; no PASS todavía | PENDING_PHYSICAL_DEX | Compatibilidad MIME por app; pruebas con dos ventanas y permisos pendientes |
+| 02 Drag & drop externo | PARTIAL / CI_PENDING (Android global Alt+drag saliente + content:// entrante al directorio activo) | `c7f22a59` | [Run 41176428850](https://github.com/Jorgeprdz/Voyager/actions/runs/41176428850) IN_PROGRESS; no PASS todavía | PENDING_PHYSICAL_DEX | Compatibilidad MIME por app; pruebas con dos ventanas y permisos pendientes |
 | 03 OneDrive | PLANNED | — | — | PENDING | Registro Microsoft por verificar |
 | 04 Analizador | PLANNED | — | — | PENDING | — |
 | 05 Recientes/red/Quick Share | PLANNED | — | — | PENDING | — |
@@ -56,5 +56,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 
 ### 2026-10-31 UTC — etapa 02 extendida
 - `b6794b2`: soporte real de destino hover en carpeta y sidebar utilizando `FinderDragDropState.externalTargetAt`, resaltado de carpeta, prueba del destino más específico y descartes de destino de sólo lectura.
-- `91231779`: ajuste de visibilidad del composable para evitar exposición de tipo internal.
-- El workflow anterior se canceló al llegar nuevos commits (concurrency cancel-in-progress). El vigente es `41176324671` para `91231779`. **CI todavía no aprobado, pruebas DeX pendientes**.
+- `c7f22a59`: ajuste de visibilidad del composable para evitar exposición de tipo internal.
+- El workflow anterior se canceló al llegar nuevos commits (concurrency cancel-in-progress). El vigente es `41176428850` para `c7f22a59`. **CI todavía no aprobado, pruebas DeX pendientes**.
+
+### 2026-10-31 UTC — corrección gate de etapa 02
+- Run 41176324671 falló al compilar por parámetro positional de `FinderDesktopScreen` tras añadir el estado compartido; no se ejecutaron tests/lint/APK. Causa confirmada en logs de Kotlin.
+- Commit `c7f22a59`: pasar `bookmarks` por nombre para conservar firma tipada. Run 41176428850 pendiente de verificación.
