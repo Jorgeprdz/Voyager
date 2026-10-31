@@ -42,8 +42,9 @@ jobs:
       - name: '2/4 · Pruebas unitarias'
         id: tests
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
-        # Always execute tests, including contracts which inspect source/resources directly.
-        run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false testDebugUnitTest --rerun
+        # Changed test inputs execute normally; avoid invalidating all cached Gradle tasks.
+        # The XML reports, not the requested command, determine actual test execution.
+        run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false testDebugUnitTest
       - name: '3/4 · Lint'
         id: lint
         if: ${{ !cancelled() && steps.compile.outcome == 'success' }}
@@ -53,20 +54,44 @@ jobs:
         id: apk
         if: ${{ !cancelled() && steps.tests.outcome == 'success' && steps.lint.outcome == 'success' }}
         run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false assembleDebug assembleDebugAndroidTest
-      - name: Verify debug APK content
+      - name: Verify debug APK, signing and packaged FinderDex launcher
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
           apks=(app/build/outputs/apk/debug/*.apk)
-          test "${#apks[@]}" -gt 0
+          test "${#apks[@]}" -eq 1
+          build_tools="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -x "$build_tools/aapt"
+          test -x "$build_tools/apksigner"
           for apk in "${apks[@]}"; do
             test -s "$apk"
             unzip -tq "$apk" >/dev/null
-            unzip -Z -1 "$apk" | grep -qx 'AndroidManifest.xml'
-            unzip -Z -1 "$apk" | grep -qx 'classes.dex'
+            entries="$(mktemp)"
+            unzip -Z -1 "$apk" > "$entries"
+            grep -qx 'AndroidManifest.xml' "$entries"
+            grep -qx 'classes.dex' "$entries"
+            "$build_tools/apksigner" verify --print-certs "$apk"
+            badging="$(mktemp)"
+            "$build_tools/aapt" dump badging "$apk" > "$badging"
+            grep -q "package: name='com.finderdex.preview'" "$badging"
+            resources="$(mktemp)"
+            "$build_tools/aapt" dump resources "$apk" > "$resources"
+            for resource in mipmap/ic_launcher mipmap/ic_launcher_round               drawable/ic_launcher_foreground drawable/ic_launcher_background               drawable/ic_launcher_monochrome drawable/finderdex_icon_art; do
+              if ! grep -Fq "$resource" "$resources"; then
+                echo "::error::Packaged FinderDex launcher resource missing: $resource"
+                exit 1
+              fi
+            done
+            echo "APK: $apk"
             sha256sum "$apk"
+            echo "### FinderDex APK verification" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Package: com.finderdex.preview" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Signing: apksigner verified" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Launcher: adaptive, round, monochrome, background, foreground, artwork resources present" >> "$GITHUB_STEP_SUMMARY"
+            echo "- SHA256: `$(sha256sum "$apk" | cut -d ' ' -f 1)`" >> "$GITHUB_STEP_SUMMARY"
+            rm -f "$entries" "$badging" "$resources"
           done
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
