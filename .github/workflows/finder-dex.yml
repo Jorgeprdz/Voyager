@@ -53,6 +53,21 @@ jobs:
         id: apk
         if: ${{ !cancelled() && steps.tests.outcome == 'success' && steps.lint.outcome == 'success' }}
         run: ./gradlew --build-cache --max-workers=2 -Pvoyager.enableAbiSplits=false assembleDebug assembleDebugAndroidTest
+      - name: Verify debug APK content
+        if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/debug/*.apk)
+          test "${#apks[@]}" -gt 0
+          for apk in "${apks[@]}"; do
+            test -s "$apk"
+            unzip -tq "$apk" >/dev/null
+            unzip -Z -1 "$apk" | grep -qx 'AndroidManifest.xml'
+            unzip -Z -1 "$apk" | grep -qx 'classes.dex'
+            sha256sum "$apk"
+          done
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         with:
@@ -61,6 +76,7 @@ jobs:
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/androidTest/debug/*.apk
           retention-days: 30
+          if-no-files-found: error
       - uses: actions/upload-artifact@v7
         if: always()
         with:
