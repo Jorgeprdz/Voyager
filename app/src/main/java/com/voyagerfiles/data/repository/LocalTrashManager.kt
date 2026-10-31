@@ -22,7 +22,11 @@ class LocalTrashManager(
 
     suspend fun moveToTrash(path: String): Result<TrashEntry> = withContext(Dispatchers.IO) {
         runCatching {
-            val source = File(path).canonicalFile
+            val requested = File(path)
+            require(!java.nio.file.Files.isSymbolicLink(requested.toPath())) {
+                "Moving a symbolic link to Trash must not move its target"
+            }
+            val source = requested.canonicalFile
             if (!source.exists()) throw IllegalArgumentException("Item no longer exists: $path")
             val root = rootFor(source) ?: throw IllegalArgumentException("Trash is not available for this location")
             val trashRoot = trashRoot(root)
