@@ -179,6 +179,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val uiMessage by viewModel.snackbarMessage.collectAsState()
     val lastOperationResult by viewModel.lastOperationResult.collectAsState()
     val trash by viewModel.trashState.collectAsState()
+    val clipboardPaths by viewModel.clipboardPaths.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(session?.id) {
         if (session == null) viewModel.openLocalRoot(Environment.getExternalStorageDirectory().path)
@@ -279,6 +280,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         },
         onOpen = { file -> FileUtils.openFile(context, file).onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
         operationsAvailable = true,
+        clipboardAvailable = clipboardPaths.isNotEmpty(),
         onPaste = {
             if (viewModel.browseState.value.currentPath == controller.currentPath) viewModel.paste()
             else message = "Espera a que termine la navegación antes de pegar"
@@ -374,6 +376,7 @@ fun FinderDesktopScreen(
     message: String? = null,
     onDismissMessage: () -> Unit = {},
     operationsAvailable: Boolean = false,
+    clipboardAvailable: Boolean = false,
     onPaste: () -> Unit = {},
     operationProgress: com.voyagerfiles.viewmodel.TransferProgress? = null,
     canCancelOperation: Boolean = false,
@@ -525,10 +528,10 @@ fun FinderDesktopScreen(
                 detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
             }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
             when (viewStyle) {
-                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
-                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
-                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, ::execute, dragState)
-                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, ::execute, dragState)
+                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
+                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
+                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(1f).background(Paper), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
+                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState)
             }
             if (showPreview && mode == DesktopMode.FULL) FinderPreview(controller.selectedFile, onOpen)
         }
@@ -776,7 +779,7 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
 @Composable
 private fun FinderIconView(controller: FinderColumnController, columns: List<FinderColumn>, query: String,
     descending: Boolean, sortBy: SortBy, modifier: Modifier, onOpen: (FileItem) -> Unit,
-    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
+    operationsAvailable: Boolean, clipboardAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val column = columns.lastOrNull()
     val files = remember(column?.files, query, descending, sortBy) {
@@ -831,7 +834,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                             style = TextStyle(color = if (selected) Color.White else Ink, fontSize = 12.sp,
                                 fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
-                            if (file.path in column?.selected.orEmpty()) column?.selected?.size ?: 1 else 1, isArchive = file.isArchive) {
+                            if (file.path in column?.selected.orEmpty()) column?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                             onFileAction(it, file)
                         }
                     }
@@ -849,7 +852,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
 
 @Composable
 private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, sortBy: SortBy, modifier: Modifier, onOpen: (FileItem) -> Unit,
-    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
+    operationsAvailable: Boolean, clipboardAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val horizontal = rememberScrollState()
     LaunchedEffect(columns.size) { horizontal.animateScrollTo(horizontal.maxValue) }
@@ -857,7 +860,7 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
         columns.forEachIndexed { index, column ->
             key(column.id) {
                 ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, sortBy, onOpen,
-                    operationsAvailable && index == columns.lastIndex, onFileAction, dragState)
+                    operationsAvailable && index == columns.lastIndex, clipboardAvailable, onFileAction, dragState)
             }
         }
         Spacer(Modifier.width(12.dp))
@@ -867,7 +870,7 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, sortBy: SortBy, onOpen: (FileItem) -> Unit,
-    operationsAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
+    operationsAvailable: Boolean, clipboardAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState) {
     val scroll = rememberLazyListState(column.scrollIndex, column.scrollOffset)
     val marqueeForEdge = remember(column.id) { FinderMarqueeState() }
@@ -913,7 +916,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         Label(file.name, Modifier.weight(1f), if (selected && active) Color.White else Ink)
                         if (file.isDirectory) FinderGlyph("forward", if (selected && active) Color.White else Muted, Modifier.size(10.dp))
                         FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
-                            if (file.path in column.selected) column.selected.size else 1, isArchive = file.isArchive) {
+                            if (file.path in column.selected) column.selected.size else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                             onFileAction(it, file)
                         }
                     }
