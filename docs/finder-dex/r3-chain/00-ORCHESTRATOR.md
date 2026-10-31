@@ -26,7 +26,8 @@ Ejecutar la cadena completa de funciones aprobadas para FinderDex R3 en **Jorgep
 - **05** → `05-RECENTS-NETWORK-SHARING.md` — recientes, redes y Quick Share / share sheet.
 - **06** → `06-TABS-DUAL-PANE.md` — pestañas y doble panel de escritorio.
 - **07** → `07-BULK-RENAME-TRANSFERS.md` — renombrado masivo y panel de transferencias.
-- **08** → `08-HARDENING-DELIVERY.md` — integración, rendimiento, CI, APK y entrega.
+- **08** → `08-MOBILE-REDESIGN.md` — rediseño de la interfaz móvil con identidad visual R2.2, sin encoger la versión DeX.
+- **09** → `09-HARDENING-DELIVERY.md` — integración escritorio+móvil, rendimiento, CI, APK y entrega.
 
 ## Protocolo entre etapas: obligatorio
 Al finalizar la etapa N:
@@ -35,7 +36,7 @@ Al finalizar la etapa N:
 - Commit y push de código + actualización de estado, sin alterar el HEAD de otra tarea.
 - Leer y ejecutar **inmediatamente** `NN+1-*.md`.
 - Si cambió la rama o la sesión terminó, al reanudar leer `STATE.md` y retomar exactamente la etapa pendiente. No repetir operaciones destructivas ni reimportar datos.
-- Tras etapa 08, mostrar informe consolidado y separar integraciones realmente verificadas de integraciones pendientes de OAuth/DeX.
+- Tras etapa 09, mostrar informe consolidado y separar integraciones realmente verificadas de integraciones pendientes de OAuth/DeX.
 
 ## Reglas técnicas globales
 - Extender arquitectura existente de Voyager y providers; reutilizar operaciones, sesiones, cifrado/Keystore donde corresponda, papelera y pruebas.
