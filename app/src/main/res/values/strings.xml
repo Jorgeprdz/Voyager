@@ -634,4 +634,9 @@
     <string name="finderdex_recents_empty">No files to display</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">Clear history</string>
+    <string name="finderdex_bulk_rename_title">Batch rename</string>
+    <string name="finderdex_bulk_prefix">Prefix</string>
+    <string name="finderdex_bulk_number">Numbering</string>
+    <string name="finderdex_bulk_preview">Preview</string>
+    <string name="finderdex_bulk_invalid">Invalid or conflicting name</string>
 </resources>

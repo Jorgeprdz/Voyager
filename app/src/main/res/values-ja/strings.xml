@@ -604,4 +604,9 @@
     <string name="finderdex_recents_empty">表示するファイルがありません</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">履歴を消去</string>
+    <string name="finderdex_bulk_rename_title">一括名前変更</string>
+    <string name="finderdex_bulk_prefix">接頭辞</string>
+    <string name="finderdex_bulk_number">連番</string>
+    <string name="finderdex_bulk_preview">プレビュー</string>
+    <string name="finderdex_bulk_invalid">名前が無効か競合しています</string>
 </resources>

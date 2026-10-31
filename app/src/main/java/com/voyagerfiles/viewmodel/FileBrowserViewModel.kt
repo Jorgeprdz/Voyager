@@ -815,6 +815,53 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
+    /** One cancellable local batch; every file is checked again before provider mutation. */
+    fun renameMultipleLocal(changes: List<Pair<String, String>>) {
+        val state = _browseState.value
+        if (state.source != FileSource.LOCAL || changes.isEmpty() || changes.size > 1000) return
+        val available = state.files.associateBy { it.path }
+        if (changes.any { (path, _) -> path !in available }) return
+        val normalized = changes.map { (path, name) ->
+            path to (validFileNameOrNotify(name) ?: return)
+        }.distinctBy { it.first }.sortedBy { it.first }
+        val names = normalized.map { it.second.lowercase(java.util.Locale.ROOT) }
+        if (names.size != names.toSet().size) return
+        val provider = fileProvider
+        val dest = state.currentPath
+        launchOperation(R.string.progress_renaming, R.string.operation_rename) {
+            val latest = provider.listFiles(dest).getOrThrow()
+            val selected = normalized.map { it.first }.toSet()
+            val occupied = latest.filterNot { it.path in selected }
+                .mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+            if (names.any { it in occupied }) {
+                throw IllegalStateException("A destination name is already used")
+            }
+            val oldNames = latest.filter { it.path in selected }.associateBy { it.path }
+            if (normalized.any { (path, newName) ->
+                    oldNames[path] == null ||
+                    (newName.lowercase(java.util.Locale.ROOT) in oldNames.values
+                        .filter { it.path != path }.map { it.name.lowercase(java.util.Locale.ROOT) })
+                }) throw IllegalStateException("Source was changed or rename would collide")
+            var completed = 0
+            var failed = 0
+            for ((path, name) in normalized) {
+                updateOperationProgress(TransferProgress(
+                    label = UiText.Resource(R.string.progress_renaming),
+                    completedItems = completed,
+                    totalItems = normalized.size,
+                    currentItemName = name
+                ))
+                provider.rename(path, name).onSuccess { completed++ }.onFailure {
+                    if (it is CancellationException) throw it
+                    operationController.recordFailure(it)
+                    failed++
+                }
+            }
+            refreshFiles()
+            showSnackbar(UiText.Dynamic("$completed renamed; $failed failed"))
+        }
+    }
+
     fun rename(oldPath: String, newName: String) {
         val validatedName = validFileNameOrNotify(newName) ?: return
         renameFile(oldPath, validatedName)
@@ -1624,7 +1671,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
     ) {
         val started = operationController.launch(
             label = UiText.Resource(progressLabel),
-            cancellable = operationName in setOf(R.string.operation_upload, R.string.operation_paste, R.string.operation_download, R.string.audio_setting_tone, R.string.operation_extract, R.string.operation_compress),
+            cancellable = operationName in setOf(R.string.operation_rename, R.string.operation_upload, R.string.operation_paste, R.string.operation_download, R.string.audio_setting_tone, R.string.operation_extract, R.string.operation_compress),
             onFailure = { error ->
                 showSnackbar(
                     if (error is CancellationException) UiText.Resource(cancelledMessage)

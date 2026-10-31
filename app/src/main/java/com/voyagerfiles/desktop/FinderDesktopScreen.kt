@@ -412,6 +412,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             else viewModel.copyToClipboard(paths, false)
         },
         onRename = { file, name -> viewModel.rename(file.path, name) },
+        onBulkRename = viewModel::renameMultipleLocal,
         onCreateFolder = viewModel::createDirectory,
         onMovePaths = viewModel::moveDesktopPaths,
         onCopyPathsTo = viewModel::copyDesktopPaths,
@@ -516,6 +517,7 @@ internal fun FinderDesktopScreen(
     onDeletePaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
+    onBulkRename: (List<Pair<String, String>>) -> Unit = {},
     onFileAction: (FinderFileAction, FileItem) -> Unit = { _, _ -> },
 ) {
     val columns by controller.columns.collectAsState()
@@ -589,6 +591,8 @@ internal fun FinderDesktopScreen(
     var infoFile by remember { mutableStateOf<FileItem?>(null) }
     var renameFile by remember { mutableStateOf<FileItem?>(null) }
     var renameText by remember { mutableStateOf("") }
+    var bulkRenameItems by remember { mutableStateOf<List<FinderRenameCandidate>>(emptyList()) }
+    var bulkSiblingNames by remember { mutableStateOf<Set<String>>(emptySet()) }
     var deleteFile by remember { mutableStateOf<FileItem?>(null) }
     var permanentDelete by remember { mutableStateOf(false) }
     var pendingDeletePaths by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -635,6 +639,14 @@ internal fun FinderDesktopScreen(
             FinderFileAction.QUICK_LOOK -> if (!file.isDirectory) quickLook = file
             FinderFileAction.INFO -> infoFile = file
             FinderFileAction.RENAME -> { renameFile = file; renameText = file.name }
+            FinderFileAction.BULK_RENAME -> {
+                val col = owningColumn
+                if (col != null && selectedPaths.size > 1) {
+                    bulkRenameItems = col.files.filter { it.path in selectedPaths }
+                        .map { FinderRenameCandidate(it.path, it.name) }
+                    bulkSiblingNames = col.files.map { it.name }.toSet()
+                }
+            }
             FinderFileAction.TRASH, FinderFileAction.DELETE -> {
                 deleteFile = file; permanentDelete = action == FinderFileAction.DELETE
                 pendingDeletePaths = if (file.path in selectedPaths) {
@@ -877,6 +889,11 @@ internal fun FinderDesktopScreen(
             } },
             confirmButton = { TextButton(onClick = { infoFile = null }) { Text(stringResource(R.string.finderdex_close)) } })
     }
+    if (bulkRenameItems.isNotEmpty()) FinderBulkRenameDialog(
+        items = bulkRenameItems,
+        siblings = bulkSiblingNames,
+        onDismiss = { bulkRenameItems = emptyList() },
+        onApply = onBulkRename)
     renameFile?.let { file ->
         AlertDialog(onDismissRequest = { renameFile = null }, title = { Text(stringResource(R.string.dialog_rename)) },
             text = { BasicTextField(renameText, { renameText = it },

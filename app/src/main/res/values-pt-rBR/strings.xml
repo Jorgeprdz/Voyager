@@ -616,4 +616,9 @@
     <string name="finderdex_recents_empty">Nenhum arquivo para mostrar</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">Limpar histórico</string>
+    <string name="finderdex_bulk_rename_title">Renomear em lote</string>
+    <string name="finderdex_bulk_prefix">Prefixo</string>
+    <string name="finderdex_bulk_number">Numeração</string>
+    <string name="finderdex_bulk_preview">Prévia</string>
+    <string name="finderdex_bulk_invalid">Nome inválido ou em conflito</string>
 </resources>

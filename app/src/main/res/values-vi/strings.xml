@@ -604,4 +604,9 @@
     <string name="finderdex_recents_empty">Không có tệp để hiển thị</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">Xóa lịch sử</string>
+    <string name="finderdex_bulk_rename_title">Đổi tên hàng loạt</string>
+    <string name="finderdex_bulk_prefix">Tiền tố</string>
+    <string name="finderdex_bulk_number">Đánh số</string>
+    <string name="finderdex_bulk_preview">Xem trước</string>
+    <string name="finderdex_bulk_invalid">Tên không hợp lệ hoặc trùng</string>
 </resources>

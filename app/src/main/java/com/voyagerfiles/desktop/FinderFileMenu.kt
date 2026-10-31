@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.pointer.*
 
 enum class FinderFileAction {
-    OPEN, OPEN_WITH, QUICK_LOOK, COPY, CUT, PASTE_INTO, DUPLICATE, RENAME, ZIP, EXTRACT, INFO, SHARE, FAVORITE, TRASH, DELETE
+    OPEN, OPEN_WITH, QUICK_LOOK, COPY, CUT, PASTE_INTO, DUPLICATE, RENAME, BULK_RENAME, ZIP, EXTRACT, INFO, SHARE, FAVORITE, TRASH, DELETE
 }
 
 /** Tracks the latest mouse press without saving transient pointer state in Compose snapshots. */
@@ -72,6 +72,8 @@ internal fun FinderFileMenu(
             if (isDirectory && canPaste) funAction(FinderFileAction.PASTE_INTO, "Pegar dentro de esta carpeta", onDismiss, onAction)
             funAction(FinderFileAction.DUPLICATE, many("Duplicar", "Duplicar"), onDismiss, onAction)
             if (count == 1) funAction(FinderFileAction.RENAME, "Renombrar", onDismiss, onAction)
+            if (count > 1) funAction(FinderFileAction.BULK_RENAME,
+                androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_bulk_rename_title), onDismiss, onAction)
             funAction(FinderFileAction.ZIP, many("Comprimir ZIP", "Comprimir"), onDismiss, onAction)
             if (count == 1 && isArchive) funAction(FinderFileAction.EXTRACT, "Extraer archivo", onDismiss, onAction)
             if (isDirectory && count == 1) funAction(FinderFileAction.FAVORITE, "Añadir a favoritos", onDismiss, onAction)
@@ -92,7 +94,7 @@ private fun funAction(action: FinderFileAction, name: String, onDismiss: () -> U
             FinderGlyph(when(action) {
                 FinderFileAction.COPY, FinderFileAction.CUT -> "document"
                 FinderFileAction.PASTE_INTO, FinderFileAction.DUPLICATE -> "folder-outline"
-                FinderFileAction.RENAME, FinderFileAction.INFO -> "document"
+                FinderFileAction.RENAME, FinderFileAction.BULK_RENAME, FinderFileAction.INFO -> "document"
                 FinderFileAction.ZIP, FinderFileAction.EXTRACT -> "file"
                 FinderFileAction.TRASH, FinderFileAction.DELETE -> "trash"
                 FinderFileAction.SHARE -> "forward"

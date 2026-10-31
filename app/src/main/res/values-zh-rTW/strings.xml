@@ -604,4 +604,9 @@
     <string name="finderdex_recents_empty">沒有可顯示的檔案</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">清除歷史紀錄</string>
+    <string name="finderdex_bulk_rename_title">批次重新命名</string>
+    <string name="finderdex_bulk_prefix">前綴</string>
+    <string name="finderdex_bulk_number">編號</string>
+    <string name="finderdex_bulk_preview">預覽</string>
+    <string name="finderdex_bulk_invalid">名稱無效或衝突</string>
 </resources>

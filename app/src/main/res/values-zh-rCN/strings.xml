@@ -601,4 +601,9 @@
     <string name="finderdex_recents_empty">没有可显示的文件</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">清除历史记录</string>
+    <string name="finderdex_bulk_rename_title">批量重命名</string>
+    <string name="finderdex_bulk_prefix">前缀</string>
+    <string name="finderdex_bulk_number">编号</string>
+    <string name="finderdex_bulk_preview">预览</string>
+    <string name="finderdex_bulk_invalid">名称无效或冲突</string>
 </resources>

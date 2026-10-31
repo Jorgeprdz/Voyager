@@ -616,4 +616,9 @@
     <string name="finderdex_recents_empty">Nessun file da mostrare</string>
     <string name="finderdex_recents_entry">%1$s · %2$s</string>
     <string name="finderdex_recents_clear">Cancella cronologia</string>
+    <string name="finderdex_bulk_rename_title">Rinomina in blocco</string>
+    <string name="finderdex_bulk_prefix">Prefisso</string>
+    <string name="finderdex_bulk_number">Numerazione</string>
+    <string name="finderdex_bulk_preview">Anteprima</string>
+    <string name="finderdex_bulk_invalid">Nome non valido o in conflitto</string>
 </resources>
