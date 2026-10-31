@@ -152,6 +152,9 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                 drawRect(resolved, Offset(w*.08f,h*.2f), androidx.compose.ui.geometry.Size(w*.84f,h*.6f), style = stroke)
                 drawLine(resolved,Offset(w*.62f,h*.2f),Offset(w*.62f,h*.8f),w*.07f)
             }
+            "more" -> listOf(.25f,.5f,.75f).forEach { x ->
+                drawCircle(resolved, radius = w*.07f, center = Offset(w*x,h*.5f))
+            }
             "sort" -> listOf(.25f,.5f,.75f).forEachIndexed { i, y -> drawLine(resolved,Offset(w*.18f,h*y),Offset(w*(.85f-i*.15f),h*y),w*.07f) }
             "home" -> {
                 val p = Path().apply { moveTo(w*.12f,h*.46f); lineTo(w*.5f,h*.12f); lineTo(w*.88f,h*.46f)
@@ -165,33 +168,6 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                 drawLine(resolved,Offset(w*.34f,h*.62f),Offset(w*.66f,h*.62f),w*.05f)
             }
         }
-    }
-}
-
-@Composable
-private fun Tool(label: String, glyph: String, enabled: Boolean = true, selected: Boolean = false, action: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val pressed by interaction.collectIsPressedAsState()
-    var focused by remember { mutableStateOf(false) }
-    val focusTracker = LocalFinderControlFocus.current
-    val materials = LocalFinderMaterials.current
-    val p = materials.palette
-    val bg = finderAnimatedMaterial(when {
-        !enabled -> Color.Transparent
-        pressed -> p.pressed
-        selected -> p.selected
-        hovered -> p.hover
-        else -> Color.Transparent
-    }, selected)
-    Box(Modifier.size(34.dp, 30.dp).clip(RoundedCornerShape(6.dp))
-        .background(bg).hoverable(interaction).pointerHoverIcon(PointerIcon.Hand)
-        .onFocusChanged { focused = it.isFocused; focusTracker.update("tool:$label", it.isFocused) }
-        .clickable(enabled = enabled, interactionSource = interaction, indication = null,
-            onClickLabel = label, onClick = action)
-        .finderFocusOutline(focused)
-        .semantics { contentDescription = label; role = Role.Button }, contentAlignment = Alignment.Center) {
-        FinderGlyph(glyph, if (enabled) p.ink else p.secondaryInk)
     }
 }
 
@@ -537,29 +513,29 @@ fun FinderDesktopScreen(
                 event.key == Key.Spacebar && !focusTracker.hasFocusedControl && !searching && quickLook == null && controller.selectedFile?.isDirectory == false -> {
                     quickLook = controller.selectedFile; true
                 }
-                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C && operationsAvailable -> {
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C && operationsAvailable && !focusTracker.hasFocusedControl -> {
                     controller.columns.value.lastOrNull()?.selected.orEmpty().toList()
                         .takeIf { it.isNotEmpty() }?.let { onCopyPaths(it, false) }; true
                 }
-                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.X && operationsAvailable -> {
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.X && operationsAvailable && !focusTracker.hasFocusedControl -> {
                     controller.columns.value.lastOrNull()?.selected.orEmpty().toList()
                         .takeIf { it.isNotEmpty() }?.let { onCopyPaths(it, true) }; true
                 }
-                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.V && operationsAvailable -> {
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.V && operationsAvailable && !focusTracker.hasFocusedControl -> {
                     onPaste(); true
                 }
-                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.A && !searching -> {
+                (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.A && !searching && !focusTracker.hasFocusedControl -> {
                     controller.selectAll(); true
                 }
-                event.key == Key.Delete && controller.selectedFile != null && operationsAvailable -> {
+                event.key == Key.Delete && controller.selectedFile != null && operationsAvailable && !focusTracker.hasFocusedControl -> {
                     val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
                     pendingDeletePaths = selected.toList()
                     deleteFile = controller.selectedFile
                     permanentDelete = event.isShiftPressed
                     true
                 }
-                event.isAltPressed && event.key == Key.DirectionLeft -> { controller.back(); true }
-                event.isAltPressed && event.key == Key.DirectionRight -> { controller.forward(); true }
+                event.isAltPressed && event.key == Key.DirectionLeft && !focusTracker.hasFocusedControl -> { controller.back(); true }
+                event.isAltPressed && event.key == Key.DirectionRight && !focusTracker.hasFocusedControl -> { controller.forward(); true }
                 event.key == Key.Enter && !focusTracker.hasFocusedControl -> { controller.selectedFile?.let { file ->
                     if (file.isDirectory) controller.select(columns.indexOfLast { file.path in it.selected }, file) else onOpen(file)
                 }; true }
@@ -573,10 +549,8 @@ fun FinderDesktopScreen(
             sortBy, { sortBy = it }, onMobile,
             canCreateFolder = operationsAvailable,
             onNewFolder = { newFolderName = ""; newFolderDialog = true },
-            onTrash = { onRefreshTrash(); showTrash = true })
-        if (searching && shell.compactToolbar) BasicTextField(search, { search = it },
-            Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(palette.content, RoundedCornerShape(6.dp)).padding(8.dp),
-            singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
+            onTrash = { onRefreshTrash(); showTrash = true },
+            previewAvailable = shell.showPreview && mode != DesktopMode.COMPACT)
         Row(Modifier.weight(1f).fillMaxWidth()) {
             if (effectiveSidebarWidth >= 40f) {
                 FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
@@ -702,78 +676,6 @@ fun FinderDesktopScreen(
 }
 
 internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }
-
-@Composable
-private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWindowChrome,
-    sidebarWidth: Float, dividerWidth: Float, windowWidth: Float, compact: Boolean, minimal: Boolean,
-    viewStyle: FinderViewStyle, setViewStyle: (FinderViewStyle) -> Unit, searching: Boolean, search: String,
-    toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
-    descending: Boolean, toggleSort: () -> Unit,
-    sortBy: SortBy, setSortBy: (SortBy) -> Unit, onMobile: () -> Unit,
-    canCreateFolder: Boolean, onNewFolder: () -> Unit, onTrash: () -> Unit) {
-    val columnsDescription = stringResource(R.string.finderdex_view_columns)
-    val searchDescription = stringResource(R.string.finderdex_search_folder)
-    val rootTitle = stringResource(R.string.home_storage)
-    val leading = chrome.layout.leading / chrome.density
-    val trailing = chrome.layout.trailing / chrome.density
-    val material = LocalFinderMaterials.current.palette
-    val height = maxOf(FinderWindowGeometry.TOOLBAR_HEIGHT_DP, chrome.captionHeight / chrome.density)
-    // This gutter keeps controls clear of a native leading caption group when the sidebar is a rail.
-    val leftGap = maxOf(FinderWindowGeometry.TOOLBAR_GAP_DP,
-        leading - sidebarWidth - dividerWidth + FinderWindowGeometry.CAPTION_CLEARANCE_DP)
-    val freeToolbarWidth = (windowWidth - sidebarWidth - dividerWidth - leftGap -
-        trailing - 14f).coerceAtLeast(0f)
-    Row(Modifier.fillMaxWidth().height(height.dp).background(material.toolbar)
-        .onGloballyPositioned { chrome.reserveInput(it, sidebarWidth + dividerWidth + leftGap,
-            if (searching) 380f else 220f) }
-        .padding(end = trailing.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.width((sidebarWidth + dividerWidth).dp).fillMaxHeight().background(material.titlebar)
-            .padding(start = minOf(leading + FinderWindowGeometry.CAPTION_CLEARANCE_DP, sidebarWidth).dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            if (sidebarWidth > 160f && leading + 42f < sidebarWidth)
-                Label(stringResource(R.string.app_name), size = 12, color = Muted, bold = true)
-        }
-        Spacer(Modifier.width(leftGap.dp))
-        if (freeToolbarWidth >= 65f) Tool("Atrás", "back", controller.canBack) { controller.back() }
-        if (!minimal) Tool("Adelante", "forward", controller.canForward) { controller.forward() }
-        Spacer(Modifier.width(FinderWindowGeometry.TOOLBAR_GAP_DP.dp))
-        if (!minimal) Label(if (controller.currentPath == Environment.getExternalStorageDirectory().path) rootTitle
-            else controller.currentPath.substringAfterLast('/').ifEmpty { rootTitle }, Modifier.weight(1f), size = 15, bold = true)
-        else Spacer(Modifier.weight(1f))
-        if (compact && (!minimal || freeToolbarWidth >= 175f)) Tool("Cambiar vista", when (viewStyle) {
-            FinderViewStyle.ICONS -> "icons"
-            FinderViewStyle.LIST -> "list"
-            FinderViewStyle.COLUMNS -> "columns"
-            FinderViewStyle.GALLERY -> "gallery"
-        }) { setViewStyle(FinderViewStyle.entries[(viewStyle.ordinal + 1) % FinderViewStyle.entries.size]) }
-        else if (!compact) Row(Modifier.clip(RoundedCornerShape(9.dp)).background(material.sidebar).padding(2.dp)) {
-            Tool(stringResource(R.string.finderdex_view_icons), "icons", selected = viewStyle == FinderViewStyle.ICONS) { setViewStyle(FinderViewStyle.ICONS) }
-            Tool("Vista de lista", "list", selected = viewStyle == FinderViewStyle.LIST) { setViewStyle(FinderViewStyle.LIST) }
-            Tool(columnsDescription, "columns", selected = viewStyle == FinderViewStyle.COLUMNS) { setViewStyle(FinderViewStyle.COLUMNS) }
-            Tool("Vista de galería", "gallery", selected = viewStyle == FinderViewStyle.GALLERY) { setViewStyle(FinderViewStyle.GALLERY) }
-        }
-        Spacer(Modifier.width(12.dp))
-        if (!compact) Tool("Nueva carpeta", "folder-outline", enabled = canCreateFolder, action = onNewFolder)
-        if (!compact) Tool("Papelera", "trash", enabled = canCreateFolder, action = onTrash)
-        var sortMenu by remember { mutableStateOf(false) }
-        if (!compact) Box {
-            Tool("Ordenar: ${sortBy.name.lowercase()}", "sort") { sortMenu = true }
-            DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                listOf(SortBy.NAME to "Nombre", SortBy.TYPE to "Tipo",
-                    SortBy.DATE to "Fecha", SortBy.SIZE to "Tamaño").forEach { (mode, label) ->
-                    DropdownMenuItem(text = { Text(label) }, onClick = { setSortBy(mode); sortMenu = false })
-                }
-            }
-        }
-        if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
-        if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
-        if (freeToolbarWidth >= 145f) Tool(searchDescription, "search", selected = searching, action = toggleSearch)
-        if (searching && !compact) BasicTextField(search, setSearch, Modifier.padding(start = 6.dp).width(136.dp)
-            .background(material.content, RoundedCornerShape(6.dp)).border(0.5.dp, material.separator, RoundedCornerShape(6.dp)).padding(6.dp)
-            .semantics { contentDescription = searchDescription }, singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
-        Spacer(Modifier.width(14.dp))
-    }
-}
 
 @Composable
 private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit,
