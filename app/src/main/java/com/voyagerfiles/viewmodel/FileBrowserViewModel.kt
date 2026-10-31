@@ -995,9 +995,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
         if (session.source != FileSource.LOCAL || paths.isEmpty()) return
         val normalized = BrowserNavigationBounds.normalizePath(destinationDirectory)
         val canonicalRoot = runCatching { java.io.File(session.rootPath).canonicalFile.toPath() }.getOrNull()
-        fun isSafeLocalPath(path: String): Boolean = canonicalRoot != null &&
-            BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
-            runCatching { java.io.File(path).canonicalFile.toPath().startsWith(canonicalRoot) }.getOrDefault(false)
+        fun isSafeLocalPath(path: String): Boolean {
+            val root = canonicalRoot ?: return false
+            return BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
+                runCatching { java.io.File(path).canonicalFile.toPath().startsWith(root) }.getOrDefault(false)
+        }
         if (!isSafeLocalPath(normalized) || paths.any { !isSafeLocalPath(it) }) {
             showSnackbar(UiText.Dynamic("Origen o destino fuera de la sesión")); return
         }
@@ -1045,9 +1047,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
         val provider = sessionProviders[session.id] ?: return
         val parent = _browseState.value.currentPath
         val rootCanonical = runCatching { java.io.File(session.rootPath).canonicalFile.toPath() }.getOrNull()
-        fun inside(path: String) = rootCanonical != null &&
-            BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
-            runCatching { java.io.File(path).canonicalFile.toPath().startsWith(rootCanonical) }.getOrDefault(false)
+        fun inside(path: String): Boolean {
+            val root = rootCanonical ?: return false
+            return BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
+                runCatching { java.io.File(path).canonicalFile.toPath().startsWith(root) }.getOrDefault(false)
+        }
         if (!inside(parent) || paths.any { !inside(it) || provider.getParentPath(it) != parent }) {
             showSnackbar(UiText.Dynamic("Selección fuera del directorio activo")); return
         }
