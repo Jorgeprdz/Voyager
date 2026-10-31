@@ -766,7 +766,7 @@ internal fun FinderDesktopScreen(
         })
     }
     infoFile?.let { file ->
-        AlertDialog(onDismissRequest = { infoFile = null }, title = { Text("Obtener información") },
+        AlertDialog(onDismissRequest = { infoFile = null }, title = { Text(stringResource(R.string.finderdex_info_title)) },
             text = { Column {
                 PreviewDetail("Nombre", file.name)
                 PreviewDetail("Tipo MIME", file.mimeType)
@@ -776,22 +776,22 @@ internal fun FinderDesktopScreen(
                 PreviewDetail("Permisos", file.permissions ?: "No disponibles")
                 PreviewDetail("Modificado", DateFormat.getDateTimeInstance().format(file.lastModified))
             } },
-            confirmButton = { TextButton(onClick = { infoFile = null }) { Text("Cerrar") } })
+            confirmButton = { TextButton(onClick = { infoFile = null }) { Text(stringResource(R.string.finderdex_close)) } })
     }
     renameFile?.let { file ->
-        AlertDialog(onDismissRequest = { renameFile = null }, title = { Text("Renombrar") },
+        AlertDialog(onDismissRequest = { renameFile = null }, title = { Text(stringResource(R.string.dialog_rename)) },
             text = { BasicTextField(renameText, { renameText = it },
                 Modifier.fillMaxWidth().border(1.dp, Line, RoundedCornerShape(8.dp)).padding(12.dp),
                 singleLine = true, textStyle = TextStyle(fontSize = 15.sp, color = Ink)) },
             confirmButton = { TextButton(onClick = {
                 if (renameText.isNotBlank() && renameText != file.name) onRename(file, renameText)
                 renameFile = null
-            }) { Text("Guardar") } },
-            dismissButton = { TextButton(onClick = { renameFile = null }) { Text("Cancelar") } })
+            }) { Text(stringResource(R.string.action_save)) } },
+            dismissButton = { TextButton(onClick = { renameFile = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
     deleteFile?.let { _ ->
         AlertDialog(onDismissRequest = { deleteFile = null },
-            title = { Text(if (permanentDelete) "Eliminar definitivamente" else "Mover a papelera") },
+            title = { Text(stringResource(if (permanentDelete) R.string.dialog_delete_permanently else R.string.dialog_move_to_trash)) },
             text = { Text(if (permanentDelete)
                 "Eliminar ${pendingDeletePaths.size} elemento(s) definitivamente. No se puede deshacer."
                 else "¿Mover ${pendingDeletePaths.size} elemento(s) a la papelera?") },
@@ -799,32 +799,34 @@ internal fun FinderDesktopScreen(
                 onDeletePaths(pendingDeletePaths.toList(), permanentDelete)
                 deleteFile = null
                 pendingDeletePaths = emptyList()
-            }) { Text(if (permanentDelete) "Eliminar" else "Mover") } },
-            dismissButton = { TextButton(onClick = { deleteFile = null }) { Text("Cancelar") } })
+            }) { Text(stringResource(if (permanentDelete) R.string.action_delete else R.string.action_move)) } },
+            dismissButton = { TextButton(onClick = { deleteFile = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
     dragState.pending?.let { drop ->
         AlertDialog(onDismissRequest = { dragState.dismiss() },
-            title = { Text(if (drop.action == FinderDropAction.COPY) "Copiar elementos" else "Mover elementos") },
-            text = { Text("¿${if (drop.action == FinderDropAction.COPY) "Copiar" else "Mover"} ${drop.paths.size} elemento(s) a ${drop.destination}?") },
+            title = { Text(stringResource(if (drop.action == FinderDropAction.COPY) R.string.finderdex_copy_items_title else R.string.finderdex_move_items_title)) },
+            text = { Text(stringResource(R.string.finderdex_confirm_drop,
+                stringResource(if (drop.action == FinderDropAction.COPY) R.string.action_copy else R.string.action_move),
+                drop.paths.size, drop.destination)) },
             confirmButton = { TextButton(enabled = !operationRunning, onClick = {
                 dragState.acceptPending()
                 if (drop.action == FinderDropAction.COPY) onCopyPathsTo(drop.paths, drop.destination)
                 else onMovePaths(drop.paths, drop.destination)
-            }) { Text(if (drop.action == FinderDropAction.COPY) "Copiar" else "Mover") } },
-            dismissButton = { TextButton(onClick = { dragState.dismiss() }) { Text("Cancelar") } })
+            }) { Text(stringResource(if (drop.action == FinderDropAction.COPY) R.string.action_copy else R.string.action_move)) } },
+            dismissButton = { TextButton(onClick = { dragState.dismiss() }) { Text(stringResource(R.string.action_cancel)) } })
     }
     if (showTrash) FinderTrashDialog(trashEntries, trashLoading, trashError,
         onRestore = onRestoreTrash, onRefresh = onRefreshTrash, onDismiss = { showTrash = false })
     if (newFolderDialog) AlertDialog(
-        onDismissRequest = { newFolderDialog = false }, title = { Text("Nueva carpeta") },
+        onDismissRequest = { newFolderDialog = false }, title = { Text(stringResource(R.string.finderdex_toolbar_new_folder)) },
         text = { BasicTextField(newFolderName, { newFolderName = it },
             Modifier.fillMaxWidth().border(1.dp, Line, RoundedCornerShape(8.dp)).padding(12.dp),
             singleLine = true, textStyle = TextStyle(fontSize = 15.sp, color = Ink)) },
         confirmButton = { TextButton(onClick = {
             if (newFolderName.isNotBlank()) onCreateFolder(newFolderName)
             newFolderDialog = false
-        }) { Text("Crear") } },
-        dismissButton = { TextButton(onClick = { newFolderDialog = false }) { Text("Cancelar") } })
+        }) { Text(stringResource(R.string.action_create)) } },
+        dismissButton = { TextButton(onClick = { newFolderDialog = false }) { Text(stringResource(R.string.action_cancel)) } })
 }
 
 internal enum class FinderViewStyle { ICONS, LIST, COLUMNS, GALLERY }

@@ -584,4 +584,8 @@
     <string name="finderdex_cloud_drive_disconnected">Google Drive · 尚未連線</string>
     <string name="finderdex_cloud_drive_unavailable">尚未連線。FinderDex 必須完成官方 OAuth 設定並取得你的授權，才能存取 Drive 檔案。目前尚未存取任何檔案。</string>
     <string name="finderdex_cloud_drive_ok">了解</string>
+    <string name="finderdex_info_title">取得資訊</string>
+    <string name="finderdex_copy_items_title">複製項目</string>
+    <string name="finderdex_move_items_title">移動項目</string>
+    <string name="finderdex_confirm_drop">將 %2$d 個項目%1$s到 %3$s？</string>
 </resources>

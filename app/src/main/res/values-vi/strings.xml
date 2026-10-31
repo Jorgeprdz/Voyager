@@ -584,4 +584,8 @@
     <string name="finderdex_cloud_drive_disconnected">Google Drive · chưa kết nối</string>
     <string name="finderdex_cloud_drive_unavailable">Chưa kết nối. FinderDex cần cấu hình OAuth chính thức và sự cho phép của bạn trước khi truy cập tệp trên Drive. Chưa có tệp nào được truy cập.</string>
     <string name="finderdex_cloud_drive_ok">Đã hiểu</string>
+    <string name="finderdex_info_title">Xem thông tin</string>
+    <string name="finderdex_copy_items_title">Sao chép mục</string>
+    <string name="finderdex_move_items_title">Di chuyển mục</string>
+    <string name="finderdex_confirm_drop">%1$s %2$d mục vào %3$s?</string>
 </resources>

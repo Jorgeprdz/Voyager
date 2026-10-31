@@ -584,4 +584,8 @@
     <string name="finderdex_cloud_drive_disconnected">Google Drive · 未接続</string>
     <string name="finderdex_cloud_drive_unavailable">未接続です。FinderDex が Drive のファイルにアクセスするには、公式の OAuth 設定とユーザーの許可が必要です。ファイルにはアクセスしていません。</string>
     <string name="finderdex_cloud_drive_ok">了解</string>
+    <string name="finderdex_info_title">情報を見る</string>
+    <string name="finderdex_copy_items_title">項目をコピー</string>
+    <string name="finderdex_move_items_title">項目を移動</string>
+    <string name="finderdex_confirm_drop">%2$d 個の項目を %3$s に%1$sしますか？</string>
 </resources>

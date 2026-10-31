@@ -596,4 +596,8 @@
     <string name="finderdex_cloud_drive_disconnected">Google Drive · sin conectar</string>
     <string name="finderdex_cloud_drive_unavailable">Sin conectar. FinderDex necesita la configuración oficial de OAuth y tu autorización para acceder a Drive. No se ha accedido a ningún archivo.</string>
     <string name="finderdex_cloud_drive_ok">Entendido</string>
+    <string name="finderdex_info_title">Obtener información</string>
+    <string name="finderdex_copy_items_title">Copiar elementos</string>
+    <string name="finderdex_move_items_title">Mover elementos</string>
+    <string name="finderdex_confirm_drop">¿%1$s %2$d elemento(s) a %3$s?</string>
 </resources>

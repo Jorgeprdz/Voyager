@@ -584,4 +584,8 @@
     <string name="finderdex_cloud_drive_disconnected">Google Drive · 연결되지 않음</string>
     <string name="finderdex_cloud_drive_unavailable">연결되지 않았습니다. FinderDex가 Drive 파일에 접근하려면 공식 OAuth 설정과 사용자의 승인이 필요합니다. 어떤 파일에도 접근하지 않았습니다.</string>
     <string name="finderdex_cloud_drive_ok">확인</string>
+    <string name="finderdex_info_title">정보 보기</string>
+    <string name="finderdex_copy_items_title">항목 복사</string>
+    <string name="finderdex_move_items_title">항목 이동</string>
+    <string name="finderdex_confirm_drop">%2$d개 항목을 %3$s(으)로 %1$s하시겠습니까?</string>
 </resources>
