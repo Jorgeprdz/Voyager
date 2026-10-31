@@ -4,10 +4,10 @@
 - IMPLEMENTATION_BRANCH: `feat/finderdex-r3-implementation` (crear sólo cuando Codex inicie)
 - BASELINE_BRANCH: `feat/finder-dex-foundation-01`
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
-- CURRENT_STAGE: `05-RECENTS-NETWORK-SHARING.md`
-- LAST_COMPLETED_STAGE: `04-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_05_IMPLEMENTED_CI_RUNNING`
-- NEXT_ACTION: `Verificar workflow 41185601902 para etapa 05; corregir build/unit/lint, registrar cobertura y avanzar a 06-TABS-DUAL-PANE.md sólo tras gate`
+- CURRENT_STAGE: `06-TABS-DUAL-PANE.md`
+- LAST_COMPLETED_STAGE: `05-PARTIAL-PASS_AUTOMATED`
+- STATUS: `STAGE_05_PARTIAL_PASS_AUTOMATED_STAGE_06_READY`
+- NEXT_ACTION: `Ejecutar 06-TABS-DUAL-PANE.md con sesiones separadas, selección/scroll por pestaña, doble panel opcional y validación CI`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -16,7 +16,7 @@
 | 02 Drag & drop externo | PARTIAL/PASS_AUTOMATED (global Alt+drag, content URI receive, hovered folder/sidebar destinations) | `d44d96a0` | [Run 41176885241](https://github.com/Jorgeprdz/Voyager/actions/runs/41176885241) SUCCESS: build, unit, lint, APK, signed package; SHA256 `35b4a53819c07365255ff87c4320b3c52ef9cdb59ed72f915f4937a20199ef37` | PENDING_PHYSICAL_DEX | Folder-as-source unsupported; external app acceptance and URI grants unverified physically |
 | 03 OneDrive | PARTIAL/PASS_AUTOMATED (Graph adapter + disconnected sidebar, no OAuth) | `2df8dfe` | [Run 41177638059](https://github.com/Jorgeprdz/Voyager/actions/runs/41177638059) SUCCESS: build, unit, lint, signed APK; SHA256 `baca78228e30f7849b14f92f6c9f6165d3f54f52df6d3ff95cc681de925b903d` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: Microsoft app registration/MSAL OAuth/consent; resumable uploads and async copy not implemented |
 | 04 Analizador | PARTIAL/PASS_AUTOMATED (panel nativo, escaneo acotado de categorías, revisión de duplicados) | `b2c439f` | [Run 41185041348](https://github.com/Jorgeprdz/Voyager/actions/runs/41185041348) SUCCESS: build, unit, lint, signing; SHA256 `b7587debcd418ac480ba1ef44b5ec96c542eec6194e8934f5af999fd84ff0bde` | PENDING_PHYSICAL_DEX | No se estima espacio de carpetas inaccesibles ni se borran datos; revisión pendiente |
-| 05 Recientes/red/Quick Share | PARTIAL / CI_PENDING (historial local, mtime separado, conexiones guardadas en sidebar, system share sheet existente) | `b7f4bc4` | [Run 41185601902](https://github.com/Jorgeprdz/Voyager/actions/runs/41185601902) IN_PROGRESS | PENDING_PHYSICAL_DEX | Red usa browser Voyager tras cambiar a vista móvil; Quick Share depende del receptor del sistema |
+| 05 Recientes/red/Quick Share | PARTIAL/PASS_AUTOMATED (historial local, mtime separado, conexiones guardadas en sidebar, system share sheet existente) | `b7f4bc4` | [Run 41185601902](https://github.com/Jorgeprdz/Voyager/actions/runs/41185601902) SUCCESS: build, unit, lint, APK; SHA256 `f6d40cae291fa45eadee609b6d596b355539856eb40ba3a77928dc4ff163cd34` | PENDING_PHYSICAL_DEX | Red usa browser Voyager tras cambiar a vista móvil; Quick Share depende del receptor del sistema |
 | 06 Pestañas y doble panel | PLANNED | — | — | PENDING | — |
 | 07 Renombrado/transferencias | PLANNED | — | — | PENDING | — |
 | 08 Rediseño móvil FinderDex | PLANNED | — | — | PENDING | Revisión visual en teléfono |
@@ -102,3 +102,8 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Sidebar de red enumera conexiones guardadas de Voyager; navegación red se delega al browser actual de Voyager y NO se presenta como experiencia nativa DeX terminada.
 - Compartir reutiliza `ACTION_SEND`/`ACTION_SEND_MULTIPLE` con `content://`, Android chooser (Quick Share cuando está disponible); sin API privada.
 - `PARTIAL`: filtros adicionales de historial, soporte Desktop nativo de sesiones de red, Quick Share y validaciones físicas aún pendientes. CI [41185601902](https://github.com/Jorgeprdz/Voyager/actions/runs/41185601902) en curso.
+
+### 2026-10-31 UTC — cierre gate etapa 05
+- [Run 41185601902](https://github.com/Jorgeprdz/Voyager/actions/runs/41185601902) SUCCESS: build,  unit, lint, debug APK signed/published. Artifact `FinderDex-R3-APK` ID `13037100053`; SHA256 `f6d40cae291fa45eadee609b6d596b355539856eb40ba3a77928dc4ff163cd34`.
+- La etapa 05 sigue PARTIAL: red en Voyager browser, Quick Share depende de Android y requiere prueba real, historial aún no ofrece todos los filtros.
+- `CURRENT_STAGE` avanza a 06 por independencia de la funcionalidad.
