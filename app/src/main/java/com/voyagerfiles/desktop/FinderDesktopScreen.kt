@@ -294,6 +294,11 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
                         viewModel.duplicateDesktopPaths(paths)
                     else message = "Espera a que termine la navegación antes de duplicar"
                 }
+                FinderFileAction.EXTRACT -> if (file.isArchive) {
+                    if (viewModel.browseState.value.currentPath == controller.currentPath)
+                        viewModel.extractArchive(file.path)
+                    else message = "Espera a que termine la navegación antes de extraer"
+                }
                 FinderFileAction.ZIP -> {
                     val current = viewModel.browseState.value
                     val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
@@ -768,7 +773,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                             style = TextStyle(color = if (selected) Color.White else Ink, fontSize = 12.sp,
                                 fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
-                            if (file.path in column?.selected.orEmpty()) column?.selected?.size ?: 1 else 1) {
+                            if (file.path in column?.selected.orEmpty()) column?.selected?.size ?: 1 else 1, isArchive = file.isArchive) {
                             onFileAction(it, file)
                         }
                     }
@@ -846,7 +851,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         Label(file.name, Modifier.weight(1f), if (selected && active) Color.White else Ink)
                         if (file.isDirectory) FinderGlyph("forward", if (selected && active) Color.White else Muted, Modifier.size(10.dp))
                         FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
-                            if (file.path in column.selected) column.selected.size else 1) {
+                            if (file.path in column.selected) column.selected.size else 1, isArchive = file.isArchive) {
                             onFileAction(it, file)
                         }
                     }
