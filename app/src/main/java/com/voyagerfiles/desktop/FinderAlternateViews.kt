@@ -18,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -30,10 +31,6 @@ import com.voyagerfiles.data.model.FileItem
 import com.voyagerfiles.data.model.SortBy
 import com.voyagerfiles.ui.components.FileThumbnailOrIcon
 import java.text.DateFormat
-
-private val ink = Color(0xff303034)
-private val soft = Color(0xfff5f7fb)
-private val blue = Color(0xffdfebfc)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -56,20 +53,23 @@ internal fun FinderListView(
             sortBy, descending)
     }
     val marquee = remember(last?.path) { FinderMarqueeState() }
+    val glass = LocalFinderMaterials.current
+    val palette = glass.palette
     val listState = rememberLazyListState()
     var listBounds by remember { mutableStateOf(Rect.Zero) }
     FinderEdgeAutoScroll(marquee, dragState, listBounds) { listState.scrollBy(it) }
-    Box(modifier.background(Color.White).testTag("finder-list")
+    Box(modifier.background(palette.content).testTag("finder-list")
         .finderMarqueeGesture(controller, marquee, dragState)) {
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().height(31.dp).background(Color(0xfff5f5f7))
+        Row(Modifier.fillMaxWidth().height(31.dp).background(palette.toolbar)
             .padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_name), Modifier.weight(1f), color = ink, fontSize = 11.sp)
-            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_size), Modifier.width(100.dp), color = ink, fontSize = 11.sp)
-            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_modified), Modifier.width(128.dp), color = ink, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_name), Modifier.weight(1f), color = palette.secondaryInk, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_size), Modifier.width(100.dp), color = palette.secondaryInk, fontSize = 11.sp)
+            Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_column_modified), Modifier.width(128.dp), color = palette.secondaryInk, fontSize = 11.sp)
         }
+        Box(Modifier.fillMaxSize()) {
         LazyColumn(state = listState,
-            modifier = Modifier.onGloballyPositioned { listBounds = it.boundsInRoot() },
+            modifier = Modifier.fillMaxSize().onGloballyPositioned { listBounds = it.boundsInRoot() },
             contentPadding = PaddingValues(vertical = 5.dp)) {
             items(files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
@@ -77,11 +77,16 @@ internal fun FinderListView(
                 var shift by remember { mutableStateOf(false) }
                 val hoverSource = remember { MutableInteractionSource() }
                 val hovered by hoverSource.collectIsHoveredAsState()
+                val pressed by hoverSource.collectIsPressedAsState()
                 val selected = file.path in last?.selected.orEmpty()
+                var keyboardFocused by remember { mutableStateOf(false) }
+                val surface = finderAnimatedMaterial(if (pressed) palette.pressed
+                    else if (selected) palette.selection(false, glass.windowFocused)
+                    else if (hovered) palette.hover else Color.Transparent, selected)
                 Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 9.dp, vertical = 1.dp)
                     .clip(RoundedCornerShape(7.dp))
-                    .background(if (selected) blue else if (hovered) soft else Color.Transparent)
-                    .hoverable(hoverSource)
+                    .background(surface).hoverable(hoverSource)
+                    .onFocusChanged { keyboardFocused = it.isFocused }
                     .finderMarqueeItem(file.path, marquee)
                     .finderDragVisual(file.path, file.isDirectory, dragState)
                     .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
@@ -91,29 +96,33 @@ internal fun FinderListView(
                         if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
                         menu = true
                     }
-                    .combinedClickable(
+                    .combinedClickable(interactionSource = hoverSource, indication = null,
                         onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
                         onDoubleClick = {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
                         },
                         onLongClick = { controller.selectOnly(columns.lastIndex, file); menu = true })
+                    .finderFocusOutline(keyboardFocused)
                     .semantics { this.selected = selected }
                     .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(24.dp))
                     else FileThumbnailOrIcon(file, 24.dp)
                     Spacer(Modifier.width(9.dp))
-                    Text(file.name, Modifier.weight(1f), color = ink, maxLines = 1,
+                    val rowInk = if (selected) palette.selectionText(false, glass.windowFocused) else palette.ink
+                    Text(file.name, Modifier.weight(1f), color = rowInk, maxLines = 1,
                         overflow = TextOverflow.Ellipsis, fontSize = 12.sp)
                     Text(if (file.isDirectory) "—" else file.formattedSize,
-                        Modifier.width(100.dp), color = ink, fontSize = 11.sp, maxLines = 1)
+                        Modifier.width(100.dp), color = rowInk, fontSize = 11.sp, maxLines = 1)
                     Text(DateFormat.getDateInstance(DateFormat.SHORT).format(file.lastModified),
-                        Modifier.width(128.dp), color = ink, fontSize = 11.sp, maxLines = 1)
+                        Modifier.width(128.dp), color = rowInk, fontSize = 11.sp, maxLines = 1)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
                         if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                         onAction(it, file)
                     }
                 }
             }
+        }
+        FinderLazyListScrollbar(listState, Modifier.align(Alignment.CenterEnd))
         }
     }
     FinderMarqueeOverlay(marquee)
@@ -141,30 +150,40 @@ internal fun FinderGalleryView(
             sortBy, descending)
     }
     val selected = files.firstOrNull { it.path in last?.selected.orEmpty() }
-    Column(modifier.background(Color.White).testTag("finder-gallery")) {
+    val glass = LocalFinderMaterials.current
+    val palette = glass.palette
+    Column(modifier.background(palette.content).testTag("finder-gallery")) {
         Column(Modifier.weight(1f).fillMaxWidth().padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             if (selected == null) {
-                Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_select_file), fontSize = 13.sp, color = ink)
+                Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_select_file), fontSize = 13.sp, color = palette.ink)
             } else {
                 if (selected.isDirectory) FinderGlyph("folder", modifier = Modifier.size(188.dp))
                 else FileThumbnailOrIcon(selected, 220.dp)
                 Spacer(Modifier.height(12.dp))
-                Text(selected.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = ink)
+                Text(selected.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = palette.ink)
                 Spacer(Modifier.height(5.dp))
-                Text(selected.formattedSize, fontSize = 12.sp, color = Color.Gray)
-                if (!selected.isDirectory) Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_double_click_open), fontSize = 11.sp, color = Color.Gray)
+                Text(selected.formattedSize, fontSize = 12.sp, color = palette.secondaryInk)
+                if (!selected.isDirectory) Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_double_click_open), fontSize = 11.sp, color = palette.secondaryInk)
             }
         }
-        LazyRow(Modifier.fillMaxWidth().height(144.dp).background(Color(0xfff5f5f7))
+        LazyRow(Modifier.fillMaxWidth().height(144.dp).background(palette.footer)
             .padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
             items(files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
                 var ctrl by remember { mutableStateOf(false) }
                 var shift by remember { mutableStateOf(false) }
                 val active = file.path in last?.selected.orEmpty()
+                var keyboardFocused by remember { mutableStateOf(false) }
+                val interaction = remember { MutableInteractionSource() }
+                val hovered by interaction.collectIsHoveredAsState()
+                val pressed by interaction.collectIsPressedAsState()
+                val surface = finderAnimatedMaterial(if (pressed) palette.pressed
+                    else if (active) palette.selection(false, glass.windowFocused)
+                    else if (hovered) palette.hover else Color.Transparent, active)
                 Column(Modifier.width(105.dp).fillMaxHeight().clip(RoundedCornerShape(9.dp))
-                    .background(if (active) blue else Color.Transparent)
+                    .background(surface).hoverable(interaction)
+                    .onFocusChanged { keyboardFocused = it.isFocused }
                     .finderDragVisual(file.path, file.isDirectory, dragState)
                     .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
                     .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
@@ -173,7 +192,8 @@ internal fun FinderGalleryView(
                         if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
                         menu = true
                     }
-                    .combinedClickable(
+                    .finderFocusOutline(keyboardFocused)
+                    .combinedClickable(interactionSource = interaction, indication = null,
                         onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
                         onDoubleClick = {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
@@ -183,7 +203,7 @@ internal fun FinderGalleryView(
                     if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(72.dp))
                     else FileThumbnailOrIcon(file, 72.dp)
                     Spacer(Modifier.height(4.dp))
-                    Text(file.name, color = ink, fontSize = 11.sp, maxLines = 1,
+                    Text(file.name, color = if (active) palette.selectionText(false, glass.windowFocused) else palette.ink, fontSize = 11.sp, maxLines = 1,
                         overflow = TextOverflow.Ellipsis)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
                         if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
