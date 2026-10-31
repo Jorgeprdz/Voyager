@@ -980,6 +980,84 @@ class FileBrowserViewModel @JvmOverloads constructor(
         return true
     }
 
+    /**
+     * Desktop transfers use Voyager's transactional coordinator, not platform File.copyTo.
+     * Rejects paths outside the active local session before any write.
+     */
+    fun moveDesktopPaths(paths: List<String>, destinationDirectory: String) {
+        val session = _activeSession.value ?: return
+        if (session.source != FileSource.LOCAL || paths.isEmpty()) return
+        val root = session.rootPath
+        val normalized = BrowserNavigationBounds.normalizePath(destinationDirectory)
+        if (!BrowserNavigationBounds.isPathAtOrInsideRoot(normalized, root) ||
+            paths.any { !BrowserNavigationBounds.isPathAtOrInsideRoot(it, root) }) {
+            showSnackbar(UiText.Dynamic("Origen o destino fuera de la sesión")); return
+        }
+        val provider = sessionProviders[session.id] ?: return
+        val chosen = paths.distinct()
+        launchOperation(R.string.progress_moving, R.string.operation_paste) {
+            var completed = 0
+            var failed = 0
+            for (source in chosen) {
+                val result = FileOperationCoordinator.movePath(provider, provider, source, normalized,
+                    operationController.conflicts::resolve) { progress ->
+                    updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_moving),
+                        completedItems = completed, totalItems = chosen.size,
+                        currentItemName = source.substringAfterLast('/'),
+                        copiedBytes = progress.bytesTransferred, totalBytes = progress.totalBytes,
+                        elapsedNanos = progress.elapsedNanos))
+                }
+                result.onSuccess { completed++ }
+                result.onFailure { error ->
+                    if (error is CancellationException) throw error
+                    failed++
+                    operationController.recordFailure(error)
+                    showSnackbar(OperationMessages.failure(R.string.operation_paste, error))
+                }
+            }
+            refreshFiles()
+            desktopColumns?.refresh()
+            if (failed == 0) showSnackbar(UiText.Dynamic("$completed elemento(s) movido(s)"))
+        }
+    }
+
+    /** Duplicates selected items without overwriting the originals. */
+    fun duplicateDesktopPaths(paths: List<String>) {
+        val session = _activeSession.value ?: return
+        if (session.source != FileSource.LOCAL || paths.isEmpty()) return
+        val provider = sessionProviders[session.id] ?: return
+        val parent = _browseState.value.currentPath
+        if (!BrowserNavigationBounds.isPathAtOrInsideRoot(parent, session.rootPath) ||
+            paths.any { !BrowserNavigationBounds.isPathAtOrInsideRoot(it, session.rootPath) ||
+                provider.getParentPath(it) != parent }) {
+            showSnackbar(UiText.Dynamic("Selección fuera del directorio activo")); return
+        }
+        val chosen = paths.distinct()
+        launchOperation(R.string.progress_copying, R.string.operation_paste) {
+            val usedNames = provider.listFiles(parent).getOrThrow().mapTo(mutableSetOf()) { it.name.lowercase() }
+            var completed = 0
+            for (source in chosen) {
+                val item = provider.getFileInfo(source).getOrThrow()
+                val stem = if (item.isDirectory || !item.name.contains('.')) item.name else item.name.substringBeforeLast('.')
+                val extension = if (item.isDirectory || !item.name.contains('.')) "" else ".${item.name.substringAfterLast('.')}"
+                val destinationName = generateSequence(1) { it + 1 }
+                    .map { suffix -> "$stem copia" + (if (suffix == 1) "" else " $suffix") + extension }
+                    .first { name -> name.lowercase() !in usedNames }
+                // Never allow an existing destination to be replaced when duplicating.
+                val outcome = FileOperationCoordinator.copyPath(provider, provider, source, parent,
+                    destinationName = destinationName)
+                outcome.getOrThrow()
+                usedNames.add(destinationName.lowercase())
+                completed++
+                updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_copying),
+                    completedItems = completed, totalItems = chosen.size, currentItemName = item.name))
+            }
+            refreshFiles()
+            desktopColumns?.refresh()
+            showSnackbar(UiText.Dynamic("$completed elemento(s) duplicado(s)"))
+        }
+    }
+
     fun copyToClipboard(paths: List<String>, clearSelectionAfter: Boolean = true) {
         _clipboardPaths.value = paths
         _clipboardOperation.value = ClipboardOperation.COPY
