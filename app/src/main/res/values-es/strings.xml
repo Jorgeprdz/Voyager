@@ -610,4 +610,10 @@
     <string name="finderdex_analytics_largest">Archivos más grandes</string>
     <string name="finderdex_analytics_folders">Carpetas de mayor tamaño</string>
     <string name="finderdex_analytics_nondeleting">Las estimaciones solo abarcan archivos accesibles examinados. Nada se elimina automáticamente.</string>
+    <string name="finderdex_recents_title">Recientes</string>
+    <string name="finderdex_recents_opened">Abiertos desde FinderDex</string>
+    <string name="finderdex_recents_modified">Modificados en esta carpeta</string>
+    <string name="finderdex_recents_empty">No hay archivos para mostrar</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Limpiar historial</string>
 </resources>

@@ -628,4 +628,10 @@
     <string name="finderdex_analytics_largest">Largest files</string>
     <string name="finderdex_analytics_folders">Largest parent folders</string>
     <string name="finderdex_analytics_nondeleting">Estimates cover accessible scanned files only. Nothing is deleted automatically.</string>
+    <string name="finderdex_recents_title">Recent</string>
+    <string name="finderdex_recents_opened">Opened through FinderDex</string>
+    <string name="finderdex_recents_modified">Modified in this folder</string>
+    <string name="finderdex_recents_empty">No files to display</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Clear history</string>
 </resources>

@@ -598,4 +598,10 @@
     <string name="finderdex_analytics_largest">最大檔案</string>
     <string name="finderdex_analytics_folders">最大的上層資料夾</string>
     <string name="finderdex_analytics_nondeleting">估算僅涵蓋可存取且已掃描的檔案。不會自動刪除任何內容。</string>
+    <string name="finderdex_recents_title">最近使用</string>
+    <string name="finderdex_recents_opened">透過 FinderDex 開啟</string>
+    <string name="finderdex_recents_modified">此資料夾中最近修改</string>
+    <string name="finderdex_recents_empty">沒有可顯示的檔案</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">清除歷史紀錄</string>
 </resources>

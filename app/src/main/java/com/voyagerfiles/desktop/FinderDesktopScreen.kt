@@ -239,6 +239,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val lastOperationResult by viewModel.lastOperationResult.collectAsState()
     val trash by viewModel.trashState.collectAsState()
     val clipboardPaths by viewModel.clipboardPaths.collectAsState()
+    val savedConnections by viewModel.connections.collectAsState()
     val context = LocalContext.current
     val rootView = LocalView.current
     LaunchedEffect(session?.id) {
@@ -261,6 +262,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         return
     }
     val sharedDragState = remember(controller.session.id) { FinderDragDropState() }
+    val recentStore = remember(context) { FinderRecentStore(context) }
     val bookmarks by viewModel.bookmarks.collectAsState()
     val favoritePrefs = remember(context) { context.getSharedPreferences("finderdex_favorites", Context.MODE_PRIVATE) }
     var favoriteOrder by remember(favoritePrefs) { mutableStateOf(
@@ -352,6 +354,8 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     }
     FinderDesktopScreen(controller, mode, bookmarks = orderedFavorites.map { it.name to it.path },
         volumes = volumes.map { it.name to it.path },
+        savedConnections = savedConnections,
+        onConnectNetwork = { conn -> viewModel.connectToRemote(conn); onMobile() },
         externalDragState = sharedDragState,
         onRoot = viewModel::openLocalRoot,
         onMobile = onMobile,
@@ -385,7 +389,9 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             imagePrefs.edit().remove(path).apply()
             customImages = customImages - path
         },
-        onOpen = { file -> FileUtils.openFile(context, file).onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
+        onOpen = { file -> FileUtils.openFile(context, file)
+            .onSuccess { recentStore.record(file) }
+            .onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
         operationsAvailable = true,
         clipboardAvailable = clipboardPaths.isNotEmpty(),
         onPaste = {
@@ -468,6 +474,8 @@ internal fun FinderDesktopScreen(
     externalDragState: FinderDragDropState? = null,
     bookmarks: List<Pair<String, String>> = emptyList(),
     volumes: List<Pair<String, String>> = emptyList(),
+    savedConnections: List<com.voyagerfiles.data.model.RemoteConnection> = emptyList(),
+    onConnectNetwork: (com.voyagerfiles.data.model.RemoteConnection) -> Unit = {},
     favoriteImages: Map<String, String> = emptyMap(),
     trashEntries: List<com.voyagerfiles.data.model.TrashEntry> = emptyList(),
     trashLoading: Boolean = false,
@@ -576,6 +584,7 @@ internal fun FinderDesktopScreen(
     var newFolderDialog by remember { mutableStateOf(false) }
     var showTrash by remember { mutableStateOf(false) }
     var showAnalytics by remember { mutableStateOf(false) }
+    var showRecents by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
         val owningColumn = columns.lastOrNull { col -> col.files.any { it.path == file.path } }
@@ -691,7 +700,9 @@ internal fun FinderDesktopScreen(
             previewAvailable = shell.showPreview && mode != DesktopMode.COMPACT)
         Row(Modifier.weight(1f).fillMaxWidth()) {
             if (effectiveSidebarWidth >= 40f) {
-                FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot, onAnalytics = { showAnalytics = true },
+                FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
+                    onAnalytics = { showAnalytics = true }, onRecents = { showRecents = true },
+                    connections = savedConnections, onConnection = onConnectNetwork,
                     favoriteImages, onRemoveFavorite, onReorderFavorite, onPickFavoriteImage, onRemoveFavoriteImage,
                     dragState, rail = shell.sidebarRail)
             }
@@ -816,6 +827,9 @@ internal fun FinderDesktopScreen(
             }) { Text(stringResource(if (drop.action == FinderDropAction.COPY) R.string.action_copy else R.string.action_move)) } },
             dismissButton = { TextButton(onClick = { dragState.dismiss() }) { Text(stringResource(R.string.action_cancel)) } })
     }
+    if (showRecents) FinderRecentsDialog(columns.lastOrNull()?.files.orEmpty(),
+        onDismiss = { showRecents = false },
+        onOpenLocation = { path -> showRecents = false; onRoot(path) })
     if (showAnalytics) FinderAnalyticsDialog(controller.currentPath,
         onDismiss = { showAnalytics = false },
         onOpenFolder = { path -> showAnalytics = false; onRoot(path) })
@@ -847,7 +861,9 @@ internal fun finderSidebarGlyph(folder: String): String = when (folder) {
 
 @Composable
 private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit,
-    onAnalytics: () -> Unit,
+    onAnalytics: () -> Unit, onRecents: () -> Unit,
+    connections: List<com.voyagerfiles.data.model.RemoteConnection>,
+    onConnection: (com.voyagerfiles.data.model.RemoteConnection) -> Unit,
     favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
     onReorderFavorite: (String, Int) -> Unit,
     onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit,
@@ -868,6 +884,8 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
         var locationsExpanded by remember { mutableStateOf(true) }
         if (!rail) SidebarHeading("Favoritos", favoritesExpanded) { favoritesExpanded = !favoritesExpanded }
         if (favoritesExpanded || rail) {
+            SidebarItem(stringResource(R.string.finderdex_recents_title), "recent:local", "document",
+                false, { onRecents() }, dragState = null, rail = rail)
             SidebarItem("Inicio", root, "home", currentPath == root, onRoot, dragState = dragState, rail = rail)
             listOf("Descargas" to "Download", "Documentos" to "Documents", "Imágenes" to "Pictures", "Música" to "Music", "Películas" to "Movies").forEach { (name, folder) ->
                 val path = java.io.File(root, folder).path
@@ -900,6 +918,10 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
                 false, { showDriveStatus = true }, dragState = null, rail = rail)
             SidebarItem(stringResource(R.string.finderdex_onedrive_disconnected), "cloud:onedrive", "drive",
                 false, { showOneDriveStatus = true }, dragState = null, rail = rail)
+            connections.forEach { connection ->
+                SidebarItem(connection.name, "network:${connection.id}", "drive",
+                    false, { onConnection(connection) }, dragState = null, rail = rail)
+            }
         }
     }
     FinderVerticalScrollbar(sidebarScroll, Modifier.align(Alignment.CenterEnd))

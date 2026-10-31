@@ -610,4 +610,10 @@
     <string name="finderdex_analytics_largest">Größte Dateien</string>
     <string name="finderdex_analytics_folders">Größte übergeordnete Ordner</string>
     <string name="finderdex_analytics_nondeleting">Schätzungen umfassen nur zugängliche geprüfte Dateien. Nichts wird automatisch gelöscht.</string>
+    <string name="finderdex_recents_title">Zuletzt verwendet</string>
+    <string name="finderdex_recents_opened">Über FinderDex geöffnet</string>
+    <string name="finderdex_recents_modified">In diesem Ordner geändert</string>
+    <string name="finderdex_recents_empty">Keine Dateien vorhanden</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Verlauf löschen</string>
 </resources>

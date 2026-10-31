@@ -598,4 +598,10 @@
     <string name="finderdex_analytics_largest">Tệp lớn nhất</string>
     <string name="finderdex_analytics_folders">Thư mục cha lớn nhất</string>
     <string name="finderdex_analytics_nondeleting">Ước tính chỉ gồm tệp đã quét có quyền truy cập. Không tự động xóa.</string>
+    <string name="finderdex_recents_title">Gần đây</string>
+    <string name="finderdex_recents_opened">Mở bằng FinderDex</string>
+    <string name="finderdex_recents_modified">Đã sửa trong thư mục này</string>
+    <string name="finderdex_recents_empty">Không có tệp để hiển thị</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Xóa lịch sử</string>
 </resources>

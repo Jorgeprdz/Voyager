@@ -598,4 +598,10 @@
     <string name="finderdex_analytics_largest">큰 파일</string>
     <string name="finderdex_analytics_folders">용량이 큰 상위 폴더</string>
     <string name="finderdex_analytics_nondeleting">추정치는 접근 가능한 검사 파일만 포함하며 자동 삭제는 하지 않습니다.</string>
+    <string name="finderdex_recents_title">최근 항목</string>
+    <string name="finderdex_recents_opened">FinderDex에서 연 파일</string>
+    <string name="finderdex_recents_modified">이 폴더에서 수정된 파일</string>
+    <string name="finderdex_recents_empty">표시할 파일이 없습니다</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">기록 지우기</string>
 </resources>

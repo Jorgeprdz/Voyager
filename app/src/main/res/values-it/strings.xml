@@ -610,4 +610,10 @@
     <string name="finderdex_analytics_largest">File più grandi</string>
     <string name="finderdex_analytics_folders">Cartelle principali più grandi</string>
     <string name="finderdex_analytics_nondeleting">Le stime coprono solo i file accessibili analizzati. Nessun file viene eliminato automaticamente.</string>
+    <string name="finderdex_recents_title">Recenti</string>
+    <string name="finderdex_recents_opened">Aperti tramite FinderDex</string>
+    <string name="finderdex_recents_modified">Modificati in questa cartella</string>
+    <string name="finderdex_recents_empty">Nessun file da mostrare</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Cancella cronologia</string>
 </resources>

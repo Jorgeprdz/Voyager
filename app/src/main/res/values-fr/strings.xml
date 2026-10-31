@@ -610,4 +610,10 @@
     <string name="finderdex_analytics_largest">Fichiers les plus volumineux</string>
     <string name="finderdex_analytics_folders">Dossiers parents les plus volumineux</string>
     <string name="finderdex_analytics_nondeleting">Les estimations couvrent uniquement les fichiers accessibles analysés. Rien n\'est supprimé automatiquement.</string>
+    <string name="finderdex_recents_title">Récents</string>
+    <string name="finderdex_recents_opened">Ouverts depuis FinderDex</string>
+    <string name="finderdex_recents_modified">Modifiés dans ce dossier</string>
+    <string name="finderdex_recents_empty">Aucun fichier à afficher</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Effacer l\'historique</string>
 </resources>
