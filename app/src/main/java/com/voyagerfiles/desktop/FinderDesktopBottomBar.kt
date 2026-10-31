@@ -18,6 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.CircleShape
+import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -148,7 +151,8 @@ internal fun FinderStatusBar(controller: FinderColumnController, columns: List<F
     val current=columns.lastOrNull()
     val selected=current?.files.orEmpty().filter{it.path in current?.selected.orEmpty()}
     val bytes=selected.filterNot{it.isDirectory}.sumOf{it.size.coerceAtLeast(0L)}
-    Row(Modifier.fillMaxWidth().height(heightDp.dp).background(p.footer),
+    Row(Modifier.fillMaxWidth().height(heightDp.dp)
+        .background(p.footer).border(.5.dp, p.separator),
         verticalAlignment=Alignment.CenterVertically) {
         Box(Modifier.width(sidebarExtentDp.dp).fillMaxHeight().background(p.sidebar))
         BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
@@ -157,9 +161,10 @@ internal fun FinderStatusBar(controller: FinderColumnController, columns: List<F
                 verticalAlignment=Alignment.CenterVertically,
                 horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 val count=current?.files?.size?:0
-                val label=if(tight)count.toString()+" · "+selected.size
-                    else count.toString()+" elementos · "+selected.size+" seleccionados"+
-                        if(selected.isNotEmpty())" · "+FileItem.formatFileSize(bytes) else ""
+                val countLabel = "$count " + if (count == 1) "elemento" else "elementos"
+                val selectionLabel = if (selected.isEmpty()) "" else
+                    " · ${selected.size} seleccionados" + if (tight) "" else " · ${FileItem.formatFileSize(bytes)}"
+                val label = countLabel + selectionLabel
                 Text(label,color=p.secondaryInk,fontSize=11.sp,maxLines=1,
                     overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
                 if(!tight)free?.let{
@@ -171,6 +176,7 @@ internal fun FinderStatusBar(controller: FinderColumnController, columns: List<F
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FinderZoomControl(view:FinderViewStyle,selected:Int,onChange:(Int)->Unit,compact:Boolean) {
     val p=LocalFinderMaterials.current.palette
@@ -200,13 +206,24 @@ private fun FinderZoomControl(view:FinderViewStyle,selected:Int,onChange:(Int)->
         }
     }else{
         Text(stringResource(R.string.finderdex_zoom_decrease),color=p.secondaryInk,fontSize=10.sp)
-        Slider(value=selected.toFloat(),onValueChange={onChange(it.toInt().coerceIn(0,max))},
-            valueRange=0f..max.toFloat(),steps=max-1,
+        Slider(value=selected.toFloat(),
+            onValueChange={onChange(it.roundToInt().coerceIn(0,max))},
+            valueRange=0f..max.toFloat(), steps=max-1,
             modifier=Modifier.width(116.dp).height(32.dp)
                 .onFocusChanged{tracker.update("zoom:slider",it.isFocused)}
                 .semantics{contentDescription=zoomAccessibleLabel},
-            colors=SliderDefaults.colors(thumbColor=p.accent,activeTrackColor=p.accent,
-                inactiveTrackColor=p.separator))
+            thumb = {
+                Box(Modifier.size(12.dp).shadow(2.dp, CircleShape)
+                    .background(p.accent, CircleShape)
+                    .border(.8.dp, p.illuminatedEdge, CircleShape))
+            },
+            track = { state ->
+                Box(Modifier.fillMaxWidth().height(3.dp)
+                    .background(p.separator, CircleShape)) {
+                    Box(Modifier.fillMaxWidth((state.value / max.toFloat()).coerceIn(0f,1f))
+                        .fillMaxHeight().background(p.accent, CircleShape))
+                }
+            })
         Text(stringResource(R.string.finderdex_zoom_increase),color=p.secondaryInk,fontSize=11.sp)
     }
 }
