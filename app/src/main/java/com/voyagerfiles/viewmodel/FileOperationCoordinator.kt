@@ -46,8 +46,12 @@ object FileOperationCoordinator {
         destinationDirectoryPath: String,
         resolveConflict: ConflictResolver = rejectConflict,
         onProgress: (StreamTransferProgress) -> Unit = {},
+        destinationName: String? = null,
     ): Result<TransferDisposition> = withContext(Dispatchers.IO) {
-        runCatching { copyPathInternal(sourceProvider, destinationProvider, sourcePath, destinationDirectoryPath, resolveConflict, onProgress) }
+        runCatching {
+            copyPathInternal(sourceProvider, destinationProvider, sourcePath,
+                destinationDirectoryPath, resolveConflict, onProgress, destinationName)
+        }
     }
 
     suspend fun movePath(
@@ -76,9 +80,13 @@ object FileOperationCoordinator {
         destinationDirectoryPath: String,
         resolveConflict: ConflictResolver,
         onProgress: (StreamTransferProgress) -> Unit,
+        destinationName: String? = null,
     ): TransferDisposition {
         TransferCancellation.check()
         val item = sourceProvider.getFileInfo(sourcePath).getOrThrow()
+        require(destinationName == null || (destinationName.isNotBlank() &&
+            destinationName != "." && destinationName != ".." &&
+            '/' !in destinationName && '\\' !in destinationName)) { "Invalid duplicate name" }
         if (item.isDirectory) {
             require(!sourceProvider.isDescendantPath(sourcePath, destinationProvider, destinationDirectoryPath)) {
                 "A folder cannot be copied or moved into itself"
@@ -86,7 +94,7 @@ object FileOperationCoordinator {
         }
         return transfer(
             destinationProvider, destinationDirectoryPath,
-            ConflictSource(item.name, item.size.takeIf { it >= 0 }, item.lastModified), item.isDirectory, resolveConflict,
+            ConflictSource(destinationName ?: item.name, item.size.takeIf { it >= 0 }, item.lastModified), item.isDirectory, resolveConflict,
             validateTarget = { target ->
                 require(!sourceProvider.isSamePath(sourcePath, destinationProvider, target.path)) { "An item cannot replace itself" }
                 require(!target.isDirectory || !destinationProvider.isDescendantPath(target.path, sourceProvider, sourcePath)) {
