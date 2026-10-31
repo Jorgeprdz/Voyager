@@ -176,3 +176,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - XML de pruebas descargado e inspeccionado: **562 tests: 548 PASS, 0 FAIL, 0 ERROR, 14 skipped**. Lint **0 errors, 192 warnings**. Los instrumentos `androidTest` se compilaron, no se ejecutaron sobre hardware.
 - APK `com.finderdex.preview`, artifact `FinderDex-R3-APK` ID `13039317905`; test artifact `13039327888`; verification `13039283007`. Archivo ZIP descargado y comprobado; APK extraída y SHA256 comprobado localmente contra log CI: `b6a01a13e4ea83c592516253c78a57870fe221e23f6882a96c8a13f19b143e25`. La verificación de firma se aprobó en CI.
 - Estado: `PASS_AUTOMATED` para la instantánea citada, **no PASS_PHYSICAL ni RELEASE**. Persisten `BLOCKED_EXTERNAL` sólo para registro/consentimiento OAuth real Drive/OneDrive; `PENDING_PHYSICAL_DEX`, `PENDING_USER_VISUAL_REVIEW` y pendientes funcionales identificados por R3.1. R2.2 protegida sin cambios.
+
+### 2026-10-31 UTC — R3.2 premium mobile (rama aislada)
+- Rama: `feat/finderdex-r3.2-mobile-premium`, base R3.1 `73eb4004f5e167ed5f489195e540af3216f9edc1`.
+- Tema móvil propio claro/oscuro, búsqueda/filtros, botón crear, densidad visual y traducción ES. Desktop R2.2 no editado.
+- Estado: `R3.2_CODE_PENDING_CI_AND_PHYSICAL`. Pendientes aún abiertos: aceptación visual con capturas, instrumentación física Android 17/DeX, pruebas de tablet/split y OAuth real externo.
+- Ver `R3.2-MOBILE-PREMIUM-REPORT.md` y `R3.2-CONTINUE-PROMPT.md`.
