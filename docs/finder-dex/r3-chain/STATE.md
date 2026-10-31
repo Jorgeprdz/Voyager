@@ -201,3 +201,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Analizador móvil ahora usa `FinderMobileAnalyticsPanel` con scanner/summary existentes; el componente Desktop original no cambia.
 - Código listo para gate automatizado; no registrar tests ni APK hasta recibir resultados reales.
 - Estado: `R3.2.1_CODE_PENDING_CI_AND_PHYSICAL`; ver reporte y prompt R3.2.1.
+
+### 2026-10-31 UTC — R3.2.1 PASS_AUTOMATED
+- Código `6a4a4d7c8d06d32cee43453d44c5b63d2702a010`, [CI 41215623349](https://github.com/Jorgeprdz/Voyager/actions/runs/41215623349) SUCCESS.
+- Tests: 567 total, 553 PASS, 14 skipped, 0 fallos; lint 0 errores, 193 warnings; compile, assemble, APK package/signing, iconos: PASS.
+- Artifact `FinderDex-R3.2.1-APK` ID `13048586759`; SHA256 APK real `2fbe290776658cea653f822145b70d284477dc269efdea5fb90e903932b84ad8` confirmado por hash local y CI.
+- Package `com.finderdex.preview`; certificado V2 SHA256 `767da04162cffcc91d3db64f9d1a58128cf35a8a11a72cf30dd7058795781023` idéntico a R3.2.
+- Reporte: `R3.2.1-MICRO-POLISH-REPORT.md`. `PASS_PHYSICAL` NO; `FULL_POLISH` NO; OAuth externo pendiente.
