@@ -38,6 +38,8 @@ internal class FinderDragDropState {
     var receiving by mutableStateOf(false)
         private set
     var copyRequested by mutableStateOf(false)
+    var awaitingTransfer by mutableStateOf(false)
+        private set
     var hoveredDestination by mutableStateOf<String?>(null)
         private set
     var springFolder by mutableStateOf<String?>(null)
@@ -111,12 +113,28 @@ internal class FinderDragDropState {
             pending = FinderPendingMove(draggingPaths.toList(), destination.path,
                 if (copyRequested) FinderDropAction.COPY else FinderDropAction.MOVE)
             ghostDestination = destination.rect.center
-            receiving = true
+            receiving = false
             returning = false
             draggingPaths = emptyList()
             hoveredDestination = null
             springFolder = null
         } else cancel()
+    }
+    fun acceptPending() {
+        if (pending != null) {
+            awaitingTransfer = true
+            receiving = true
+        }
+    }
+    fun completeTransfer(success: Boolean) {
+        awaitingTransfer = false
+        pending = null
+        if (success) clearGhost()
+        else {
+            receiving = false
+            returning = true
+            ghostDestination = sourcePosition
+        }
     }
     fun cancel() {
         draggingPaths = emptyList()
@@ -135,7 +153,7 @@ internal class FinderDragDropState {
     }
     fun dismiss() {
         pending = null
-        if (ghostPaths.isNotEmpty() && !receiving) cancel()
+        if (!awaitingTransfer && ghostPaths.isNotEmpty()) cancel()
     }
 }
 
@@ -143,12 +161,14 @@ internal fun Modifier.finderDragSource(
     path: String,
     selection: Set<String>,
     drag: FinderDragDropState,
+    copyModifier: Boolean = false,
 ): Modifier = composed {
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     this.onGloballyPositioned { rootOrigin = it.positionInRoot() }
         .pointerInput(path, selection, drag) {
             detectDragGestures(
                 onDragStart = { at ->
+                    drag.copyRequested = copyModifier
                     drag.start(if (path in selection) selection.toList() else listOf(path),
                         rootOrigin + at, rootOrigin + at)
                 },
