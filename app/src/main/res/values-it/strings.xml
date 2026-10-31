@@ -548,4 +548,23 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_spring_opened">Cartella aperta temporaneamente</string>
+    <string name="finderdex_close">Chiudi</string>
+    <string name="finderdex_drop_copy_here">Rilascia qui per copiare</string>
+    <string name="finderdex_drop_move_here">Rilascia qui per spostare</string>
+    <string name="finderdex_opening">Apertura…</string>
+    <string name="finderdex_no_subfolders">Nessuna sottocartella</string>
+    <string name="finderdex_cannot_read_folder">Impossibile leggere questa cartella</string>
+    <string name="finderdex_quicklook_close">Chiudi  Esc</string>
+    <string name="finderdex_quicklook_loading">Caricamento anteprima…</string>
+    <string name="finderdex_trash_title">Cestino</string>
+    <string name="finderdex_trash_loading">Caricamento elementi…</string>
+    <string name="finderdex_trash_empty">Il cestino è vuoto</string>
+    <string name="finderdex_restore">Ripristina</string>
+    <string name="finderdex_refresh">Aggiorna</string>
+    <string name="finderdex_column_name">Nome</string>
+    <string name="finderdex_column_size">Dimensione</string>
+    <string name="finderdex_column_modified">Modificato</string>
+    <string name="finderdex_select_file">Seleziona un file</string>
+    <string name="finderdex_double_click_open">Fai doppio clic per aprire</string>
 </resources>

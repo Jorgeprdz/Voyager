@@ -536,4 +536,23 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_spring_opened">폴더를 임시로 열었습니다</string>
+    <string name="finderdex_close">닫기</string>
+    <string name="finderdex_drop_copy_here">여기에 놓아 복사</string>
+    <string name="finderdex_drop_move_here">여기에 놓아 이동</string>
+    <string name="finderdex_opening">여는 중…</string>
+    <string name="finderdex_no_subfolders">하위 폴더 없음</string>
+    <string name="finderdex_cannot_read_folder">이 폴더를 읽을 수 없습니다</string>
+    <string name="finderdex_quicklook_close">닫기  Esc</string>
+    <string name="finderdex_quicklook_loading">미리보기 불러오는 중…</string>
+    <string name="finderdex_trash_title">휴지통</string>
+    <string name="finderdex_trash_loading">항목 불러오는 중…</string>
+    <string name="finderdex_trash_empty">휴지통이 비어 있습니다</string>
+    <string name="finderdex_restore">복원</string>
+    <string name="finderdex_refresh">새로고침</string>
+    <string name="finderdex_column_name">이름</string>
+    <string name="finderdex_column_size">크기</string>
+    <string name="finderdex_column_modified">수정일</string>
+    <string name="finderdex_select_file">파일 선택</string>
+    <string name="finderdex_double_click_open">두 번 클릭하여 열기</string>
 </resources>

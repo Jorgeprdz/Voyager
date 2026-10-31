@@ -536,4 +536,23 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_spring_opened">フォルダーを一時的に開いています</string>
+    <string name="finderdex_close">閉じる</string>
+    <string name="finderdex_drop_copy_here">ここにドロップしてコピー</string>
+    <string name="finderdex_drop_move_here">ここにドロップして移動</string>
+    <string name="finderdex_opening">開いています…</string>
+    <string name="finderdex_no_subfolders">サブフォルダーがありません</string>
+    <string name="finderdex_cannot_read_folder">このフォルダーを読み込めません</string>
+    <string name="finderdex_quicklook_close">閉じる  Esc</string>
+    <string name="finderdex_quicklook_loading">プレビューを読み込み中…</string>
+    <string name="finderdex_trash_title">ゴミ箱</string>
+    <string name="finderdex_trash_loading">項目を読み込み中…</string>
+    <string name="finderdex_trash_empty">ゴミ箱は空です</string>
+    <string name="finderdex_restore">復元</string>
+    <string name="finderdex_refresh">更新</string>
+    <string name="finderdex_column_name">名前</string>
+    <string name="finderdex_column_size">サイズ</string>
+    <string name="finderdex_column_modified">更新日時</string>
+    <string name="finderdex_select_file">ファイルを選択</string>
+    <string name="finderdex_double_click_open">ダブルクリックして開く</string>
 </resources>

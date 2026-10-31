@@ -536,4 +536,23 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_spring_opened">Thư mục được mở tạm thời</string>
+    <string name="finderdex_close">Đóng</string>
+    <string name="finderdex_drop_copy_here">Thả vào đây để sao chép</string>
+    <string name="finderdex_drop_move_here">Thả vào đây để di chuyển</string>
+    <string name="finderdex_opening">Đang mở…</string>
+    <string name="finderdex_no_subfolders">Không có thư mục con</string>
+    <string name="finderdex_cannot_read_folder">Không thể đọc thư mục này</string>
+    <string name="finderdex_quicklook_close">Đóng  Esc</string>
+    <string name="finderdex_quicklook_loading">Đang tải bản xem trước…</string>
+    <string name="finderdex_trash_title">Thùng rác</string>
+    <string name="finderdex_trash_loading">Đang tải các mục…</string>
+    <string name="finderdex_trash_empty">Thùng rác trống</string>
+    <string name="finderdex_restore">Khôi phục</string>
+    <string name="finderdex_refresh">Làm mới</string>
+    <string name="finderdex_column_name">Tên</string>
+    <string name="finderdex_column_size">Kích thước</string>
+    <string name="finderdex_column_modified">Đã sửa đổi</string>
+    <string name="finderdex_select_file">Chọn một tệp</string>
+    <string name="finderdex_double_click_open">Nhấp đúp để mở</string>
 </resources>

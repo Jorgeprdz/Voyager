@@ -548,4 +548,23 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_spring_opened">Ordner vorübergehend geöffnet</string>
+    <string name="finderdex_close">Schließen</string>
+    <string name="finderdex_drop_copy_here">Hier ablegen, um zu kopieren</string>
+    <string name="finderdex_drop_move_here">Hier ablegen, um zu verschieben</string>
+    <string name="finderdex_opening">Wird geöffnet…</string>
+    <string name="finderdex_no_subfolders">Keine Unterordner</string>
+    <string name="finderdex_cannot_read_folder">Dieser Ordner kann nicht gelesen werden</string>
+    <string name="finderdex_quicklook_close">Schließen  Esc</string>
+    <string name="finderdex_quicklook_loading">Vorschau wird geladen…</string>
+    <string name="finderdex_trash_title">Papierkorb</string>
+    <string name="finderdex_trash_loading">Elemente werden geladen…</string>
+    <string name="finderdex_trash_empty">Der Papierkorb ist leer</string>
+    <string name="finderdex_restore">Wiederherstellen</string>
+    <string name="finderdex_refresh">Aktualisieren</string>
+    <string name="finderdex_column_name">Name</string>
+    <string name="finderdex_column_size">Größe</string>
+    <string name="finderdex_column_modified">Geändert</string>
+    <string name="finderdex_select_file">Datei auswählen</string>
+    <string name="finderdex_double_click_open">Doppelklicken zum Öffnen</string>
 </resources>
