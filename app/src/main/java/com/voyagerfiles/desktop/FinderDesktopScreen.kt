@@ -507,6 +507,8 @@ fun FinderDesktopScreen(
         }
         FinderStatusBar(controller, columns)
     }
+    if (dragState.springFolder != null && dragState.draggingPaths.isNotEmpty())
+        FinderSpringFolderPanel(dragState, Modifier.align(Alignment.CenterEnd).padding(end = 26.dp))
     FinderDragGhost(dragState)
     FinderSpringFolderTimer(dragState)
     }
