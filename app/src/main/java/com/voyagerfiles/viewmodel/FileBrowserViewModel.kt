@@ -1103,11 +1103,21 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
-    fun paste() {
+    fun paste() = pasteAtDirectory(_browseState.value.currentPath)
+
+    fun pasteIntoDesktopFolder(folderPath: String) {
+        val session = _activeSession.value ?: return
+        if (session.source != FileSource.LOCAL ||
+            !BrowserNavigationBounds.isPathAtOrInsideRoot(folderPath, session.rootPath)) {
+            showSnackbar(UiText.Dynamic("Destino fuera de la sesión local")); return
+        }
+        pasteAtDirectory(folderPath)
+    }
+
+    private fun pasteAtDirectory(destPath: String) {
         val paths = _clipboardPaths.value.toList()
         val operation = _clipboardOperation.value
         if (paths.isEmpty() || operation == ClipboardOperation.NONE) return
-        val destPath = _browseState.value.currentPath
         val sourceProvider = clipboardProvider ?: fileProvider
         val destinationProvider = fileProvider
         val progressLabelRes = when (operation) {
@@ -1117,6 +1127,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
         val progressLabel = UiText.Resource(progressLabelRes)
         launchOperation(progressLabelRes, R.string.operation_paste) {
+            require(fileProvider.getFileInfo(destPath).getOrThrow().isDirectory) { "Paste target is not a folder" }
             var failed = 0
             var firstError: Throwable? = null
             var completed = 0
