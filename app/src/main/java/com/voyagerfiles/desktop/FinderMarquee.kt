@@ -2,7 +2,6 @@ package com.voyagerfiles.desktop
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -105,9 +104,23 @@ internal fun Modifier.finderMarqueeGesture(
             )
         }
         .pointerInput(controller, marquee) {
-            detectTapGestures(onTap = { at ->
-                if (!marquee.hitItem(origin + at)) controller.clearSelection()
-            })
+            awaitPointerEventScope {
+                var pressedAt: Offset? = null
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val pointer = event.changes.firstOrNull()
+                    if (event.type == PointerEventType.Press)
+                        pressedAt = pointer?.position?.let { origin + it }
+                    if (event.type == PointerEventType.Release) {
+                        val release = pointer?.position?.let { origin + it }
+                        val down = pressedAt
+                        if (down != null && release != null &&
+                            (release - down).getDistance() < 8f && !marquee.hitItem(down))
+                            controller.clearSelection()
+                        pressedAt = null
+                    }
+                }
+            }
         }
 }
 
