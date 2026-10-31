@@ -280,8 +280,12 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
                 FinderFileAction.CUT -> viewModel.cutToClipboard(listOf(file.path), false)
                 FinderFileAction.OPEN_WITH -> FileUtils.openFileWith(context, file)
                     .onFailure { message = it.localizedMessage ?: "No se pudo abrir" }
-                FinderFileAction.SHARE -> FileUtils.shareFiles(context, listOf(file))
-                    .onFailure { message = it.localizedMessage ?: "No se pudo compartir" }
+                FinderFileAction.SHARE -> {
+                    val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
+                    val files = if (file.path in selected) browser.files.filter { it.path in selected } else listOf(file)
+                    FileUtils.shareFiles(context, files)
+                        .onFailure { message = it.localizedMessage ?: "No se pudo compartir" }
+                }
                 FinderFileAction.PASTE_INTO -> if (file.isDirectory) viewModel.pasteIntoDesktopFolder(file.path)
                 FinderFileAction.DUPLICATE -> {
                     val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
@@ -354,7 +358,10 @@ fun FinderDesktopScreen(
 ) {
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
-    val dragState = remember { FinderDragDropState() }
+    val dragState = remember(controller.session.id) { FinderDragDropState() }
+    LaunchedEffect(controller.session.rootPath) {
+        dragState.allowedRoot = controller.session.rootPath
+    }
     LaunchedEffect(controller.currentPath) {
         dragState.clearTargets()
         if (dragState.draggingPaths.isEmpty()) {
@@ -420,7 +427,7 @@ fun FinderDesktopScreen(
             else when {
                 event.key == Key.Escape && searching -> { searching = false; search = ""; true }
                 event.key == Key.Escape && dragState.draggingPaths.isNotEmpty() -> { dragState.cancel(); true }
-                event.key == Key.Escape && controller.selectedFile != null -> { controller.clearSelection(); true }
+                event.key == Key.Escape && quickLook == null && controller.selectedFile != null -> { controller.clearSelection(); true }
                 !searching && event.key in listOf(Key.DirectionLeft, Key.DirectionRight,
                     Key.DirectionUp, Key.DirectionDown) && !event.isAltPressed -> {
                     val columnDelta = if (viewStyle == FinderViewStyle.ICONS) 4 else 1
@@ -433,7 +440,7 @@ fun FinderDesktopScreen(
                     controller.moveSelectionBy(step, event.isShiftPressed)
                     true
                 }
-                event.key == Key.Spacebar && !searching && quickLook == null && controller.selectedFile != null -> {
+                event.key == Key.Spacebar && !searching && quickLook == null && controller.selectedFile?.isDirectory == false -> {
                     quickLook = controller.selectedFile; true
                 }
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.C && operationsAvailable -> {
