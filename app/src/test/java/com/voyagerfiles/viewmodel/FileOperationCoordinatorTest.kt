@@ -25,6 +25,38 @@ import java.util.concurrent.atomic.AtomicReference
 class FileOperationCoordinatorTest {
 
     @Test
+    fun confirmedFolderDropMovesOnlySelectedPathsAndPreservesContents() = runBlocking {
+        val disk = MemoryProvider().apply {
+            putDirectory("/root")
+            putDirectory("/root/from")
+            putDirectory("/root/to")
+            putFile("/root/from/move.txt", "move safely")
+            putFile("/root/from/stay.txt", "do not touch")
+        }
+        val outcome = FileOperationCoordinator.movePath(disk, disk,
+            "/root/from/move.txt", "/root/to").getOrThrow()
+        assertEquals(TransferDisposition.COMPLETED, outcome)
+        assertFalse(disk.exists("/root/from/move.txt"))
+        assertEquals("move safely", disk.readFile("/root/to/move.txt"))
+        assertEquals("do not touch", disk.readFile("/root/from/stay.txt"))
+    }
+
+    @Test
+    fun folderDropRejectsMovingIntoItsOwnChildWithoutDeletingAnything() = runBlocking {
+        val disk = MemoryProvider().apply {
+            putDirectory("/root")
+            putDirectory("/root/Folder")
+            putDirectory("/root/Folder/Child")
+            putFile("/root/Folder/important.txt", "keep")
+        }
+        val outcome = FileOperationCoordinator.movePath(disk, disk,
+            "/root/Folder", "/root/Folder/Child")
+        assertTrue(outcome.isFailure)
+        assertEquals("keep", disk.readFile("/root/Folder/important.txt"))
+        assertTrue(disk.exists("/root/Folder/Child"))
+    }
+
+    @Test
     fun namedCopyDuplicatesFileWithoutOverwritingSource() = runBlocking {
         val storage = MemoryProvider().apply {
             putDirectory("/root")
