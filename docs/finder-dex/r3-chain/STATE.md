@@ -6,14 +6,14 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `02-CROSS-APP-DRAG-DROP.md`
 - LAST_COMPLETED_STAGE: `01-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_01_PARTIAL_PASS_AUTOMATED_STAGE_02_READY`
-- NEXT_ACTION: `Ejecutar 02-CROSS-APP-DRAG-DROP.md; validar con CI, registrar bloqueos y pruebas físicas DeX; no declarar interoperabilidad sin pruebas reales`
+- STATUS: `STAGE_02_IMPLEMENTED_CI_RUNNING`
+- NEXT_ACTION: `Verificar run 41176095581 para commit a25dee9 de etapa 02; corregir cualquier fallo sin tocar R2.2, actualizar evidencias y continuar con 03-ONEDRIVE.md sólo después del gate`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive OAuth/client registration, user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
 |---|---|---|---|---|---|
 | 01 Google Drive | PARTIAL/PASS_AUTOMATED (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) SUCCESS: compile,  unit, lint, debug APK, signing checks; SHA256 `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
-| 02 Drag & drop externo | PLANNED | — | — | PENDING | Compatibilidad receptores |
+| 02 Drag & drop externo | PARTIAL / CI_PENDING (Android global Alt+drag saliente + content:// entrante al directorio activo) | `2b11039` + `a25dee9` | [Run 41176095581](https://github.com/Jorgeprdz/Voyager/actions/runs/41176095581) IN_PROGRESS; no PASS todavía | PENDING_PHYSICAL_DEX | Compatibilidad MIME por app; pruebas con dos ventanas y permisos pendientes |
 | 03 OneDrive | PLANNED | — | — | PENDING | Registro Microsoft por verificar |
 | 04 Analizador | PLANNED | — | — | PENDING | — |
 | 05 Recientes/red/Quick Share | PLANNED | — | — | PENDING | — |
@@ -46,3 +46,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - `01` es PARTIAL, no integrada: contrato, políticas y UI de estado no conectado, NO OAuth, NO listados/subidas/bajadas reales de Drive; `BLOCKED_EXTERNAL` para credenciales y consentimiento.
 - `PENDING_PHYSICAL_DEX`: ninguna prueba en dispositivo; APK no descargada en Android por ausencia de conexión a Termux en este entorno.
 - El orquestador permite avanzar con etapas independientes tras dejar registradas dependencias externas. Se habilita `CURRENT_STAGE=02-CROSS-APP-DRAG-DROP.md` sin declarar stage 01 funcionalmente completo.
+
+### 2026-10-31 UTC — etapa 02 en validación
+- Código real publicado en `2b11039`, corrección de compatibilidad de parámetros de Kotlin en `a25dee9`.
+- Drag saliente con `View.startDragAndDrop` + `DRAG_FLAG_GLOBAL | DRAG_FLAG_GLOBAL_URI_READ`, `ClipData` de `FileUtils.createShareIntent` y `FileProvider`; gesto Alt+arrastrar para no romper drag interno R2.2.
+- Drop entrante con `View.OnDragListener`, `Activity.requestDragAndDropPermissions`, máximo 64 URIs `content://`; subida/copias mediante `FileBrowserViewModel.uploadDocuments` con destino capturado y permiso liberado al terminar, cancelar o rechazo por operación ocupada.
+- Limitación declarada: destino actual, sin drop dirigido a carpetas específicas/sidebar ni carpeta de origen arrastrada; sin garantías sobre qué apps Android aceptan el payload; permisos, cursores y selección DeX pendientes de prueba real.
+- CI `41176095581` pendiente de verificación; NO anunciar PASS funcional ni avanzar prematuramente `CURRENT_STAGE`.
