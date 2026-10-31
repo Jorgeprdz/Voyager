@@ -91,7 +91,7 @@ internal fun FinderListView(
                         menu = true
                     }
                     .combinedClickable(
-                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift) },
+                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
                         onDoubleClick = {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
                         },
@@ -172,7 +172,7 @@ internal fun FinderGalleryView(
                         menu = true
                     }
                     .combinedClickable(
-                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift) },
+                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
                         onDoubleClick = {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
                         },
