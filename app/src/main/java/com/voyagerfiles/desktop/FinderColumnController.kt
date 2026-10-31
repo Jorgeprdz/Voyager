@@ -27,6 +27,7 @@ class FinderColumnController(
     private val _columns = MutableStateFlow<List<FinderColumn>>(emptyList())
     val columns = _columns.asStateFlow()
     private var nextId = 0L
+    var iconColumns: Int = 1
     private var selectionAnchor: String? = null
     private var keyboardCursor: String? = null
     private val jobs = mutableMapOf<Long, Job>()
@@ -71,17 +72,19 @@ class FinderColumnController(
     }
 
     /** Icon view selects a folder on one click; activation opens it separately. */
-    fun selectOnly(index: Int, file: FileItem, additive: Boolean = false, extend: Boolean = false) {
+    fun selectOnly(index: Int, file: FileItem, additive: Boolean = false,
+        extend: Boolean = false, visibleOrder: List<String>? = null) {
         val columns = _columns.value
         val column = columns.getOrNull(index) ?: return
         if (index != columns.lastIndex || column.files.none { it.path == file.path }) return
+        val actualPaths = column.files.map { it.path }.toSet()
+        val ordered = visibleOrder?.filter { it in actualPaths } ?: column.files.map { it.path }
         val selection = when {
             extend -> {
-                val anchor = column.files.indexOfFirst { it.path == selectionAnchor }
-                val target = column.files.indexOfFirst { it.path == file.path }
-                if (anchor < 0) setOf(file.path)
-                else column.files.subList(minOf(anchor, target), maxOf(anchor, target) + 1)
-                    .mapTo(mutableSetOf()) { it.path }
+                val anchor = ordered.indexOf(selectionAnchor)
+                val target = ordered.indexOf(file.path)
+                if (anchor < 0 || target < 0) setOf(file.path)
+                else ordered.subList(minOf(anchor, target), maxOf(anchor, target) + 1).toSet()
             }
             additive -> column.selected.toMutableSet().apply {
                 if (!add(file.path)) remove(file.path)
@@ -112,22 +115,24 @@ class FinderColumnController(
     fun clearSelection() = selectPaths(emptySet())
 
     /** The visible file order is also keyboard navigation order. */
-    fun moveSelectionBy(delta: Int, extend: Boolean = false) {
+    fun moveSelectionBy(delta: Int, extend: Boolean = false, visibleOrder: List<String>? = null) {
         val last = _columns.value.lastOrNull() ?: return
         if (last.files.isEmpty() || last.loading) return
-        val anchor = last.files.indexOfFirst { it.path == selectionAnchor }
-        val current = last.files.indexOfFirst { it.path == keyboardCursor }
-            .takeIf { it >= 0 } ?: last.files.indexOfFirst { it.path in last.selected }
-        val start = if (current >= 0) current else if (delta >= 0) -1 else last.files.size
-        val target = (start + delta).coerceIn(0, last.files.lastIndex)
-        keyboardCursor = last.files[target].path
+        val valid = last.files.associateBy { it.path }
+        val ordered = (visibleOrder?.filter { it in valid } ?: last.files.map { it.path })
+        if (ordered.isEmpty()) return
+        val anchor = ordered.indexOf(selectionAnchor)
+        val current = ordered.indexOf(keyboardCursor)
+            .takeIf { it >= 0 } ?: ordered.indexOfFirst { it in last.selected }
+        val start = if (current >= 0) current else if (delta >= 0) -1 else ordered.size
+        val target = (start + delta).coerceIn(0, ordered.lastIndex)
+        keyboardCursor = ordered[target]
         if (extend) {
             val from = if (anchor >= 0) anchor else (if (current >= 0) current else target)
-            selectionAnchor = last.files[from].path
-            selectPaths(last.files.subList(minOf(from, target), maxOf(from, target) + 1)
-                .mapTo(mutableSetOf()) { it.path })
+            selectionAnchor = ordered[from]
+            selectPaths(ordered.subList(minOf(from, target), maxOf(from, target) + 1).toSet())
         } else {
-            selectOnly(_columns.value.lastIndex, last.files[target])
+            selectOnly(_columns.value.lastIndex, valid.getValue(ordered[target]))
         }
     }
 
