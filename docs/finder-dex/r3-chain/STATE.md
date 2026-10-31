@@ -189,3 +189,7 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - APK real `FinderDex-R3.2-APK` artifact ID `13047322810`, package `com.finderdex.preview`; SHA256 `346bf16b19053ad4483f099b344752b3ff493a67f0084101487a5db8b4693e63` validado en log y descarga extraída localmente.
 - Descarga sin prueba de instalación en el teléfono; compatibilidad con APK R3.1 esperada por pipeline de firma estable, instalación/actualización física aún no comprobada. No declarar FULL_POLISH, no dar PASS Android 17/DeX, no declarar E2E OAuth.
 - Continuación de pendientes documentada en `R3.2-MOBILE-PREMIUM-REPORT.md` y `R3.2-CONTINUE-PROMPT.md`.
+
+### 2026-10-31 UTC — compatibilidad de firma R3.1 → R3.2
+- Los logs de [R3.1 run 41192949098](https://github.com/Jorgeprdz/Voyager/actions/runs/41192949098) y [R3.2 run 41213278060](https://github.com/Jorgeprdz/Voyager/actions/runs/41213278060) informan el mismo certificado de firma V2 SHA-256: `767da04162cffcc91d3db64f9d1a58128cf35a8a11a72cf30dd7058795781023`.
+- Mismo package `com.finderdex.preview`, mismo `versionCode` 25 de build.gradle.kts: la firma permite actualización entre ambas variantes, pero instalación encima de igual `versionCode` puede requerir actualización/reinstalación según instalador y política del dispositivo; no probado físicamente.
