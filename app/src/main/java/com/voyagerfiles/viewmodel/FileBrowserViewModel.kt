@@ -984,40 +984,54 @@ class FileBrowserViewModel @JvmOverloads constructor(
      * Desktop transfers use Voyager's transactional coordinator, not platform File.copyTo.
      * Rejects paths outside the active local session before any write.
      */
-    fun moveDesktopPaths(paths: List<String>, destinationDirectory: String) {
+    fun moveDesktopPaths(paths: List<String>, destinationDirectory: String) =
+        transferDesktopPaths(paths, destinationDirectory, move = true)
+
+    fun copyDesktopPaths(paths: List<String>, destinationDirectory: String) =
+        transferDesktopPaths(paths, destinationDirectory, move = false)
+
+    private fun transferDesktopPaths(paths: List<String>, destinationDirectory: String, move: Boolean) {
         val session = _activeSession.value ?: return
         if (session.source != FileSource.LOCAL || paths.isEmpty()) return
-        val root = session.rootPath
         val normalized = BrowserNavigationBounds.normalizePath(destinationDirectory)
-        if (!BrowserNavigationBounds.isPathAtOrInsideRoot(normalized, root) ||
-            paths.any { !BrowserNavigationBounds.isPathAtOrInsideRoot(it, root) }) {
+        if (!BrowserNavigationBounds.isPathAtOrInsideRoot(normalized, session.rootPath) ||
+            paths.any { !BrowserNavigationBounds.isPathAtOrInsideRoot(it, session.rootPath) }) {
             showSnackbar(UiText.Dynamic("Origen o destino fuera de la sesión")); return
         }
         val provider = sessionProviders[session.id] ?: return
         val chosen = paths.distinct()
-        launchOperation(R.string.progress_moving, R.string.operation_paste) {
+        val progressLabel = if (move) R.string.progress_moving else R.string.progress_copying
+        launchOperation(progressLabel, R.string.operation_paste) {
+            require(provider.getFileInfo(normalized).getOrThrow().isDirectory) {
+                "El destino no es una carpeta accesible"
+            }
             var completed = 0
-            var failed = 0
+            val errors = mutableListOf<String>()
             for (source in chosen) {
-                val result = FileOperationCoordinator.movePath(provider, provider, source, normalized,
-                    operationController.conflicts::resolve) { progress ->
-                    updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_moving),
+                val onProgress: (StreamTransferProgress) -> Unit = { progress ->
+                    updateOperationProgress(TransferProgress(UiText.Resource(progressLabel),
                         completedItems = completed, totalItems = chosen.size,
                         currentItemName = source.substringAfterLast('/'),
                         copiedBytes = progress.bytesTransferred, totalBytes = progress.totalBytes,
                         elapsedNanos = progress.elapsedNanos))
                 }
+                val result = if (move)
+                    FileOperationCoordinator.movePath(provider, provider, source, normalized,
+                        operationController.conflicts::resolve, onProgress)
+                else FileOperationCoordinator.copyPath(provider, provider, source, normalized,
+                        operationController.conflicts::resolve, onProgress)
                 result.onSuccess { completed++ }
                 result.onFailure { error ->
                     if (error is CancellationException) throw error
-                    failed++
                     operationController.recordFailure(error)
-                    showSnackbar(OperationMessages.failure(R.string.operation_paste, error))
+                    errors += "${source.substringAfterLast('/')}: ${error.localizedMessage ?: "error"}"
                 }
             }
             refreshFiles()
             desktopColumns?.refresh()
-            if (failed == 0) showSnackbar(UiText.Dynamic("$completed elemento(s) movido(s)"))
+            if (errors.isNotEmpty()) {
+                showSnackbar(UiText.Dynamic("${errors.size} elemento(s) fallaron: ${errors.joinToString("; ").take(400)}"))
+            } else showSnackbar(UiText.Dynamic("$completed elemento(s) ${if (move) "movido(s)" else "copiado(s)"}"))
         }
     }
 
