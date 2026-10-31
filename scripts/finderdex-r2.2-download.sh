@@ -2,7 +2,7 @@
 # FinderDex R2.2 exact-build verified downloader.
 set -euo pipefail
 REPO="Jorgeprdz/Voyager"
-SHA="\${1:-}"
+SHA="${1:-}"
 DEST="/storage/emulated/0/Download/FinderDex-R2.2-debug.apk"
 [[ "$SHA" =~ ^[a-fA-F0-9]{40}$ ]] || { echo "Uso: bash scripts/finderdex-r2.2-download.sh <SHA del commit>" >&2; exit 2; }
 for cmd in gh sha256sum grep awk mktemp; do
