@@ -56,8 +56,9 @@ internal object FinderBulkRenamePlanner {
                 bytes > 255 -> "File name exceeds 255 UTF-8 bytes"
                 proposed.lowercase(Locale.ROOT) in collisions &&
                     proposed.lowercase(Locale.ROOT) !in oldNames -> "Existing sibling name"
-                proposed.lowercase(Locale.ROOT) in oldNames &&
-                    proposed != item.name -> "Conflicts with selected original"
+                ordered.any { other ->
+                    other.path != item.path && other.name.equals(proposed, ignoreCase = true)
+                } -> "Conflicts with selected original"
                 else -> null
             }
             FinderRenameRow(item.path, item.name, proposed, error)
