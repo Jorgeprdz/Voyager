@@ -1,38 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:aapt="http://schemas.android.com/aapt"
-    android:width="108dp" android:height="108dp"
-    android:viewportWidth="108" android:viewportHeight="108">
-    <!-- water shadow under hull -->
-    <path android:fillColor="#3D33206B"
-        android:pathData="M33,69 a21,3.2 0 1 0 42,0 a21,3.2 0 1 0 -42,0" />
-    <!-- hull (rounded folds) -->
-    <path android:strokeWidth="4.6" android:strokeLineJoin="round" android:strokeLineCap="round"
-        android:pathData="M36,66 L27,47 L41,50 L54,34 L67,50 L81,47 L72,66 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="30" android:startY="40" android:endX="80" android:endY="56"
-                android:startColor="#FFFFFFFF" android:endColor="#FFE8E2F3" />
-        </aapt:attr>
-        <aapt:attr name="android:strokeColor">
-            <gradient android:type="linear" android:startX="30" android:startY="40" android:endX="80" android:endY="56"
-                android:startColor="#FFFFFFFF" android:endColor="#FFE8E2F3" />
-        </aapt:attr>
-    </path>
-    <!-- sail -->
-    <path android:strokeWidth="4.6" android:strokeLineJoin="round" android:strokeLineCap="round"
-        android:pathData="M54,34 L41,50 L67,50 Z">
-        <aapt:attr name="android:fillColor">
-            <gradient android:type="linear" android:startX="44" android:startY="35" android:endX="64" android:endY="50"
-                android:startColor="#FF54DBD3" android:endColor="#FF1AA098" />
-        </aapt:attr>
-        <aapt:attr name="android:strokeColor">
-            <gradient android:type="linear" android:startX="44" android:startY="35" android:endX="64" android:endY="50"
-                android:startColor="#FF54DBD3" android:endColor="#FF1AA098" />
-        </aapt:attr>
-    </path>
-    <!-- waves -->
-    <path android:strokeColor="#34C5BE" android:strokeAlpha="0.62" android:strokeWidth="3.6" android:strokeLineCap="round"
-        android:pathData="M35,76 Q44.5,71.5 54,76 T73,76" />
-    <path android:strokeColor="#34C5BE" android:strokeAlpha="0.36" android:strokeWidth="3.4" android:strokeLineCap="round"
-        android:pathData="M45,82 Q54,78.5 63,82" />
-</vector>
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/finderdex_icon_art"
+    android:insetLeft="18dp"
+    android:insetTop="18dp"
+    android:insetRight="18dp"
+    android:insetBottom="18dp" />

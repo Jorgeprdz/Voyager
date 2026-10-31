@@ -2,14 +2,7 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <path android:fillColor="#FF000000" android:strokeColor="#FF000000" android:strokeWidth="4.6"
-        android:strokeLineJoin="round" android:strokeLineCap="round"
-        android:pathData="M36,66 L27,47 L41,50 L54,34 L67,50 L81,47 L72,66 Z" />
-    <path android:fillColor="#FF000000" android:strokeColor="#FF000000" android:strokeWidth="4.6"
-        android:strokeLineJoin="round" android:strokeLineCap="round"
-        android:pathData="M54,34 L41,50 L67,50 Z" />
-    <path android:strokeColor="#FF000000" android:strokeWidth="3.6" android:strokeLineCap="round"
-        android:pathData="M35,76 Q44.5,71.5 54,76 T73,76" />
-    <path android:strokeColor="#FF000000" android:strokeAlpha="0.65" android:strokeWidth="3.4" android:strokeLineCap="round"
-        android:pathData="M45,82 Q54,78.5 63,82" />
+    <!-- Opaque folder silhouette, transparent facial cutouts via even-odd fill. -->
+    <path android:fillColor="#FF000000" android:fillType="evenOdd"
+        android:pathData="M29,39 Q29,31 36,31 L44,31 Q49,31 52,37 L72,37 Q79,37 79,44 L79,72 Q79,79 72,79 L36,79 Q29,79 29,72 Z M43,51 a2,4 0,1 0,4 0 a2,4 0,1 0,-4 0 M61,51 a2,4 0,1 0,4 0 a2,4 0,1 0,-4 0 M40,65 Q53,79 68,65 L65,63 Q54,72 43,62 Z" />
 </vector>
