@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.ui.theme.FinderMobileTokens
@@ -97,7 +98,7 @@ fun FinderMobileFilterPill(
 
 /** Premium create control retaining the Browser's original actions and menu. */
 @Composable
-fun FinderMobileCreateButton(onClick: () -> Unit, contentDescription: String) {
+fun FinderMobileCreateButton(onClick: () -> Unit, contentDescription: String, icon: ImageVector = Icons.Filled.CreateNewFolder) {
     Surface(
         onClick = onClick,
         modifier = Modifier.size(56.dp),
@@ -107,7 +108,7 @@ fun FinderMobileCreateButton(onClick: () -> Unit, contentDescription: String) {
         shadowElevation = 3.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(Icons.Filled.CreateNewFolder, contentDescription)
+            Icon(icon, contentDescription)
         }
     }
 }
