@@ -110,11 +110,14 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                 }
                 if (kind == "folder-outline") drawPath(tab,resolved,style=stroke)
                 else {
+                    drawRoundRect(Color.Black.copy(alpha = if (palette.dark) .20f else .10f),
+                        Offset(w*.085f,h*.385f),androidx.compose.ui.geometry.Size(w*.85f,h*.58f),
+                        androidx.compose.ui.geometry.CornerRadius(w*.085f))
                     drawPath(tab, folder.base)
-                    drawRoundRect(Brush.verticalGradient(listOf(folder.top, folder.bottom)),
+                    drawRoundRect(Brush.verticalGradient(listOf(folder.top, folder.base, folder.bottom)),
                         Offset(w*.06f,h*.31f),androidx.compose.ui.geometry.Size(w*.88f,h*.62f),
                         androidx.compose.ui.geometry.CornerRadius(w*.07f))
-                    drawLine(folder.highlight,Offset(w*.10f,h*.36f),Offset(w*.90f,h*.36f),w*.018f)
+                    drawLine(folder.highlight.copy(alpha = .78f),Offset(w*.13f,h*.35f),Offset(w*.87f,h*.35f),w*.015f)
                     drawLine(folder.highlight.copy(alpha = .40f),
                         Offset(w*.13f,h*.84f),Offset(w*.87f,h*.84f),w*.012f)
                 }
@@ -786,7 +789,10 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     val glass = LocalFinderMaterials.current.palette
     val sidebarScroll = rememberScrollState()
     Box(Modifier.width(width).fillMaxHeight()
-        .background(Brush.verticalGradient(listOf(glass.titlebar, glass.sidebar, glass.sidebar)))) {
+        // Light layered glass, without blur on file content or extra pointer interceptors.
+        .shadow(3.dp, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp), clip = false)
+        .background(Brush.verticalGradient(listOf(glass.titlebar, glass.sidebar, glass.sidebar)))
+        .border(.6.dp, glass.illuminatedEdge, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp))) {
     Column(Modifier.fillMaxSize().verticalScroll(sidebarScroll)
         .padding(horizontal = if (rail) 8.dp else 12.dp, vertical = 14.dp)) {
         var favoritesExpanded by remember { mutableStateOf(true) }
@@ -814,7 +820,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
         if (!rail) SidebarHeading("Ubicaciones", locationsExpanded) { locationsExpanded = !locationsExpanded }
         if (locationsExpanded || rail) volumes.forEach { (name, path) ->
             if (java.io.File(path).isDirectory && java.io.File(path).canRead())
-                SidebarItem(name, path, "drive", currentPath == path, onRoot, dragState = dragState, rail = rail)
+                SidebarItem(name, path, "drive", path != root && currentPath == path, onRoot, dragState = dragState, rail = rail)
         }
     }
     FinderVerticalScrollbar(sidebarScroll, Modifier.align(Alignment.CenterEnd))
@@ -857,7 +863,10 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
     }, selected)
     var menu by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(11.dp))
-        .background(selection).hoverable(interaction).pointerHoverIcon(PointerIcon.Hand)
+        .background(selection)
+        .border(.7.dp, if (selected) palette.accent.copy(alpha = .28f) else Color.Transparent,
+            RoundedCornerShape(11.dp))
+        .hoverable(interaction).pointerHoverIcon(PointerIcon.Hand)
         .then(if (dragState != null) Modifier.finderFolderDropTarget("sidebar:$path", path, dragState) else Modifier)
         .then(if (dragState != null) Modifier.finderDragVisual(path, true, dragState) else Modifier)
         .finderRightClick { if (pinned) menu = true }
@@ -870,11 +879,12 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
         horizontalArrangement = if (rail) Arrangement.Center else Arrangement.Start) {
         if (imageUri != null) AsyncImage(model = Uri.parse(imageUri), contentDescription = null,
             modifier = Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop)
-        else FinderGlyph(glyph, palette.icon, Modifier.size(21.dp))
+        else FinderGlyph(glyph, palette.icon, Modifier.size(20.dp))
         if (!rail) {
             Spacer(Modifier.width(8.dp))
             Label(name, Modifier.weight(1f),
-                color = if (selected) palette.selectionText(false, material.windowFocused) else palette.ink)
+                color = if (selected) palette.selectionText(false, material.windowFocused) else palette.ink,
+                size = 12, bold = selected)
         }
         if (pinned) FinderGlassMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_up)) },
@@ -936,8 +946,13 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         else if (selected) colors.selection(false, glass.windowFocused)
                         else if (hovered) colors.hover else Color.Transparent, selected)
                     Column(Modifier.fillMaxWidth().height(zoom.cellHeightDp.dp)
+                        .then(if (hovered && !pressed) Modifier.shadow(2.dp,
+                            RoundedCornerShape(FinderContentTokens.ICON_CELL_CORNER_DP.dp)) else Modifier)
                         .clip(RoundedCornerShape(FinderContentTokens.ICON_CELL_CORNER_DP.dp))
-                        .background(rowColor).hoverable(interaction)
+                        .background(rowColor)
+                        .border(.7.dp, if (selected) colors.accent.copy(alpha = .52f) else Color.Transparent,
+                            RoundedCornerShape(FinderContentTokens.ICON_CELL_CORNER_DP.dp))
+                        .hoverable(interaction)
                         .onFocusChanged { keyboardFocused = it.isFocused }
                         .finderMarqueeItem(file.path, marquee)
                         .finderDragVisual(file.path, file.isDirectory, dragState)

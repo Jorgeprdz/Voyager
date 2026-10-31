@@ -104,7 +104,8 @@ internal fun FinderToolbarCapsule(content: @Composable RowScope.() -> Unit) {
     val p = LocalFinderMaterials.current.palette
     val shape = RoundedCornerShape(FinderToolbarTokens.CAPSULE_RADIUS_DP.dp)
     Row(Modifier.height(FinderToolbarTokens.CAPSULE_HEIGHT_DP.dp)
-        .shadow(2.dp, shape).clip(shape).background(p.titlebar)
+        .shadow(3.dp, shape, clip = false).clip(shape)
+        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.illuminatedEdge, p.titlebar)))
         .border(0.7.dp, p.edge, shape).padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically, content = content)
 }
@@ -148,7 +149,7 @@ internal fun FinderToolbarButton(
         label = "Finder toolbar state")
     Box(contentAlignment = Alignment.Center) {
         Box(Modifier.size(FinderToolbarTokens.BUTTON_DP.dp)
-            .then(if (standalone) Modifier.shadow(2.dp, CircleShape) else Modifier)
+            .then(if (standalone) Modifier.shadow(3.dp, CircleShape, clip = false) else Modifier)
             .clip(CircleShape)
             .then(if (standalone) Modifier.background(p.titlebar)
                 .border(0.7.dp, p.edge, CircleShape) else Modifier)
@@ -329,7 +330,9 @@ internal fun FinderToolbar(
     val currentTitle = if (controller.currentPath == Environment.getExternalStorageDirectory().path)
         rootTitle else controller.currentPath.substringAfterLast('/').ifEmpty { rootTitle }
     val height = maxOf(FinderWindowGeometry.TOOLBAR_HEIGHT_DP, chrome.captionHeight / chrome.density)
-    Row(Modifier.fillMaxWidth().height(height.dp).background(p.toolbar)
+    Row(Modifier.fillMaxWidth().height(height.dp)
+        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.titlebar, p.toolbar)))
+        .border(width = .5.dp, color = p.separator)
         .onGloballyPositioned { chrome.reserveInput(it, sidebarWidth + dividerWidth + leftGap,
             interactiveTrailingWidth.coerceAtMost(freeWidth)) }
         .padding(end = trailing.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -338,7 +341,7 @@ internal fun FinderToolbar(
             .padding(start = minOf(leading + FinderWindowGeometry.CAPTION_CLEARANCE_DP, sidebarWidth).dp),
             verticalAlignment = Alignment.CenterVertically) {
             if (sidebarWidth > 160f && leading + 42f < sidebarWidth)
-                Text(stringResource(R.string.app_name), color = p.secondaryInk, fontSize = 12.sp,
+                Text(stringResource(R.string.app_name), color = p.ink, fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
         Spacer(Modifier.width(leftGap.dp))
