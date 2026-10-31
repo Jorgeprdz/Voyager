@@ -412,8 +412,9 @@ fun FinderDesktopScreen(
                 com.voyagerfiles.viewmodel.OperationOutcome.COMPLETED)
         }
     }
-    val widthPrefs = remember(LocalContext.current) {
-        LocalContext.current.getSharedPreferences("finderdex_window", Context.MODE_PRIVATE)
+    val localContext = LocalContext.current
+    val widthPrefs = remember(localContext) {
+        localContext.getSharedPreferences("finderdex_window", Context.MODE_PRIVATE)
     }
     var sidebarWidth by rememberSaveable { mutableFloatStateOf(widthPrefs.getFloat("sidebarWidth", 208f)) }
     LaunchedEffect(sidebarWidth) {
