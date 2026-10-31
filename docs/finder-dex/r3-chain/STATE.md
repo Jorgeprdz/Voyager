@@ -6,13 +6,13 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `01-GOOGLE-DRIVE.md`
 - LAST_COMPLETED_STAGE: `NONE`
-- STATUS: `PLANNED_NOT_STARTED`
-- NEXT_ACTION: `Leer 00-ORCHESTRATOR.md y ejecutar 01-GOOGLE-DRIVE.md`
-- BLOCKERS: `NONE_RECORDED`
+- STATUS: `STAGE_01_PARTIAL_CI_VALIDATION`
+- NEXT_ACTION: `Verificar workflow 41174819255 para SHA 9fb6506; corregir cualquier error; si pasa, registrar PASS_AUTOMATED y avanzar a 02-CROSS-APP-DRAG-DROP.md`
+- BLOCKERS: `BLOCKED_EXTERNAL: Google Drive OAuth/client registration, user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
 |---|---|---|---|---|---|
-| 01 Google Drive | PLANNED | — | — | PENDING | OAuth/consentimiento por verificar |
+| 01 Google Drive | PARTIAL (contract + disconnected UI; no cloud I/O) | `9fb6506` | [Run 41174819255](https://github.com/Jorgeprdz/Voyager/actions/runs/41174819255) IN_PROGRESS; previous run `a2f6c6a` compiled/tests PASS, lint FAILED on missing translations (fixed in `9fb6506`) | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
 | 02 Drag & drop externo | PLANNED | — | — | PENDING | Compatibilidad receptores |
 | 03 OneDrive | PLANNED | — | — | PENDING | Registro Microsoft por verificar |
 | 04 Analizador | PLANNED | — | — | PENDING | — |
@@ -27,3 +27,10 @@ Agregar nuevas entradas a continuación, con fecha UTC, SHA, evidencias y decisi
 
 ## Resumen de pendientes
 Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de código o build.
+
+### 2026-10-31 UTC — inicio real de R3 / etapa 01 parcial
+- Rama creada desde R2.2 estable `a5bd2dc` (CI previo PASS); importación de 11 documentos en `671b026`.
+- Implementación parcial: `f5ba324` (contrato CloudFileProvider, políticas de paginación/errores, pruebas, sidebar Drive desconectado), `a2f6c6a` (JUnit + localización en/ES), `9fb6506` (cadenas traducidas a otros 9 locales).
+- Evidencia: run 41173741244 compiló/lint PASS, tests FAILED (test signature + localización); run 41174368171 compiló/tests PASS, lint FAILED (MissingTranslation); run 41174819255 pendiente de conclusión.
+- Sin credenciales OAuth ni acceso real a Drive; sin pruebas físicas DeX. No habilitar acciones remotas ni afirmar conexión.
+- La cadena está suspendida en el gate de CI de etapa 01, NO se han completado nueve etapas y no hay APK R3 integrada.
