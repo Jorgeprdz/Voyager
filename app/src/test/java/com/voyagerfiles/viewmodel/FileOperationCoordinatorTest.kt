@@ -25,6 +25,45 @@ import java.util.concurrent.atomic.AtomicReference
 class FileOperationCoordinatorTest {
 
     @Test
+    fun namedCopyDuplicatesFileWithoutOverwritingSource() = runBlocking {
+        val storage = MemoryProvider().apply {
+            putDirectory("/root")
+            putFile("/root/notes.txt", "original")
+        }
+        FileOperationCoordinator.copyPath(storage, storage, "/root/notes.txt", "/root",
+            destinationName = "notes copia.txt").getOrThrow()
+        assertEquals("original", storage.readFile("/root/notes.txt"))
+        assertEquals("original", storage.readFile("/root/notes copia.txt"))
+        val clash = FileOperationCoordinator.copyPath(storage, storage, "/root/notes.txt", "/root",
+            destinationName = "notes copia.txt")
+        assertTrue(clash.isFailure)
+        assertEquals("original", storage.readFile("/root/notes copia.txt"))
+    }
+
+    @Test
+    fun namedCopyDuplicatesEntireFolderTree() = runBlocking {
+        val storage = MemoryProvider().apply {
+            putDirectory("/root")
+            putDirectory("/root/Documents")
+            putDirectory("/root/Documents/Sub")
+            putFile("/root/Documents/Sub/hello.txt", "untouched")
+        }
+        FileOperationCoordinator.copyPath(storage, storage, "/root/Documents", "/root",
+            destinationName = "Documents copia").getOrThrow()
+        assertEquals("untouched", storage.readFile("/root/Documents/Sub/hello.txt"))
+        assertEquals("untouched", storage.readFile("/root/Documents copia/Sub/hello.txt"))
+    }
+
+    @Test
+    fun namedCopyRejectsPathTraversal() = runBlocking {
+        val storage = MemoryProvider().apply { putDirectory("/root"); putFile("/root/a.txt", "keep") }
+        val result = FileOperationCoordinator.copyPath(storage, storage, "/root/a.txt", "/root",
+            destinationName = "../escaped.txt")
+        assertTrue(result.isFailure)
+        assertEquals("keep", storage.readFile("/root/a.txt"))
+    }
+
+    @Test
     fun cancelledMovePreservesSourceAndRemovesPartialTarget() = runBlocking {
         val payload = "x".repeat(3 * 64 * 1024)
         val source = MemoryProvider().apply { putFile("/source/large.bin", payload) }
