@@ -75,7 +75,7 @@ fun FileListItem(
         label = "selection_bg",
     )
     val horizontalPadding = if (compact) 8.dp else 16.dp
-    val verticalPadding = if (compact) 4.dp else 12.dp
+    val verticalPadding = if (compact) 4.dp else 8.dp
     val iconSize = if (compact) 32.dp else 40.dp
     val iconSpacing = if (compact) 12.dp else 16.dp
     val nameStyle = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
