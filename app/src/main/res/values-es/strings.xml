@@ -536,7 +536,7 @@
     <string name="search_storage_title">Buscar almacenamiento compartido</string>
     <string name="search_storage_scope">Archivos en almacenamiento compartido montado y accesible.</string>
     <string name="search_file_name">Nombre del archivo</string>
-    <string name="search_ready">Enter a file name and choose Search.</string>
+    <string name="search_ready">Escribe el nombre de un archivo y pulsa Buscar.</string>
     <string name="search_results_for">Results for %1$s</string>
     <string name="search_permission_required">Full storage access is required to search shared storage.</string>
     <string name="search_stale_file">This file changed or is no longer accessible. Search again.</string>
