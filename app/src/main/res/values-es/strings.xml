@@ -593,4 +593,7 @@
     <string name="finderdex_favorite_reset_icon">Restablecer icono</string>
     <string name="finderdex_favorite_remove">Quitar de favoritos</string>
     <string name="finderdex_zoom_accessibility">Tamaño de iconos</string>
+    <string name="finderdex_cloud_drive_disconnected">Google Drive · sin conectar</string>
+    <string name="finderdex_cloud_drive_unavailable">Sin conectar. FinderDex necesita la configuración oficial de OAuth y tu autorización para acceder a Drive. No se ha accedido a ningún archivo.</string>
+    <string name="finderdex_cloud_drive_ok">Entendido</string>
 </resources>

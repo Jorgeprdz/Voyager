@@ -825,7 +825,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
             }
             // Connection is intentionally unavailable until user-authorized OAuth is configured.
             // Never route a cloud item into the local filesystem or accept local folder drops here.
-            SidebarItem("Google Drive · sin conectar", "cloud:google-drive", "drive",
+            SidebarItem(stringResource(R.string.finderdex_cloud_drive_disconnected), "cloud:google-drive", "drive",
                 false, { showDriveStatus = true }, dragState = null, rail = rail)
         }
     }
@@ -833,9 +833,9 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     }
     if (showDriveStatus) AlertDialog(
         onDismissRequest = { showDriveStatus = false },
-        title = { Text("Google Drive") },
-        text = { Text("Sin conectar. La integración requiere configurar el OAuth oficial de FinderDex y autorizar el acceso desde tu cuenta. No se ha accedido a ningún archivo.") },
-        confirmButton = { TextButton(onClick = { showDriveStatus = false }) { Text("Entendido") } },
+        title = { Text(stringResource(R.string.finderdex_cloud_drive_title)) },
+        text = { Text(stringResource(R.string.finderdex_cloud_drive_unavailable)) },
+        confirmButton = { TextButton(onClick = { showDriveStatus = false }) { Text(stringResource(R.string.finderdex_cloud_drive_ok)) } },
     )
 }
 

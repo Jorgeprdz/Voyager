@@ -26,6 +26,7 @@ class CloudProviderContractTest {
         assertThrows(IllegalStateException::class.java) {
             runBlocking { CloudPageCollector.collect(maxPages = 2) { CloudPage(emptyList(), "new-${System.nanoTime()}") } }
         }
+        Unit // JUnit @Test methods must return void, not the assertThrows exception.
     }
 
     @Test fun mapsAuthorizationQuotaConflictsAndUnavailable() {
