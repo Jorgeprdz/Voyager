@@ -90,7 +90,8 @@ jobs:
             echo "- Package: com.finderdex.preview" >> "$GITHUB_STEP_SUMMARY"
             echo "- Signing: apksigner verified" >> "$GITHUB_STEP_SUMMARY"
             echo "- Launcher: adaptive, round, monochrome, background, foreground, artwork resources present" >> "$GITHUB_STEP_SUMMARY"
-            echo "- SHA256: `$(sha256sum "$apk" | cut -d ' ' -f 1)`" >> "$GITHUB_STEP_SUMMARY"
+            apk_sha="$(sha256sum "$apk" | cut -d ' ' -f 1)"
+            printf -- '- SHA256: `%s`\n' "$apk_sha" >> "$GITHUB_STEP_SUMMARY"
             rm -f "$entries" "$badging" "$resources"
           done
       - uses: actions/upload-artifact@v7
