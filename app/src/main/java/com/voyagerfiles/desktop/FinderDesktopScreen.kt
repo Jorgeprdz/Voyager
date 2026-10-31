@@ -519,7 +519,14 @@ fun FinderDesktopScreen(
     FinderDragGhost(dragState)
     FinderSpringFolderTimer(dragState)
     }
-    quickLook?.let { file -> FinderQuickLookDialog(file) { quickLook = null } }
+    quickLook?.let { file ->
+        FinderQuickLookDialog(file, onDismiss = { quickLook = null }, onNavigate = { direction ->
+            val ordered = columns.lastOrNull()?.files.orEmpty().filterNot { it.isDirectory }
+            val current = ordered.indexOfFirst { it.path == file.path }
+            if (ordered.isNotEmpty() && current >= 0)
+                quickLook = ordered[(current + direction + ordered.size) % ordered.size]
+        })
+    }
     infoFile?.let { file ->
         AlertDialog(onDismissRequest = { infoFile = null }, title = { Text("Obtener información") },
             text = { Column {
