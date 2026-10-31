@@ -223,7 +223,7 @@ internal fun FinderGalleryView(
                 val pressed by interaction.collectIsPressedAsState()
                 val surface = finderAnimatedMaterial(if (pressed) palette.pressed
                     else if (active) palette.selection(false, glass.windowFocused)
-                    else if (hovered) palette.hover else Color.Transparent, active)
+                    else Color.Transparent, active)
                 Column(Modifier.width((zoom.iconDp + 36f).dp)
                     .fillMaxHeight().clip(RoundedCornerShape(10.dp))
                     .background(surface).hoverable(interaction)
@@ -246,12 +246,15 @@ internal fun FinderGalleryView(
                         } },
                         onLongClick = { controller.selectForContextMenu(columns.lastIndex, file); menu = true })
                     .padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (file.isDirectory) FinderGlyph("folder",
-                        modifier = Modifier.size(zoom.iconDp.dp))
-                    else FileThumbnailOrIcon(file, zoom.iconDp.dp)
+                    Box(Modifier.size((zoom.iconDp + 2f).dp).finderIconHover(hovered),
+                        contentAlignment = Alignment.Center) {
+                        if (file.isDirectory) FinderGlyph("folder",
+                            modifier = Modifier.size(zoom.iconDp.dp))
+                        else FileThumbnailOrIcon(file, zoom.iconDp.dp)
+                    }
                     Spacer(Modifier.height(4.dp))
                     Text(file.name, color = if (active) palette.selectionText(false, glass.windowFocused) else palette.ink,
-                        fontSize = 11.sp, maxLines = 2,
+                        fontSize = 12.sp, maxLines = 2,
                         overflow = TextOverflow.Ellipsis)
                     FinderFileMenu(menu, { menu = false }, file.isDirectory, operationsAvailable,
                         if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {

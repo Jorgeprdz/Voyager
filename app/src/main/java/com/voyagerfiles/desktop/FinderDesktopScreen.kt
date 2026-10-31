@@ -1058,7 +1058,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                     val rowColor = finderAnimatedMaterial(
                         if (pressed) palette.pressed
                         else if (selected) palette.selection(active, glass.windowFocused)
-                        else if (hovered) palette.hover else Color.Transparent, selected)
+                        else Color.Transparent, selected)
                     val rowInk = if (selected) palette.selectionText(active, glass.windowFocused) else palette.ink
                     Row(Modifier.fillMaxWidth().height(zoom.rowHeightDp.dp)
                         .clip(RoundedCornerShape(FinderContentTokens.COLUMN_ROW_CORNER_DP.dp))
@@ -1084,8 +1084,11 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                             onLongClick = { controller.selectForContextMenu(index, file); menuOpen = true })
                         .finderFocusOutline(keyboardFocused)
                         .semantics { this.selected = selected }.padding(horizontal = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(zoom.iconDp.dp))
-                        else FileThumbnailOrIcon(file, zoom.iconDp.dp)
+                        Box(Modifier.size((zoom.iconDp + 2f).dp).finderIconHover(hovered),
+                            contentAlignment = Alignment.Center) {
+                            if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(zoom.iconDp.dp))
+                            else FileThumbnailOrIcon(file, zoom.iconDp.dp)
+                        }
                         Spacer(Modifier.width(8.dp))
                         Label(file.name, Modifier.weight(1f), rowInk)
                         if (file.isDirectory) FinderGlyph("forward", rowInk, Modifier.size(10.dp))
