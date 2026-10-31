@@ -6,8 +6,8 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `09-HARDENING-DELIVERY.md` (cierre automatizado; aceptación física/OAuth pendiente)
 - LAST_COMPLETED_STAGE: `09-PARTIAL-PASS_AUTOMATED`
-- STATUS: `R3.1_PARTIAL_VALIDATION_STOPPED_BY_USER`
-- NEXT_ACTION: `Acción externa indispensable: OAuth legítimo para Google Drive/OneDrive; aceptación física Samsung DeX/Android 17 y revisión visual móvil; implementar funciones R3 parciales según 09-AUDIT-REPORT.md antes de producción`
+- STATUS: `R3.1_PASS_AUTOMATED_PENDING_PHYSICAL_AND_EXTERNAL`
+- NEXT_ACTION: `Instalar/validar R3.1 en Samsung DeX/Android 17 y revisar Home móvil; registrar OAuth legítimo Google/Microsoft para E2E; continuar funciones parciales según reporte R3.1 antes de producción`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -169,3 +169,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Instantánea anterior: Kotlin app/androidTest compilados; 561 casos locales, 545 PASS/1 FAIL/15 skipped. Fallo de localización corregido, sin revalidar. Lint y HEAD final pendientes.
 - Cancelación solicitada para runs `41192344250` y `41192369765`. No iniciar más builds/CI hasta autorización nueva; tampoco push de código que los active.
 - No existe entrega APK R3.1 verificada. Reporte y handoff: `R3.1-FULL-POLISH-REPORT.md`, `R3.1-CONTINUE-PROMPT.md`.
+
+### 2026-10-31 UTC — R3.1 CI autorizado y validado (continuación)
+- Autorización del usuario para volver a compilar recibida durante esta sesión. La modificación de código se limitó a Home móvil: integrar preferencias persistentes de orden/visibilidad en la composición compacta, sin tocar Desktop R2.2.
+- Commit de código: `47fdb38cc258b55277cf7ef74eba6ffd6e5c3f8b`; [workflow 41192949098](https://github.com/Jorgeprdz/Voyager/actions/runs/41192949098) **SUCCESS** (compile app/androidTest, unit, lint, APK debug, firma y launcher).
+- XML de pruebas descargado e inspeccionado: **562 tests: 548 PASS, 0 FAIL, 0 ERROR, 14 skipped**. Lint **0 errors, 192 warnings**. Los instrumentos `androidTest` se compilaron, no se ejecutaron sobre hardware.
+- APK `com.finderdex.preview`, artifact `FinderDex-R3-APK` ID `13039317905`; test artifact `13039327888`; verification `13039283007`. Archivo ZIP descargado y comprobado; APK extraída y SHA256 comprobado localmente contra log CI: `b6a01a13e4ea83c592516253c78a57870fe221e23f6882a96c8a13f19b143e25`. La verificación de firma se aprobó en CI.
+- Estado: `PASS_AUTOMATED` para la instantánea citada, **no PASS_PHYSICAL ni RELEASE**. Persisten `BLOCKED_EXTERNAL` sólo para registro/consentimiento OAuth real Drive/OneDrive; `PENDING_PHYSICAL_DEX`, `PENDING_USER_VISUAL_REVIEW` y pendientes funcionales identificados por R3.1. R2.2 protegida sin cambios.
