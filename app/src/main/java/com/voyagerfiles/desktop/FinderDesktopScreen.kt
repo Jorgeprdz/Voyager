@@ -1,6 +1,15 @@
 package com.voyagerfiles.desktop
 
 import android.os.Environment
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -182,6 +191,24 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         volumes = withContext(Dispatchers.IO) { FileUtils.getStorageDirectories(context) }
     }
     var message by remember { mutableStateOf<String?>(null) }
+    val imagePrefs = remember(context) { context.getSharedPreferences("finderdex_sidebar_images", Context.MODE_PRIVATE) }
+    var customImages by remember(imagePrefs) {
+        mutableStateOf(imagePrefs.all.mapNotNull { (key, value) ->
+            (value as? String)?.let { key to it }
+        }.toMap())
+    }
+    var imageTarget by remember { mutableStateOf<String?>(null) }
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val target = imageTarget
+        if (target != null && uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                imagePrefs.edit().putString(target, uri.toString()).apply()
+                customImages = customImages + (target to uri.toString())
+            }.onFailure { message = it.localizedMessage ?: "No se pudo conservar el permiso de imagen" }
+        }
+        imageTarget = null
+    }
     LaunchedEffect(uiMessage) {
         uiMessage?.let {
             message = it.resolve(context.resources)
@@ -193,6 +220,17 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     }
     FinderDesktopScreen(controller, mode, bookmarks.filter { it.source == FileSource.LOCAL }.map { it.name to it.path },
         volumes.map { it.name to it.path }, viewModel::openLocalRoot, onMobile,
+        favoriteImages = customImages,
+        onRemoveFavorite = { path -> viewModel.removeBookmark(path, FileSource.LOCAL) },
+        onPickFavoriteImage = { path -> imageTarget = path; imagePicker.launch(arrayOf("image/*")) },
+        onRemoveFavoriteImage = { path ->
+            customImages[path]?.let { uri ->
+                runCatching { context.contentResolver.releasePersistableUriPermission(
+                    Uri.parse(uri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            }
+            imagePrefs.edit().remove(path).apply()
+            customImages = customImages - path
+        },
         onOpen = { file -> FileUtils.openFile(context, file).onFailure { message = it.localizedMessage ?: "No se pudo abrir el archivo" } },
         operationsAvailable = true,
         onPaste = {
@@ -261,6 +299,10 @@ fun FinderDesktopScreen(
     mode: DesktopMode,
     bookmarks: List<Pair<String, String>> = emptyList(),
     volumes: List<Pair<String, String>> = emptyList(),
+    favoriteImages: Map<String, String> = emptyMap(),
+    onRemoveFavorite: (String) -> Unit = {},
+    onPickFavoriteImage: (String) -> Unit = {},
+    onRemoveFavoriteImage: (String) -> Unit = {},
     onRoot: (String) -> Unit = {},
     onMobile: () -> Unit = {},
     onOpen: (FileItem) -> Unit = {},
@@ -364,7 +406,8 @@ fun FinderDesktopScreen(
             Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(Paper, RoundedCornerShape(6.dp)).padding(8.dp),
             singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
         Row(Modifier.weight(1f)) {
-            FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot)
+            FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
+                favoriteImages, onRemoveFavorite, onPickFavoriteImage, onRemoveFavoriteImage)
             Box(Modifier.fillMaxHeight().width(4.dp).background(Sidebar).pointerInput(density) {
                 detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
             }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
@@ -491,7 +534,9 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
 }
 
 @Composable
-private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit) {
+private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit,
+    favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
+    onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit) {
     val root = Environment.getExternalStorageDirectory().path
     Column(Modifier.width(width).fillMaxHeight().background(Sidebar).verticalScroll(rememberScrollState()).padding(12.dp, 14.dp)) {
         var favoritesExpanded by remember { mutableStateOf(true) }
@@ -506,7 +551,10 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
             }
             bookmarks.forEach { (name, path) ->
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())
-                    SidebarItem(name, path, "folder-outline", currentPath == path, onRoot)
+                    SidebarItem(name, path, "folder-outline", currentPath == path, onRoot,
+                        pinned = true, imageUri = favoriteImages[path],
+                        onRemoveFavorite = onRemoveFavorite,
+                        onPickImage = onPickFavoriteImage, onClearImage = onRemoveFavoriteImage)
             }
         }
         Spacer(Modifier.height(20.dp))
@@ -527,13 +575,30 @@ private fun SidebarHeading(text: String, expanded: Boolean, onClick: () -> Unit)
 }
 
 @Composable
-private fun SidebarItem(name: String, path: String, glyph: String, selected: Boolean, onRoot: (String) -> Unit) {
+private fun SidebarItem(name: String, path: String, glyph: String, selected: Boolean, onRoot: (String) -> Unit,
+    pinned: Boolean = false, imageUri: String? = null, onRemoveFavorite: (String) -> Unit = {},
+    onPickImage: (String) -> Unit = {}, onClearImage: (String) -> Unit = {}) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Row(Modifier.fillMaxWidth().height(30.dp).clip(RoundedCornerShape(5.dp))
+    var menu by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().height(32.dp).clip(RoundedCornerShape(6.dp))
         .background(if (selected) Color(0xffdcdfe6) else if (hovered) Color(0xffe6e7ec) else Color.Transparent)
-        .hoverable(interaction).clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        FinderGlyph(glyph, Accent); Spacer(Modifier.width(8.dp)); Label(name)
+        .hoverable(interaction)
+        .finderRightClick { if (pinned) menu = true }
+        .clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (imageUri != null) AsyncImage(model = Uri.parse(imageUri), contentDescription = null,
+            modifier = Modifier.size(19.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
+        else FinderGlyph(glyph, Accent)
+        Spacer(Modifier.width(8.dp))
+        Label(name, Modifier.weight(1f))
+        if (pinned) DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text("Elegir imagen de carpeta…") },
+                onClick = { menu = false; onPickImage(path) })
+            if (imageUri != null) DropdownMenuItem(text = { Text("Restablecer icono") },
+                onClick = { menu = false; onClearImage(path) })
+            DropdownMenuItem(text = { Text("Quitar de favoritos") },
+                onClick = { menu = false; onRemoveFavorite(path) })
+        }
     }
 }
 
