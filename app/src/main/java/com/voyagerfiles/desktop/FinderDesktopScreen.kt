@@ -103,6 +103,13 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                 drawCircle(color, w*.04f, Offset(w*.16f,h*y))
                 drawLine(color,Offset(w*.32f,h*y),Offset(w*.86f,h*y),w*.065f)
             }
+            "trash" -> {
+                drawRoundRect(color,Offset(w*.2f,h*.30f),androidx.compose.ui.geometry.Size(w*.6f,h*.58f),
+                    androidx.compose.ui.geometry.CornerRadius(w*.04f),style=stroke)
+                drawLine(color,Offset(w*.12f,h*.23f),Offset(w*.88f,h*.23f),w*.08f)
+                drawLine(color,Offset(w*.35f,h*.42f),Offset(w*.35f,h*.74f),w*.06f)
+                drawLine(color,Offset(w*.65f,h*.42f),Offset(w*.65f,h*.74f),w*.06f)
+            }
             "gallery" -> {
                 drawRoundRect(color,Offset(w*.1f,h*.15f),androidx.compose.ui.geometry.Size(w*.8f,h*.52f),
                     androidx.compose.ui.geometry.CornerRadius(w*.07f),style=stroke)
@@ -165,6 +172,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val operation by viewModel.operationState.collectAsState()
     val conflict by viewModel.transferConflict.collectAsState()
     val uiMessage by viewModel.snackbarMessage.collectAsState()
+    val trash by viewModel.trashState.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(session?.id) {
         if (session == null) viewModel.openLocalRoot(Environment.getExternalStorageDirectory().path)
@@ -221,6 +229,15 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     FinderDesktopScreen(controller, mode, bookmarks.filter { it.source == FileSource.LOCAL }.map { it.name to it.path },
         volumes.map { it.name to it.path }, viewModel::openLocalRoot, onMobile,
         favoriteImages = customImages,
+        trashEntries = trash.entries,
+        trashLoading = trash.isLoading,
+        trashError = trash.error?.resolve(context.resources),
+        onRefreshTrash = viewModel::refreshTrash,
+        onRestoreTrash = { id ->
+            viewModel.clearTrashSelection()
+            viewModel.toggleTrashSelection(id)
+            viewModel.restoreSelectedTrash()
+        },
         onRemoveFavorite = { path -> viewModel.removeBookmark(path, FileSource.LOCAL) },
         onPickFavoriteImage = { path -> imageTarget = path; imagePicker.launch(arrayOf("image/*")) },
         onRemoveFavoriteImage = { path ->
@@ -300,6 +317,11 @@ fun FinderDesktopScreen(
     bookmarks: List<Pair<String, String>> = emptyList(),
     volumes: List<Pair<String, String>> = emptyList(),
     favoriteImages: Map<String, String> = emptyMap(),
+    trashEntries: List<com.voyagerfiles.data.model.TrashEntry> = emptyList(),
+    trashLoading: Boolean = false,
+    trashError: String? = null,
+    onRefreshTrash: () -> Unit = {},
+    onRestoreTrash: (String) -> Unit = {},
     onRemoveFavorite: (String) -> Unit = {},
     onPickFavoriteImage: (String) -> Unit = {},
     onRemoveFavoriteImage: (String) -> Unit = {},
@@ -335,6 +357,7 @@ fun FinderDesktopScreen(
     var permanentDelete by remember { mutableStateOf(false) }
     var pendingDeletePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var newFolderDialog by remember { mutableStateOf(false) }
+    var showTrash by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
         when (action) {
@@ -401,7 +424,8 @@ fun FinderDesktopScreen(
         FinderToolbar(controller, chrome, effectiveSidebarWidth, mode == DesktopMode.ADAPTED, viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
             showPreview, { showPreview = !showPreview }, descending, { descending = !descending }, onMobile,
             canCreateFolder = operationsAvailable,
-            onNewFolder = { newFolderName = ""; newFolderDialog = true })
+            onNewFolder = { newFolderName = ""; newFolderDialog = true },
+            onTrash = { onRefreshTrash(); showTrash = true })
         if (searching && mode == DesktopMode.ADAPTED) BasicTextField(search, { search = it },
             Modifier.fillMaxWidth().padding(12.dp, 6.dp).background(Paper, RoundedCornerShape(6.dp)).padding(8.dp),
             singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
@@ -470,6 +494,8 @@ fun FinderDesktopScreen(
             }) { Text(if (permanentDelete) "Eliminar" else "Mover") } },
             dismissButton = { TextButton(onClick = { deleteFile = null }) { Text("Cancelar") } })
     }
+    if (showTrash) FinderTrashDialog(trashEntries, trashLoading, trashError,
+        onRestore = onRestoreTrash, onRefresh = onRefreshTrash, onDismiss = { showTrash = false })
     if (newFolderDialog) AlertDialog(
         onDismissRequest = { newFolderDialog = false }, title = { Text("Nueva carpeta") },
         text = { BasicTextField(newFolderName, { newFolderName = it },
@@ -489,7 +515,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
     viewStyle: FinderViewStyle, setViewStyle: (FinderViewStyle) -> Unit, searching: Boolean, search: String,
     toggleSearch: () -> Unit, setSearch: (String) -> Unit, preview: Boolean, togglePreview: () -> Unit,
     descending: Boolean, toggleSort: () -> Unit, onMobile: () -> Unit,
-    canCreateFolder: Boolean, onNewFolder: () -> Unit) {
+    canCreateFolder: Boolean, onNewFolder: () -> Unit, onTrash: () -> Unit) {
     val columnsDescription = stringResource(R.string.finderdex_view_columns)
     val searchDescription = stringResource(R.string.finderdex_search_folder)
     val rootTitle = stringResource(R.string.home_storage)
@@ -523,6 +549,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
         }
         Spacer(Modifier.width(12.dp))
         if (!compact) Tool("Nueva carpeta", "folder-outline", enabled = canCreateFolder, action = onNewFolder)
+        if (!compact) Tool("Papelera", "trash", enabled = canCreateFolder, action = onTrash)
         if (!compact) Tool(if (descending) "Orden ascendente" else "Orden descendente", "sort", selected = descending, action = toggleSort)
         if (!compact) Tool("Mostrar vista previa", "preview", selected = preview, action = togglePreview)
         Tool(searchDescription, "search", selected = searching, action = toggleSearch)
