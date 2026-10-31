@@ -63,6 +63,7 @@ import com.voyagerfiles.viewmodel.FileBrowserViewModel
 import com.voyagerfiles.ui.text.resolve
 import com.voyagerfiles.ui.components.TransferConflictDialog
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
 
@@ -70,8 +71,8 @@ private val Ink = Color(0xff303034)
 private val Muted = Color(0xff77777e)
 private val Line = Color(0xffe4e4e8)
 private val Accent = Color(0xff087cf1)
-private val Sidebar = Color(0xfff0f0f3)
-private val Header = Color(0xfff7f7f9)
+private val Sidebar = Color(0xeef0f0f3)
+private val Header = Color(0xf9f7f7f9)
 private val Paper = Color.White
 
 @Composable
@@ -411,7 +412,14 @@ fun FinderDesktopScreen(
                 com.voyagerfiles.viewmodel.OperationOutcome.COMPLETED)
         }
     }
-    var sidebarWidth by rememberSaveable { mutableFloatStateOf(208f) }
+    val widthPrefs = remember(LocalContext.current) {
+        LocalContext.current.getSharedPreferences("finderdex_window", Context.MODE_PRIVATE)
+    }
+    var sidebarWidth by rememberSaveable { mutableFloatStateOf(widthPrefs.getFloat("sidebarWidth", 208f)) }
+    LaunchedEffect(sidebarWidth) {
+        delay(220)
+        widthPrefs.edit().putFloat("sidebarWidth", sidebarWidth).apply()
+    }
     var viewStyle by rememberSaveable { mutableStateOf(FinderViewStyle.ICONS) }
     var showPreview by rememberSaveable { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
