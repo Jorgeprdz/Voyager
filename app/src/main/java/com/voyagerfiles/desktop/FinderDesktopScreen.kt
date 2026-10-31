@@ -259,6 +259,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         },
         operationProgress = (operation as? com.voyagerfiles.viewmodel.OperationState.Running)?.progress,
         operationResult = lastOperationResult,
+        operationRunning = operation is com.voyagerfiles.viewmodel.OperationState.Running,
         onCopyPaths = { paths, cut ->
             if (cut) viewModel.cutToClipboard(paths, false)
             else viewModel.copyToClipboard(paths, false)
@@ -345,6 +346,7 @@ fun FinderDesktopScreen(
     onMovePaths: (List<String>, String) -> Unit = { _, _ -> },
     onCopyPathsTo: (List<String>, String) -> Unit = { _, _ -> },
     operationResult: com.voyagerfiles.viewmodel.OperationResult? = null,
+    operationRunning: Boolean = false,
     onDeletePaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
@@ -360,8 +362,8 @@ fun FinderDesktopScreen(
             dragState.dismiss()
         }
     }
-    LaunchedEffect(operationResult) {
-        if (dragState.awaitingTransfer && operationResult != null) {
+    LaunchedEffect(operationResult, dragState.awaitingTransfer) {
+        if (dragState.awaitingTransfer && operationResult != null && !operationRunning) {
             dragState.completeTransfer(operationResult.outcome ==
                 com.voyagerfiles.viewmodel.OperationOutcome.COMPLETED)
         }
@@ -550,7 +552,7 @@ fun FinderDesktopScreen(
         AlertDialog(onDismissRequest = { dragState.dismiss() },
             title = { Text(if (drop.action == FinderDropAction.COPY) "Copiar elementos" else "Mover elementos") },
             text = { Text("¿${if (drop.action == FinderDropAction.COPY) "Copiar" else "Mover"} ${drop.paths.size} elemento(s) a ${drop.destination}?") },
-            confirmButton = { TextButton(onClick = {
+            confirmButton = { TextButton(enabled = !operationRunning, onClick = {
                 dragState.acceptPending()
                 if (drop.action == FinderDropAction.COPY) onCopyPathsTo(drop.paths, drop.destination)
                 else onMovePaths(drop.paths, drop.destination)
