@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -112,3 +113,14 @@ fun FinderMobileCreateButton(onClick: () -> Unit, contentDescription: String, ic
         }
     }
 }
+
+/** Shared colors for legacy dialog fields without changing any form behavior. */
+@Composable
+fun finderMobileInputColors(): TextFieldColors = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+    unfocusedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+    unfocusedBorderColor = Color.Transparent,
+    cursorColor = MaterialTheme.colorScheme.primary,
+)
