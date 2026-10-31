@@ -227,7 +227,9 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         if (!browser.isLoading) controller.refresh()
     }
     FinderDesktopScreen(controller, mode, bookmarks.filter { it.source == FileSource.LOCAL }.map { it.name to it.path },
-        volumes.map { it.name to it.path }, viewModel::openLocalRoot, onMobile,
+        volumes = volumes.map { it.name to it.path },
+        onRoot = viewModel::openLocalRoot,
+        onMobile = onMobile,
         favoriteImages = customImages,
         trashEntries = trash.entries,
         trashLoading = trash.isLoading,
