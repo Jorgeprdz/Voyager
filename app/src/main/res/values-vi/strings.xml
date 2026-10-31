@@ -581,4 +581,7 @@
     <string name="finderdex_favorite_reset_icon">Đặt lại biểu tượng</string>
     <string name="finderdex_favorite_remove">Xóa khỏi mục yêu thích</string>
     <string name="finderdex_zoom_accessibility">Kích thước biểu tượng</string>
+    <string name="finderdex_cloud_drive_disconnected">Google Drive · chưa kết nối</string>
+    <string name="finderdex_cloud_drive_unavailable">Chưa kết nối. FinderDex cần cấu hình OAuth chính thức và sự cho phép của bạn trước khi truy cập tệp trên Drive. Chưa có tệp nào được truy cập.</string>
+    <string name="finderdex_cloud_drive_ok">Đã hiểu</string>
 </resources>

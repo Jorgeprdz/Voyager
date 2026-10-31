@@ -581,4 +581,7 @@
     <string name="finderdex_favorite_reset_icon">아이콘 초기화</string>
     <string name="finderdex_favorite_remove">즐겨찾기에서 제거</string>
     <string name="finderdex_zoom_accessibility">아이콘 크기</string>
+    <string name="finderdex_cloud_drive_disconnected">Google Drive · 연결되지 않음</string>
+    <string name="finderdex_cloud_drive_unavailable">연결되지 않았습니다. FinderDex가 Drive 파일에 접근하려면 공식 OAuth 설정과 사용자의 승인이 필요합니다. 어떤 파일에도 접근하지 않았습니다.</string>
+    <string name="finderdex_cloud_drive_ok">확인</string>
 </resources>

@@ -578,4 +578,7 @@
     <string name="finderdex_favorite_reset_icon">重置图标</string>
     <string name="finderdex_favorite_remove">从收藏中移除</string>
     <string name="finderdex_zoom_accessibility">图标大小</string>
+    <string name="finderdex_cloud_drive_disconnected">Google Drive · 未连接</string>
+    <string name="finderdex_cloud_drive_unavailable">尚未连接。FinderDex 需要完成官方 OAuth 配置并获得你的授权，才能访问 Drive 文件。目前未访问任何文件。</string>
+    <string name="finderdex_cloud_drive_ok">知道了</string>
 </resources>

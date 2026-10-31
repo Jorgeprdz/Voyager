@@ -581,4 +581,7 @@
     <string name="finderdex_favorite_reset_icon">アイコンをリセット</string>
     <string name="finderdex_favorite_remove">お気に入りから削除</string>
     <string name="finderdex_zoom_accessibility">アイコンのサイズ</string>
+    <string name="finderdex_cloud_drive_disconnected">Google Drive · 未接続</string>
+    <string name="finderdex_cloud_drive_unavailable">未接続です。FinderDex が Drive のファイルにアクセスするには、公式の OAuth 設定とユーザーの許可が必要です。ファイルにはアクセスしていません。</string>
+    <string name="finderdex_cloud_drive_ok">了解</string>
 </resources>
