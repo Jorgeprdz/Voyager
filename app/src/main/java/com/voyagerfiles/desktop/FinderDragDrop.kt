@@ -80,7 +80,7 @@ internal class FinderDragDropState {
     }
 
     private fun target(): FinderDropTarget? {
-        if (draggingPaths.isEmpty() || !cursorPosition.isSpecified) return null
+        if (draggingPaths.isEmpty() || (!cursorPosition.x.isFinite() || !cursorPosition.y.isFinite())) return null
         return targets.values.asSequence()
             .filter { it.rect.contains(cursorPosition) }
             .sortedBy { it.rect.width * it.rect.height }
