@@ -32,26 +32,29 @@ internal fun FinderFileMenu(
     onDismiss: () -> Unit,
     isDirectory: Boolean,
     operationsAvailable: Boolean,
+    selectionCount: Int = 1,
     onAction: (FinderFileAction) -> Unit,
 ) {
+    val count = selectionCount.coerceAtLeast(1)
+    fun many(single: String, plural: String) = if (count == 1) single else "$plural $count elementos"
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         funAction(FinderFileAction.OPEN, "Abrir", onDismiss, onAction)
         if (!isDirectory) {
             funAction(FinderFileAction.OPEN_WITH, "Abrir con…", onDismiss, onAction)
-            funAction(FinderFileAction.SHARE, "Compartir", onDismiss, onAction)
+            funAction(FinderFileAction.SHARE, many("Compartir", "Compartir"), onDismiss, onAction)
         }
         if (!isDirectory) funAction(FinderFileAction.QUICK_LOOK, "Vista previa   Espacio", onDismiss, onAction)
         funAction(FinderFileAction.INFO, "Obtener información", onDismiss, onAction)
         if (operationsAvailable) {
-            funAction(FinderFileAction.COPY, "Copiar   Ctrl+C", onDismiss, onAction)
-            funAction(FinderFileAction.CUT, "Cortar   Ctrl+X", onDismiss, onAction)
+            funAction(FinderFileAction.COPY, many("Copiar   Ctrl+C", "Copiar"), onDismiss, onAction)
+            funAction(FinderFileAction.CUT, many("Cortar   Ctrl+X", "Cortar"), onDismiss, onAction)
             if (isDirectory) funAction(FinderFileAction.PASTE_INTO, "Pegar dentro de esta carpeta", onDismiss, onAction)
-            funAction(FinderFileAction.DUPLICATE, "Duplicar", onDismiss, onAction)
+            funAction(FinderFileAction.DUPLICATE, many("Duplicar", "Duplicar"), onDismiss, onAction)
             funAction(FinderFileAction.RENAME, "Renombrar", onDismiss, onAction)
-            funAction(FinderFileAction.ZIP, "Comprimir ZIP", onDismiss, onAction)
+            funAction(FinderFileAction.ZIP, many("Comprimir ZIP", "Comprimir"), onDismiss, onAction)
             if (isDirectory) funAction(FinderFileAction.FAVORITE, "Añadir a favoritos", onDismiss, onAction)
-            funAction(FinderFileAction.TRASH, "Mover a papelera", onDismiss, onAction)
-            funAction(FinderFileAction.DELETE, "Eliminar definitivamente…", onDismiss, onAction)
+            funAction(FinderFileAction.TRASH, many("Mover a papelera", "Mover a papelera"), onDismiss, onAction)
+            funAction(FinderFileAction.DELETE, many("Eliminar definitivamente…", "Eliminar definitivamente"), onDismiss, onAction)
         }
     }
 }
