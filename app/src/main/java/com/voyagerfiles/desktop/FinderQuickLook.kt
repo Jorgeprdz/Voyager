@@ -103,7 +103,8 @@ internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
     onNavigate: (Int) -> Unit = {}) {
     val focus = remember { FocusRequester() }
     val content by produceState<QuickLookContent>(QuickLookContent.Loading, file.path) {
-        value = withContext(Dispatchers.IO) { decodeQuickLook(file) }
+        val decoded = withContext(Dispatchers.IO) { decodeQuickLook(file) }
+        value = decoded
     }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
