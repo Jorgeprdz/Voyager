@@ -30,6 +30,8 @@ internal class FinderMarqueeState {
         private set
     private var initialSelection = emptySet<String>()
     private var additive = false
+    private val exitedDuringScroll = mutableSetOf<String>()
+    private var lastVisibleHits = emptySet<String>()
 
     val rectangle: Rect
         get() = Rect(
@@ -38,7 +40,10 @@ internal class FinderMarqueeState {
         )
 
     fun register(path: String, bounds: Rect) { itemBounds[path] = bounds }
-    fun unregister(path: String) { itemBounds.remove(path) }
+    fun unregister(path: String) {
+        if (active && path in lastVisibleHits) exitedDuringScroll += path
+        itemBounds.remove(path)
+    }
     fun clearItems() { itemBounds.clear(); cancel() }
     fun hitItem(at: Offset): Boolean = itemBounds.values.any { it.contains(at) }
 
@@ -47,6 +52,8 @@ internal class FinderMarqueeState {
         start = at
         end = at
         initialSelection = selected
+        exitedDuringScroll.clear()
+        lastVisibleHits = emptySet()
         additive = extend
         active = true
         return true
@@ -55,10 +62,11 @@ internal class FinderMarqueeState {
         if (!active) return emptySet()
         end = at
         val hits = finderPathsInRect(itemBounds, rectangle)
-        return if (additive) initialSelection + hits else hits
+        lastVisibleHits = hits
+        return (if (additive) initialSelection else emptySet()) + hits + exitedDuringScroll
     }
-    fun finish() { active = false }
-    fun cancel() { active = false }
+    fun finish() { active = false; exitedDuringScroll.clear(); lastVisibleHits = emptySet() }
+    fun cancel() { active = false; exitedDuringScroll.clear(); lastVisibleHits = emptySet() }
 }
 
 /** Attach to item content; composable disposal removes stale bounds after scrolling or switching views. */
