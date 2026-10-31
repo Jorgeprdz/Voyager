@@ -26,6 +26,7 @@ internal class FinderDragDropState(
 ) {
     private val targets = mutableStateMapOf<String, FinderDropTarget>()
     var allowedRoot: String = "/"
+    var enabled: Boolean = false
     var draggingPaths by mutableStateOf<List<String>>(emptyList())
         private set
     var ghostPaths by mutableStateOf<List<String>>(emptyList())
@@ -65,6 +66,7 @@ internal class FinderDragDropState(
     }
     fun clearTargets() { targets.clear(); hoveredDestination = null }
     fun start(paths: List<String>, at: Offset, from: Offset = at) {
+        if (!enabled) return
         val valid = paths.distinct().filter(::withinRoot)
         if (valid.isEmpty()) return
         draggingPaths = valid
@@ -84,7 +86,8 @@ internal class FinderDragDropState(
     }
 
     private fun target(): FinderDropTarget? {
-        if (draggingPaths.isEmpty() || (!cursorPosition.x.isFinite() || !cursorPosition.y.isFinite())) return null
+        if (!enabled || draggingPaths.isEmpty() ||
+            (!cursorPosition.x.isFinite() || !cursorPosition.y.isFinite())) return null
         return targets.values.asSequence()
             .filter { it.rect.contains(cursorPosition) }
             .sortedBy { it.rect.width * it.rect.height }
