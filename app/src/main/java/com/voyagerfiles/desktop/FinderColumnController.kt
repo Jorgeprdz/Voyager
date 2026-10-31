@@ -92,6 +92,41 @@ class FinderColumnController(
         onLocation(currentPath, selection)
     }
 
+    /** One authoritative selection for mouse, keyboard, marquee and file operations. */
+    fun selectPaths(paths: Set<String>, extendExisting: Boolean = false) {
+        val columns = _columns.value
+        val last = columns.lastOrNull() ?: return
+        if (last.loading || last.error != null) return
+        val valid = last.files.mapTo(mutableSetOf()) { it.path }
+        val selection = (if (extendExisting) last.selected + paths else paths).intersect(valid)
+        _columns.value = columns.mapIndexed { index, column ->
+            if (index == columns.lastIndex) column.copy(selected = selection) else column
+        }
+        if (selection.isEmpty()) selectionAnchor = null
+        else if (selectionAnchor !in selection) selectionAnchor = selection.first()
+        onLocation(currentPath, selection)
+    }
+
+    fun clearSelection() = selectPaths(emptySet())
+
+    /** The visible file order is also keyboard navigation order. */
+    fun moveSelectionBy(delta: Int, extend: Boolean = false) {
+        val last = _columns.value.lastOrNull() ?: return
+        if (last.files.isEmpty() || last.loading) return
+        val anchor = last.files.indexOfFirst { it.path == selectionAnchor }
+        val current = last.files.indexOfFirst { it.path in last.selected }
+        val start = if (current >= 0) current else if (delta >= 0) -1 else last.files.size
+        val target = (start + delta).coerceIn(0, last.files.lastIndex)
+        if (extend) {
+            val from = if (anchor >= 0) anchor else (if (current >= 0) current else target)
+            selectionAnchor = last.files[from].path
+            selectPaths(last.files.subList(minOf(from, target), maxOf(from, target) + 1)
+                .mapTo(mutableSetOf()) { it.path })
+        } else {
+            selectOnly(_columns.value.lastIndex, last.files[target])
+        }
+    }
+
     /** Selects the loaded directory only, never ancestors or hidden items. */
     fun selectAll() {
         val last = _columns.value.lastOrNull() ?: return
