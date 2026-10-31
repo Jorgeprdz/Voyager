@@ -462,7 +462,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
 }
 
 @Composable
-fun FinderDesktopScreen(
+internal fun FinderDesktopScreen(
     controller: FinderColumnController,
     mode: DesktopMode,
     externalDragState: FinderDragDropState? = null,
@@ -501,7 +501,8 @@ fun FinderDesktopScreen(
 ) {
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
-    val dragState = externalDragState ?: remember(controller.session.id) { FinderDragDropState() }
+    val fallbackDragState = remember(controller.session.id) { FinderDragDropState() }
+    val dragState = externalDragState ?: fallbackDragState
     val androidView = LocalView.current
     SideEffect {
         dragState.externalError = { /* Unsupported MIME or missing URI access; no source mutation. */ }
