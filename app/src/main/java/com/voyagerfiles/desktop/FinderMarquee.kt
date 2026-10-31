@@ -9,7 +9,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.boundsInRoot
@@ -136,14 +137,19 @@ internal fun Modifier.finderMarqueeGesture(
 @Composable
 internal fun FinderMarqueeOverlay(marquee: FinderMarqueeState, modifier: Modifier = Modifier) {
     if (!marquee.active) return
+    val palette = LocalFinderMaterials.current.palette
     var origin by remember { mutableStateOf(Offset.Zero) }
+    // Draw-only overlay: never intercept marquee hit-testing, mouse clicks, or drag targets.
     Canvas(modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
         val region = marquee.rectangle
         val local = Offset(region.left - origin.x, region.top - origin.y)
         val rectSize = androidx.compose.ui.geometry.Size(region.width, region.height)
-        drawRect(Color(0xff087cf1).copy(alpha = .13f), topLeft = local, size = rectSize)
-        drawRect(Color(0xff087cf1).copy(alpha = .7f), topLeft = local,
-            size = rectSize, style = Stroke(width = 1.5f))
+        val radius = CornerRadius(6.dp.toPx())
+        drawRoundRect(palette.accent.copy(alpha = if (palette.dark) .24f else .13f),
+            topLeft = local, size = rectSize, cornerRadius = radius)
+        drawRoundRect(palette.accent.copy(alpha = .72f),
+            topLeft = local, size = rectSize, cornerRadius = radius,
+            style = Stroke(width = 1.5.dp.toPx()))
     }
 }
 

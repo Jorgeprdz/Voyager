@@ -30,11 +30,15 @@ internal fun Modifier.finderDragVisual(
 ): Modifier = composed {
     val dragged = path in drag.draggingPaths
     val hovered = isFolder && drag.hoveredDestination == path
+    val materials = LocalFinderMaterials.current
+    val p = materials.palette
     val alpha by animateFloatAsState(if (dragged) .40f else 1f,
-        animationSpec = tween(140), label = "Finder source opacity")
+        animationSpec = if (materials.reducedMotion) snap() else tween(140),
+        label = "Finder source opacity")
     val scale by animateFloatAsState(
         if (hovered) 1.08f else if (dragged) 1.05f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy,
+        animationSpec = if (materials.reducedMotion) snap() else spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium), label = "Finder destination spring")
     this.graphicsLayer {
         scaleX = scale; scaleY = scale; this.alpha = alpha
@@ -42,7 +46,7 @@ internal fun Modifier.finderDragVisual(
         shape = RoundedCornerShape(10.dp)
         clip = false
     }.background(
-        if (hovered) Color(0xff2c87ea).copy(alpha = .12f) else Color.Transparent,
+        if (hovered) p.accent.copy(alpha = if (p.dark) .23f else .13f) else Color.Transparent,
         RoundedCornerShape(10.dp),
     )
 }
@@ -52,6 +56,8 @@ internal fun Modifier.finderDragVisual(
 internal fun FinderDragGhost(drag: FinderDragDropState, modifier: Modifier = Modifier) {
     val paths = drag.ghostPaths
     if (paths.isEmpty()) return
+    val materials = LocalFinderMaterials.current
+    val p = materials.palette
     var origin by remember { mutableStateOf(Offset.Zero) }
     val target = when {
         drag.returning || drag.receiving || drag.pending != null -> drag.ghostDestination
@@ -59,14 +65,18 @@ internal fun FinderDragGhost(drag: FinderDragDropState, modifier: Modifier = Mod
     }
     val point by animateOffsetAsState(
         targetValue = if (target.x.isFinite() && target.y.isFinite()) target else Offset.Zero,
-        animationSpec = spring(stiffness = Spring.StiffnessHigh,
-            dampingRatio = Spring.DampingRatioNoBouncy),
+        animationSpec = if (materials.reducedMotion) snap() else spring(
+            stiffness = Spring.StiffnessHigh, dampingRatio = Spring.DampingRatioNoBouncy),
         label = "Finder floating stack",
     )
     val scale by animateFloatAsState(
-        if (drag.receiving) .70f else 1.05f, tween(160), label = "Finder ghost scale")
+        if (drag.receiving) .70f else 1.05f,
+        animationSpec = if (materials.reducedMotion) snap() else tween(160),
+        label = "Finder ghost scale")
     val alpha by animateFloatAsState(
-        if (drag.receiving) .25f else 1f, tween(210), label = "Finder ghost fade")
+        if (drag.receiving) .25f else 1f,
+        animationSpec = if (materials.reducedMotion) snap() else tween(210),
+        label = "Finder ghost fade")
     LaunchedEffect(drag.returning) {
         if (drag.returning) {
             delay(220)
@@ -85,28 +95,28 @@ internal fun FinderDragGhost(drag: FinderDragDropState, modifier: Modifier = Mod
                     .width(86.dp).height(62.dp)
                     .shadow((6 + layer * 2).dp, RoundedCornerShape(10.dp))
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xfff8fbff))
-                    .border(1.dp, Color(0xffd3e0f1), RoundedCornerShape(10.dp))
+                    .background(p.footer)
+                    .border(1.dp, p.edge, RoundedCornerShape(10.dp))
                     .padding(8.dp)) {
                     Column {
-                        FinderGlyph("file", Color(0xff438be2), Modifier.size(25.dp))
+                        FinderGlyph("file", p.icon, Modifier.size(25.dp))
                         Spacer(Modifier.height(2.dp))
                         Text(paths.first().substringAfterLast('/'), maxLines = 1,
-                            overflow = TextOverflow.Ellipsis, fontSize = 9.sp,
-                            color = Color(0xff273245))
+                            overflow = TextOverflow.Ellipsis, fontSize = 10.sp,
+                            color = p.ink)
                     }
                 }
             }
             if (paths.size > 1) Box(Modifier.align(Alignment.TopEnd)
-                .clip(RoundedCornerShape(30.dp)).background(Color(0xff1675d8))
+                .clip(RoundedCornerShape(30.dp)).background(p.selectedStrong)
                 .padding(horizontal = 7.dp, vertical = 3.dp)) {
-                Text(paths.size.toString(), color = Color.White, fontSize = 12.sp,
+                Text(paths.size.toString(), color = p.selectedStrongText, fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold)
             }
             if (drag.copyRequested) Box(Modifier.align(Alignment.BottomEnd)
-                .clip(RoundedCornerShape(6.dp)).background(Color(0xff1675d8))
+                .clip(RoundedCornerShape(6.dp)).background(p.selectedStrong)
                 .padding(horizontal = 6.dp, vertical = 1.dp)) {
-                Text("+", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("+", color = p.selectedStrongText, fontWeight = FontWeight.Bold)
             }
         }
     }

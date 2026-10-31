@@ -94,6 +94,7 @@ private fun Label(text: String, modifier: Modifier = Modifier, color: Color = In
 internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier = Modifier.size(17.dp)) {
     val palette = LocalFinderMaterials.current.palette
     val resolved = when (color) { Muted -> palette.secondaryInk; Accent -> palette.icon; Ink -> palette.ink; else -> color }
+    val folder = if (palette.dark) FinderFolderColors.Dark else FinderFolderColors.Light
     Canvas(modifier) {
         val w = size.width; val h = size.height
         val stroke = Stroke(width = w * .075f, cap = StrokeCap.Round, join = StrokeJoin.Round)
@@ -108,10 +109,13 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                 }
                 if (kind == "folder-outline") drawPath(tab,resolved,style=stroke)
                 else {
-                    drawPath(tab, Color(0xff85d6f5))
-                    drawRoundRect(Brush.verticalGradient(listOf(Color(0xff75cff5),Color(0xff39a9e2))),
-                        Offset(w*.06f,h*.38f),androidx.compose.ui.geometry.Size(w*.88f,h*.47f),androidx.compose.ui.geometry.CornerRadius(w*.045f))
-                    drawLine(Color(0xffb5e9ff),Offset(w*.1f,h*.41f),Offset(w*.9f,h*.41f),w*.018f)
+                    drawPath(tab, folder.base)
+                    drawRoundRect(Brush.verticalGradient(listOf(folder.top, folder.bottom)),
+                        Offset(w*.06f,h*.38f),androidx.compose.ui.geometry.Size(w*.88f,h*.47f),
+                        androidx.compose.ui.geometry.CornerRadius(w*.07f))
+                    drawLine(folder.highlight,Offset(w*.10f,h*.42f),Offset(w*.90f,h*.42f),w*.018f)
+                    drawLine(folder.highlight.copy(alpha = .40f),
+                        Offset(w*.13f,h*.76f),Offset(w*.87f,h*.76f),w*.012f)
                 }
             }
             "list" -> listOf(.25f,.5f,.75f).forEach { y ->
@@ -815,10 +819,13 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
     Box(modifier.fillMaxHeight().background(colors.content).testTag("finder-icons")
         .finderMarqueeGesture(controller, marquee, dragState)) {
         key(column?.path) {
-            LazyVerticalGrid(columns = GridCells.Adaptive(140.dp),
+            LazyVerticalGrid(columns = GridCells.Adaptive(FinderContentTokens.ICON_GRID_MIN_DP.dp),
                 state = gridState, modifier = Modifier.fillMaxSize().onGloballyPositioned { gridBounds = it.boundsInRoot() },
-                contentPadding = PaddingValues(24.dp, 22.dp), horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                contentPadding = PaddingValues(
+                    horizontal = FinderContentTokens.ICON_GRID_OUTER_HORIZONTAL_DP.dp,
+                    vertical = FinderContentTokens.ICON_GRID_OUTER_VERTICAL_DP.dp),
+                horizontalArrangement = Arrangement.spacedBy(FinderContentTokens.ICON_GRID_COLUMN_GAP_DP.dp),
+                verticalArrangement = Arrangement.spacedBy(FinderContentTokens.ICON_GRID_ROW_GAP_DP.dp)) {
                 items(files, key = { it.path }) { file ->
                     val selected = file.path in column?.selected.orEmpty()
                     val interaction = remember { MutableInteractionSource() }
@@ -832,7 +839,8 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         if (pressed) colors.pressed
                         else if (selected) colors.selection(false, glass.windowFocused)
                         else if (hovered) colors.hover else Color.Transparent, selected)
-                    Column(Modifier.fillMaxWidth().height(151.dp).clip(RoundedCornerShape(11.dp))
+                    Column(Modifier.fillMaxWidth().height(FinderContentTokens.ICON_CELL_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(FinderContentTokens.ICON_CELL_CORNER_DP.dp))
                         .background(rowColor).hoverable(interaction)
                         .onFocusChanged { keyboardFocused = it.isFocused }
                         .finderMarqueeItem(file.path, marquee)
@@ -850,13 +858,20 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                             onLongClick = { controller.selectOnly(columns.lastIndex, file); menuOpen = true })
                         .finderFocusOutline(keyboardFocused)
                         .semantics { this.selected = selected }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(Modifier.size(118.dp, 108.dp).clip(RoundedCornerShape(8.dp))
-                            .background(if (selected) colors.selected else Color.Transparent), contentAlignment = Alignment.Center) {
-                            if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(100.dp))
-                            else FileThumbnailOrIcon(file, 94.dp)
+                        Box(Modifier.size(120.dp, 110.dp).clip(RoundedCornerShape(10.dp))
+                            .background(if (selected) colors.selected.copy(alpha = .55f) else Color.Transparent),
+                            contentAlignment = Alignment.Center) {
+                            if (file.isDirectory) FinderGlyph("folder",
+                                modifier = Modifier.size(FinderContentTokens.ICON_FOLDER_SIZE_DP.dp))
+                            else {
+                                FileThumbnailOrIcon(file, FinderContentTokens.ICON_THUMBNAIL_DP.dp)
+                                Box(Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 1.dp)) {
+                                    FinderFileFormatBadge(file)
+                                }
+                            }
                         }
-                        Spacer(Modifier.height(5.dp))
-                        BasicText(file.name, Modifier.clip(RoundedCornerShape(4.dp))
+                        Spacer(Modifier.height(4.dp))
+                        BasicText(file.name, Modifier.clip(RoundedCornerShape(FinderContentTokens.ICON_LABEL_CORNER_DP.dp))
                             .background(if (selected) colors.selection(false, glass.windowFocused) else Color.Transparent).padding(4.dp, 2.dp),
                             style = TextStyle(color = if (selected) colors.selectionText(false, glass.windowFocused) else colors.ink, fontSize = 12.sp,
                                 fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -909,7 +924,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
     }
     val glass = LocalFinderMaterials.current
     val palette = glass.palette
-    Row(Modifier.width(228.dp).fillMaxHeight()) {
+    Row(Modifier.width(FinderContentTokens.COLUMN_WIDTH_DP.dp).fillMaxHeight()) {
         Box(Modifier.weight(1f).fillMaxHeight()) {
             val filtered = remember(column.files, query, descending, sortBy) {
                 finderOrderFiles(column.files.filter { it.name.contains(query, true) }, sortBy, descending)
@@ -930,7 +945,8 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         else if (selected) palette.selection(active, glass.windowFocused)
                         else if (hovered) palette.hover else Color.Transparent, selected)
                     val rowInk = if (selected) palette.selectionText(active, glass.windowFocused) else palette.ink
-                    Row(Modifier.fillMaxWidth().height(27.dp).clip(RoundedCornerShape(6.dp))
+                    Row(Modifier.fillMaxWidth().height(FinderContentTokens.COLUMN_ROW_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(FinderContentTokens.COLUMN_ROW_CORNER_DP.dp))
                         .background(rowColor).hoverable(interaction)
                         .onFocusChanged { keyboardFocused = it.isFocused }
                         .finderDragVisual(file.path, file.isDirectory, dragState)
@@ -948,8 +964,9 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                             onLongClick = { menuOpen = true })
                         .finderFocusOutline(keyboardFocused)
                         .semantics { this.selected = selected }.padding(horizontal = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        FinderGlyph(if (file.isDirectory) "folder" else "file", rowInk, Modifier.size(17.dp))
-                        Spacer(Modifier.width(6.dp))
+                        if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(20.dp))
+                        else FileThumbnailOrIcon(file, 20.dp)
+                        Spacer(Modifier.width(8.dp))
                         Label(file.name, Modifier.weight(1f), rowInk)
                         if (file.isDirectory) FinderGlyph("forward", rowInk, Modifier.size(10.dp))
                         FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
@@ -970,36 +987,70 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
     }
 }
 
+
 @Composable
 private fun FinderPreview(file: FileItem?, onOpen: (FileItem) -> Unit) {
-    Row(Modifier.width(FinderWindowGeometry.PREVIEW_WIDTH_DP.dp).fillMaxHeight()) {
-        Box(Modifier.width(0.5.dp).fillMaxHeight().background(Line))
-        Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.height(30.dp))
-            if (file == null) Label("Vista previa", color = Muted)
-            else {
-                if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(112.dp))
-                else FileThumbnailOrIcon(file, 150.dp)
+    val palette = LocalFinderMaterials.current.palette
+    val scroll = rememberScrollState()
+    Row(Modifier.width(FinderWindowGeometry.PREVIEW_WIDTH_DP.dp)
+        .fillMaxHeight().background(palette.footer)) {
+        Box(Modifier.width(1.dp).fillMaxHeight().background(palette.separator))
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            Column(Modifier.fillMaxSize().verticalScroll(scroll)
+                .padding(FinderContentTokens.PREVIEW_PADDING_DP.dp),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Label("VISTA PREVIA", Modifier.fillMaxWidth(), color = Muted, size = 11, bold = true)
                 Spacer(Modifier.height(24.dp))
-                Label(file.name, bold = true)
-                Spacer(Modifier.height(6.dp))
-                Label(if (file.isDirectory) "Carpeta" else file.formattedSize, color = Muted, size = 12)
-                Spacer(Modifier.height(22.dp))
-                PreviewDetail("Nombre", file.name)
-                PreviewDetail("Clase", if (file.isDirectory) "Carpeta" else file.extension.uppercase().ifEmpty { "Archivo" })
-                PreviewDetail("Modificado", DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(file.lastModified))
-                if (!file.isDirectory) Label("Abrir", Modifier.padding(top = 20.dp).border(1.dp, Line, RoundedCornerShape(5.dp))
-                    .clickable { onOpen(file) }.padding(18.dp, 5.dp), color = Ink)
+                if (file == null) {
+                    Label("Selecciona un archivo", color = Muted, size = 12)
+                } else {
+                    Box(Modifier.size(FinderContentTokens.PREVIEW_FRAME_WIDTH_DP.dp,
+                        FinderContentTokens.PREVIEW_FRAME_HEIGHT_DP.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(palette.content)
+                        .border(0.7.dp, palette.separator, RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center) {
+                        if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(FinderContentTokens.PREVIEW_FOLDER_DP.dp))
+                        else FileThumbnailOrIcon(file, FinderContentTokens.PREVIEW_THUMBNAIL_DP.dp)
+                    }
+                    Spacer(Modifier.height(18.dp))
+                    Label(file.name, Modifier.fillMaxWidth(), bold = true, size = 13)
+                    Spacer(Modifier.height(5.dp))
+                    Label(if (file.isDirectory) "Carpeta" else file.formattedSize,
+                        color = Muted, size = 12)
+                    Spacer(Modifier.height(18.dp))
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(palette.separator))
+                    Spacer(Modifier.height(12.dp))
+                    PreviewDetail("Nombre", file.name)
+                    PreviewDetail("Clase",
+                        if (file.isDirectory) "Carpeta" else file.extension.uppercase().ifEmpty { "Archivo" })
+                    PreviewDetail("Modificado",
+                        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                            .format(file.lastModified))
+                    if (!file.isDirectory) {
+                        Spacer(Modifier.height(14.dp))
+                        Box(Modifier.clip(RoundedCornerShape(16.dp))
+                            .background(palette.selected)
+                            .clickable { onOpen(file) }
+                            .padding(horizontal = 20.dp, vertical = 9.dp)) {
+                            Label("Abrir", color = palette.selectedText, bold = true)
+                        }
+                    }
+                }
             }
+            FinderVerticalScrollbar(scroll, Modifier.align(Alignment.CenterEnd))
         }
     }
 }
 
 @Composable
 private fun PreviewDetail(title: String, value: String) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
-        Label(title, color = Muted, size = 10)
-        BasicText(value, style = TextStyle(color = Ink, fontSize = 12.sp))
+    val palette = LocalFinderMaterials.current.palette
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+        Label(title, color = Muted, size = 11)
+        Spacer(Modifier.height(4.dp))
+        BasicText(value, style = TextStyle(color = palette.ink, fontSize = 12.sp,
+            fontFamily = FontFamily.SansSerif), maxLines = 3, overflow = TextOverflow.Ellipsis)
     }
 }
 
