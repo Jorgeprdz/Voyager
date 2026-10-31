@@ -172,6 +172,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val operation by viewModel.operationState.collectAsState()
     val conflict by viewModel.transferConflict.collectAsState()
     val uiMessage by viewModel.snackbarMessage.collectAsState()
+    val lastOperationResult by viewModel.lastOperationResult.collectAsState()
     val trash by viewModel.trashState.collectAsState()
     val context = LocalContext.current
     LaunchedEffect(session?.id) {
@@ -257,6 +258,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             else message = "Espera a que termine la navegación antes de pegar"
         },
         operationProgress = (operation as? com.voyagerfiles.viewmodel.OperationState.Running)?.progress,
+        operationResult = lastOperationResult,
         onCopyPaths = { paths, cut ->
             if (cut) viewModel.cutToClipboard(paths, false)
             else viewModel.copyToClipboard(paths, false)
@@ -264,6 +266,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         onRename = { file, name -> viewModel.rename(file.path, name) },
         onCreateFolder = viewModel::createDirectory,
         onMovePaths = viewModel::moveDesktopPaths,
+        onCopyPathsTo = viewModel::copyDesktopPaths,
         onDeletePaths = { paths, permanent ->
             viewModel.deletePaths(paths, if (permanent) com.voyagerfiles.viewmodel.DeleteMode.PERMANENT
                 else com.voyagerfiles.viewmodel.DeleteMode.TRASH)
@@ -340,6 +343,8 @@ fun FinderDesktopScreen(
     onCancelOperation: () -> Unit = {},
     onCreateFolder: (String) -> Unit = {},
     onMovePaths: (List<String>, String) -> Unit = { _, _ -> },
+    onCopyPathsTo: (List<String>, String) -> Unit = { _, _ -> },
+    operationResult: com.voyagerfiles.viewmodel.OperationResult? = null,
     onDeletePaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onCopyPaths: (List<String>, Boolean) -> Unit = { _, _ -> },
     onRename: (FileItem, String) -> Unit = { _, _ -> },
@@ -350,8 +355,16 @@ fun FinderDesktopScreen(
     val dragState = remember { FinderDragDropState() }
     LaunchedEffect(controller.currentPath) {
         dragState.clearTargets()
-        dragState.cancel()
-        dragState.dismiss()
+        if (dragState.draggingPaths.isEmpty()) {
+            dragState.cancel()
+            dragState.dismiss()
+        }
+    }
+    LaunchedEffect(operationResult) {
+        if (dragState.awaitingTransfer && operationResult != null) {
+            dragState.completeTransfer(operationResult.outcome ==
+                com.voyagerfiles.viewmodel.OperationOutcome.COMPLETED)
+        }
     }
     var sidebarWidth by rememberSaveable { mutableFloatStateOf(208f) }
     var viewStyle by rememberSaveable { mutableStateOf(FinderViewStyle.ICONS) }
@@ -391,6 +404,7 @@ fun FinderDesktopScreen(
     val density = LocalDensity.current.density
     val effectiveSidebarWidth = if (mode == DesktopMode.ADAPTED) 176f else sidebarWidth
     BackHandler(controller.canBack && quickLook == null && infoFile == null && renameFile == null && deleteFile == null) { controller.back() }
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().background(Header)
         .windowInsetsPadding(WindowInsets.systemBars.exclude(WindowInsets.captionBar))
         .padding(top = (chrome.layout.topInset / density).dp)
@@ -473,6 +487,9 @@ fun FinderDesktopScreen(
         }
         FinderStatusBar(controller, columns)
     }
+    FinderDragGhost(dragState)
+    FinderSpringFolderTimer(dragState)
+    }
     quickLook?.let { file -> FinderQuickLookDialog(file) { quickLook = null } }
     infoFile?.let { file ->
         AlertDialog(onDismissRequest = { infoFile = null }, title = { Text("Obtener información") },
@@ -513,12 +530,13 @@ fun FinderDesktopScreen(
     }
     dragState.pending?.let { drop ->
         AlertDialog(onDismissRequest = { dragState.dismiss() },
-            title = { Text("Mover elementos") },
-            text = { Text("¿Mover ${drop.paths.size} elemento(s) a ${drop.destination}?") },
+            title = { Text(if (drop.action == FinderDropAction.COPY) "Copiar elementos" else "Mover elementos") },
+            text = { Text("¿${if (drop.action == FinderDropAction.COPY) "Copiar" else "Mover"} ${drop.paths.size} elemento(s) a ${drop.destination}?") },
             confirmButton = { TextButton(onClick = {
-                onMovePaths(drop.paths, drop.destination)
-                dragState.dismiss()
-            }) { Text("Mover") } },
+                dragState.acceptPending()
+                if (drop.action == FinderDropAction.COPY) onCopyPathsTo(drop.paths, drop.destination)
+                else onMovePaths(drop.paths, drop.destination)
+            }) { Text(if (drop.action == FinderDropAction.COPY) "Copiar" else "Mover") } },
             dismissButton = { TextButton(onClick = { dragState.dismiss() }) { Text("Cancelar") } })
     }
     if (showTrash) FinderTrashDialog(trashEntries, trashLoading, trashError,
@@ -643,6 +661,7 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
         .background(if (selected) Color(0xffdcdfe6) else if (hovered) Color(0xffe6e7ec) else Color.Transparent)
         .hoverable(interaction)
         .then(if (dragState != null) Modifier.finderFolderDropTarget("sidebar:$path", path, dragState) else Modifier)
+        .finderDragVisual(path, true, dragState ?: remember { FinderDragDropState() })
         .finderRightClick { if (pinned) menu = true }
         .clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (imageUri != null) AsyncImage(model = Uri.parse(imageUri), contentDescription = null,
@@ -671,7 +690,9 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
     val files = remember(column?.files, query, descending) {
         column?.files.orEmpty().filter { it.name.contains(query, true) }.let { if (descending) it.reversed() else it }
     }
-    Box(modifier.fillMaxHeight().background(Paper).testTag("finder-icons")) {
+    val marquee = remember(column?.path) { FinderMarqueeState() }
+    Box(modifier.fillMaxHeight().background(Paper).testTag("finder-icons")
+        .finderMarqueeGesture(controller, marquee, dragState)) {
         key(column?.path) {
             LazyVerticalGrid(columns = GridCells.Adaptive(140.dp), modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(24.dp, 22.dp), horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -686,7 +707,9 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                     Column(Modifier.fillMaxWidth().height(151.dp).clip(RoundedCornerShape(11.dp))
                         .background(if (hovered && !selected) Color(0xfff7f8fa) else Color.Transparent)
                         .hoverable(interaction)
-                        .finderDragSource(file.path, column?.selected.orEmpty(), dragState)
+                        .finderMarqueeItem(file.path, marquee)
+                        .finderDragVisual(file.path, file.isDirectory, dragState)
+                        .finderDragSource(file.path, column?.selected.orEmpty(), dragState, ctrl)
                         .then(if (file.isDirectory) Modifier.finderFolderDropTarget("icon:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                         .finderRightClick {
@@ -720,6 +743,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
             BasicText(column.error, style = TextStyle(color = Muted, fontSize = 12.sp))
             Label("Reintentar", Modifier.clickable { controller.refresh() }.padding(12.dp), Accent)
         } else if (files.isEmpty()) Label(if (query.isBlank()) "Carpeta vacía" else "Sin resultados", Modifier.align(Alignment.Center), Muted)
+        FinderMarqueeOverlay(marquee)
     }
 }
 
@@ -766,7 +790,8 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         .background(if (selected) { if (active) Accent else Color(0xffdedee3) }
                             else if (hovered) Color(0xffefeff2) else Color.Transparent)
                         .hoverable(interaction)
-                        .finderDragSource(file.path, column.selected, dragState)
+                        .finderDragVisual(file.path, file.isDirectory, dragState)
+                        .finderDragSource(file.path, column.selected, dragState, ctrl)
                         .then(if (file.isDirectory) Modifier.finderFolderDropTarget("column:${index}:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                         .finderRightClick { menuOpen = true }
