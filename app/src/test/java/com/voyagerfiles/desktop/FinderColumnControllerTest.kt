@@ -18,6 +18,27 @@ class FinderColumnControllerTest {
         withTimeout(5000) { while (controller.columns.value.any { it.loading }) delay(5) }
     }
 
+    @Test fun selectingOneHundredFilesKeepsPathsAndRespectsVisibleOrder() = runBlocking {
+        val root = temporary.newFolder()
+        repeat(100) { i -> File(root, "item-${i.toString().padStart(3, '0')}.txt").writeText("$i") }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        try {
+            val controller = FinderColumnController(scope, session(root.path), LocalFileProvider()::listFiles)
+            controller.start(); settle(controller)
+            val items = controller.columns.value.last().files
+            assertEquals(100, items.size)
+            controller.selectAll()
+            assertEquals(items.map { it.path }.toSet(), controller.columns.value.last().selected)
+            controller.clearSelection()
+            assertTrue(controller.columns.value.last().selected.isEmpty())
+            val visible = items.asReversed()
+            controller.selectOnly(0, visible.first(), visibleOrder = visible.map { it.path })
+            controller.selectOnly(0, visible.last(), extend = true, visibleOrder = visible.map { it.path })
+            assertEquals(100, controller.columns.value.last().selected.size)
+            assertEquals("0", File(root, "item-000.txt").readText())
+        } finally { scope.cancel() }
+    }
+
     // Catches shared browseState or loading a different path from the selected directory.
     @Test fun localColumnsNavigateIndependentlyAndKeepAncestorSelection() = runBlocking {
         val root = temporary.newFolder()
