@@ -636,7 +636,7 @@ fun FinderDesktopScreen(
             Box(Modifier.fillMaxHeight().width(dividerWidth)
                 .background(if (dividerHovered && !shell.sidebarRail) palette.hover else palette.sidebar)
                 .hoverable(resizeInteraction)
-                .pointerHoverIcon(if (shell.sidebarRail) PointerIcon.Default else PointerIcon.HorizontalResize)
+                .pointerHoverIcon(if (shell.sidebarRail) PointerIcon.Default else PointerIcon(android.view.PointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW))
                 .pointerInput(density, shell.sidebarRail, availableWindowWidth) {
                     if (!shell.sidebarRail) detectHorizontalDragGestures { change, delta ->
                         change.consume()
