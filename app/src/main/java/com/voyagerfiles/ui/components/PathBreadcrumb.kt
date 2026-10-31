@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
@@ -44,8 +45,9 @@ fun PathBreadcrumb(
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
+                .heightIn(min = 48.dp)
                 .clickable { onNavigate(base) }
-                .padding(horizontal = 10.dp, vertical = 14.dp),
+                .padding(horizontal = 10.dp, vertical = 10.dp),
         )
 
         parts.forEachIndexed { index, part ->
@@ -62,8 +64,9 @@ fun PathBreadcrumb(
                 color = if (isLast) MaterialTheme.colorScheme.onSurface
                 else MaterialTheme.colorScheme.primary,
                 modifier = Modifier
+                    .heightIn(min = 48.dp)
                     .clickable(enabled = !isLast) { onNavigate(targetPath) }
-                    .padding(horizontal = 10.dp, vertical = 14.dp),
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
             )
         }
     }
