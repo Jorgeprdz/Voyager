@@ -6,7 +6,7 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `09-HARDENING-DELIVERY.md` (cierre automatizado; aceptación física/OAuth pendiente)
 - LAST_COMPLETED_STAGE: `09-PARTIAL-PASS_AUTOMATED`
-- STATUS: `FINAL_APK_PASS_AUTOMATED_PARTIAL_EXTERNAL_BLOCKED`
+- STATUS: `R3.1_PARTIAL_VALIDATION_STOPPED_BY_USER`
 - NEXT_ACTION: `Acción externa indispensable: OAuth legítimo para Google Drive/OneDrive; aceptación física Samsung DeX/Android 17 y revisión visual móvil; implementar funciones R3 parciales según 09-AUDIT-REPORT.md antes de producción`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
@@ -163,3 +163,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Bloques A/B implementados con límites explícitos en `R3.1-FULL-POLISH-REPORT.md`; bloque C en validación integral.
 - STATUS R3.1: `PARTIAL_PENDING_FINAL_CI`; OAuth real `BLOCKED_EXTERNAL`, aceptación `PENDING_PHYSICAL_DEX/PENDING_USER_VISUAL_REVIEW`.
 - No declarar nueve etapas completas; faltan reanudación cloud tras proceso, centro cloud integrado, red Desktop de escritura y aceptación física.
+
+### R3.1 — corte por instrucción «no compiles»
+- Código publicado `d9a957a477551aeb11af79c3c2864235848cde1e`; árbol de código limpio al corte.
+- Instantánea anterior: Kotlin app/androidTest compilados; 561 casos locales, 545 PASS/1 FAIL/15 skipped. Fallo de localización corregido, sin revalidar. Lint y HEAD final pendientes.
+- Cancelación solicitada para runs `41192344250` y `41192369765`. No iniciar más builds/CI hasta autorización nueva; tampoco push de código que los active.
+- No existe entrega APK R3.1 verificada. Reporte y handoff: `R3.1-FULL-POLISH-REPORT.md`, `R3.1-CONTINUE-PROMPT.md`.
