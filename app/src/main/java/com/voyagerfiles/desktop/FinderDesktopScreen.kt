@@ -391,6 +391,7 @@ fun FinderDesktopScreen(
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
     val dragState = remember(controller.session.id) { FinderDragDropState() }
+    LaunchedEffect(dragState, operationsAvailable) { dragState.enabled = operationsAvailable }
     LaunchedEffect(controller.session.rootPath) {
         dragState.allowedRoot = controller.session.rootPath
     }
@@ -463,14 +464,17 @@ fun FinderDesktopScreen(
                 event.key == Key.Escape && quickLook == null && controller.selectedFile != null -> { controller.clearSelection(); true }
                 !searching && event.key in listOf(Key.DirectionLeft, Key.DirectionRight,
                     Key.DirectionUp, Key.DirectionDown) && !event.isAltPressed -> {
-                    val columnDelta = if (viewStyle == FinderViewStyle.ICONS) 4 else 1
+                    val columnDelta = if (viewStyle == FinderViewStyle.ICONS) controller.iconColumns else 1
                     val step = when (event.key) {
                         Key.DirectionLeft -> -1
                         Key.DirectionRight -> 1
                         Key.DirectionUp -> -columnDelta
                         else -> columnDelta
                     }
-                    controller.moveSelectionBy(step, event.isShiftPressed)
+                    val visibleOrder = finderOrderFiles(
+                        columns.lastOrNull()?.files.orEmpty().filter { it.name.contains(search, true) },
+                        sortBy, descending).map { it.path }
+                    controller.moveSelectionBy(step, event.isShiftPressed, visibleOrder)
                     true
                 }
                 event.key == Key.Spacebar && !searching && quickLook == null && controller.selectedFile?.isDirectory == false -> {
@@ -780,6 +784,9 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
     }
     val marquee = remember(column?.path) { FinderMarqueeState() }
     val gridState = rememberLazyGridState()
+    LaunchedEffect(gridState) {
+        snapshotFlow { gridState.layoutInfo.maxSpan }.collect { controller.iconColumns = it.coerceAtLeast(1) }
+    }
     var gridBounds by remember { mutableStateOf(Rect.Zero) }
     FinderEdgeAutoScroll(marquee, dragState, gridBounds) { gridState.scrollBy(it) }
     Box(modifier.fillMaxHeight().background(Paper).testTag("finder-icons")
@@ -809,7 +816,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                             menuOpen = true
                         }
                         .combinedClickable(
-                            onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift) },
+                            onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
                             onDoubleClick = { if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file) },
                             onLongClick = { controller.selectOnly(columns.lastIndex, file); menuOpen = true })
                         .semantics { this.selected = selected }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -895,7 +902,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         .combinedClickable(
                             onClick = {
                                 if (index == controller.columns.value.lastIndex && (ctrl || shift))
-                                    controller.selectOnly(index, file, ctrl, shift)
+                                    controller.selectOnly(index, file, ctrl, shift, filtered.map { it.path })
                                 else controller.select(index, file)
                             },
                             onDoubleClick = { if (file.isDirectory) controller.select(index, file) else onOpen(file) },
