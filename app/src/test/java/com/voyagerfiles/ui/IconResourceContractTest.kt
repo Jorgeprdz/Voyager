@@ -109,3 +109,4 @@ class IconResourceContractTest {
             "fastlane/metadata/android/en-US/images/icon.png" to "f00f2fa99cbcafc1bcd625107351539436a16a27",
         )
     }
+}

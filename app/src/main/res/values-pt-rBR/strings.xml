@@ -567,4 +567,13 @@
     <string name="finderdex_column_modified">Modificado</string>
     <string name="finderdex_select_file">Selecione um arquivo</string>
     <string name="finderdex_double_click_open">Clique duas vezes para abrir</string>
+    <string name="finderdex_toolbar_forward">Avançar</string>
+    <string name="finderdex_toolbar_new_folder">Nova pasta</string>
+    <string name="finderdex_toolbar_trash">Lixeira</string>
+    <string name="finderdex_toolbar_sort_by">Ordenar por</string>
+    <string name="finderdex_toolbar_sort_ascending">Ordem crescente</string>
+    <string name="finderdex_toolbar_sort_descending">Ordem decrescente</string>
+    <string name="finderdex_toolbar_preview_resize">Pré-visualização (ampliar janela)</string>
+    <string name="finderdex_toolbar_preview_hide">Ocultar pré-visualização</string>
+    <string name="finderdex_toolbar_preview_show">Mostrar pré-visualização</string>
 </resources>

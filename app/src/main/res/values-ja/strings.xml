@@ -555,4 +555,13 @@
     <string name="finderdex_column_modified">更新日時</string>
     <string name="finderdex_select_file">ファイルを選択</string>
     <string name="finderdex_double_click_open">ダブルクリックして開く</string>
+    <string name="finderdex_toolbar_forward">進む</string>
+    <string name="finderdex_toolbar_new_folder">新しいフォルダー</string>
+    <string name="finderdex_toolbar_trash">ゴミ箱</string>
+    <string name="finderdex_toolbar_sort_by">並べ替え</string>
+    <string name="finderdex_toolbar_sort_ascending">昇順に並べ替え</string>
+    <string name="finderdex_toolbar_sort_descending">降順に並べ替え</string>
+    <string name="finderdex_toolbar_preview_resize">プレビュー（ウィンドウを拡大）</string>
+    <string name="finderdex_toolbar_preview_hide">プレビューを非表示</string>
+    <string name="finderdex_toolbar_preview_show">プレビューを表示</string>
 </resources>

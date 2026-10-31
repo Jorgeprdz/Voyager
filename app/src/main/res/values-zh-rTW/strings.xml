@@ -555,4 +555,13 @@
     <string name="finderdex_column_modified">修改時間</string>
     <string name="finderdex_select_file">選取檔案</string>
     <string name="finderdex_double_click_open">按兩下開啟</string>
+    <string name="finderdex_toolbar_forward">前進</string>
+    <string name="finderdex_toolbar_new_folder">新增資料夾</string>
+    <string name="finderdex_toolbar_trash">資源回收筒</string>
+    <string name="finderdex_toolbar_sort_by">排序依據</string>
+    <string name="finderdex_toolbar_sort_ascending">遞增排序</string>
+    <string name="finderdex_toolbar_sort_descending">遞減排序</string>
+    <string name="finderdex_toolbar_preview_resize">預覽（放大視窗）</string>
+    <string name="finderdex_toolbar_preview_hide">隱藏預覽</string>
+    <string name="finderdex_toolbar_preview_show">顯示預覽</string>
 </resources>

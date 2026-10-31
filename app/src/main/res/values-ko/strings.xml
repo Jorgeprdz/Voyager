@@ -555,4 +555,13 @@
     <string name="finderdex_column_modified">수정일</string>
     <string name="finderdex_select_file">파일 선택</string>
     <string name="finderdex_double_click_open">두 번 클릭하여 열기</string>
+    <string name="finderdex_toolbar_forward">앞으로</string>
+    <string name="finderdex_toolbar_new_folder">새 폴더</string>
+    <string name="finderdex_toolbar_trash">휴지통</string>
+    <string name="finderdex_toolbar_sort_by">정렬 기준</string>
+    <string name="finderdex_toolbar_sort_ascending">오름차순 정렬</string>
+    <string name="finderdex_toolbar_sort_descending">내림차순 정렬</string>
+    <string name="finderdex_toolbar_preview_resize">미리보기(창 확대)</string>
+    <string name="finderdex_toolbar_preview_hide">미리보기 숨기기</string>
+    <string name="finderdex_toolbar_preview_show">미리보기 표시</string>
 </resources>

@@ -555,4 +555,13 @@
     <string name="finderdex_column_modified">Đã sửa đổi</string>
     <string name="finderdex_select_file">Chọn một tệp</string>
     <string name="finderdex_double_click_open">Nhấp đúp để mở</string>
+    <string name="finderdex_toolbar_forward">Tiến</string>
+    <string name="finderdex_toolbar_new_folder">Thư mục mới</string>
+    <string name="finderdex_toolbar_trash">Thùng rác</string>
+    <string name="finderdex_toolbar_sort_by">Sắp xếp theo</string>
+    <string name="finderdex_toolbar_sort_ascending">Sắp xếp tăng dần</string>
+    <string name="finderdex_toolbar_sort_descending">Sắp xếp giảm dần</string>
+    <string name="finderdex_toolbar_preview_resize">Xem trước (phóng to cửa sổ)</string>
+    <string name="finderdex_toolbar_preview_hide">Ẩn xem trước</string>
+    <string name="finderdex_toolbar_preview_show">Hiện xem trước</string>
 </resources>

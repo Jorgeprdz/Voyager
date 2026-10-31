@@ -552,4 +552,13 @@
     <string name="finderdex_column_modified">修改时间</string>
     <string name="finderdex_select_file">选择文件</string>
     <string name="finderdex_double_click_open">双击打开</string>
+    <string name="finderdex_toolbar_forward">前进</string>
+    <string name="finderdex_toolbar_new_folder">新建文件夹</string>
+    <string name="finderdex_toolbar_trash">回收站</string>
+    <string name="finderdex_toolbar_sort_by">排序方式</string>
+    <string name="finderdex_toolbar_sort_ascending">升序排列</string>
+    <string name="finderdex_toolbar_sort_descending">降序排列</string>
+    <string name="finderdex_toolbar_preview_resize">预览（放大窗口）</string>
+    <string name="finderdex_toolbar_preview_hide">隐藏预览</string>
+    <string name="finderdex_toolbar_preview_show">显示预览</string>
 </resources>
