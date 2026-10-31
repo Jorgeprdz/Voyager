@@ -631,13 +631,13 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
-    fun uploadDocuments(uris: List<Uri>) {
+    fun uploadDocuments(uris: List<Uri>, destinationDirectory: String = _browseState.value.currentPath, onFinished: () -> Unit = {}) {
         if (uris.isEmpty()) return
         val destinationProvider = fileProvider
-        val destinationPath = _browseState.value.currentPath
+        val destinationPath = destinationDirectory
         val contentResolver = getApplication<Application>().contentResolver
         val progressLabel = UiText.Resource(R.string.progress_uploading)
-        launchOperation(R.string.progress_uploading, R.string.operation_upload) {
+        launchOperation(R.string.progress_uploading, R.string.operation_upload, onFinished = onFinished) {
             val sources = withContext(Dispatchers.IO) {
                 uris.map { uri -> UploadSourceFactory.fromUri(contentResolver, uri) }
             }
@@ -1594,6 +1594,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
         @StringRes operationName: Int,
         @StringRes cancelledMessage: Int = R.string.transfer_cancelled,
         block: suspend () -> Unit,
+        onFinished: () -> Unit = {},
     ) {
         val started = operationController.launch(
             label = UiText.Resource(progressLabel),
@@ -1604,10 +1605,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     else OperationMessages.failure(operationName, error),
                 )
             },
-            onFinished = {},
+            onFinished = onFinished,
             block = block,
         )
         if (!started) {
+            onFinished()
             val active = operationState.value as? OperationState.Running ?: return
             showSnackbar(UiText.Resource(R.string.operation_already_running, listOf(active.label)))
         }

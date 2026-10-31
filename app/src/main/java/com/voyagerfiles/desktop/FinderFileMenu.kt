@@ -106,7 +106,7 @@ private fun funAction(action: FinderFileAction, name: String, onDismiss: () -> U
 }
 
 /** Reads keyboard modifiers from the actual Android pointer event, not a stale key press. */
-internal fun Modifier.finderMouseSelectionModifiers(onChange: (Boolean, Boolean) -> Unit): Modifier =
+internal fun Modifier.finderMouseSelectionModifiers(onChange: (Boolean, Boolean, Boolean) -> Unit): Modifier =
     pointerInput(onChange) {
         awaitPointerEventScope {
             while (true) {
@@ -115,6 +115,7 @@ internal fun Modifier.finderMouseSelectionModifiers(onChange: (Boolean, Boolean)
                     onChange(
                         event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed,
                         event.keyboardModifiers.isShiftPressed,
+                        event.keyboardModifiers.isAltPressed,
                     )
                 }
             }

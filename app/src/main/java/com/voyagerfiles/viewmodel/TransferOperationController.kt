@@ -50,6 +50,7 @@ class TransferOperationController(
             finish(OperationOutcome.FAILED)
             mutableState.value = OperationState.Idle
             onFailure(error)
+            onFinished()
             return true
         }
         scope.launch(token.contextElement()) {

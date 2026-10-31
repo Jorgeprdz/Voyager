@@ -24,6 +24,9 @@ private data class FinderDropTarget(val path: String, val rect: Rect, val allowe
 internal class FinderDragDropState(
     private val isWritableDirectory: (String) -> Boolean = { File(it).isDirectory && File(it).canWrite() },
 ) {
+    /** Explicit Alt+drag uses Android's global mechanism; ordinary drags remain local. */
+    var externalStart: ((List<String>) -> Boolean)? = null
+    var externalError: (() -> Unit)? = null
     private val targets = mutableStateMapOf<String, FinderDropTarget>()
     var allowedRoot: String = "/"
     var enabled: Boolean = false
@@ -168,15 +171,20 @@ internal fun Modifier.finderDragSource(
     selection: Set<String>,
     drag: FinderDragDropState,
     copyModifier: Boolean = false,
+    externalRequested: Boolean = false,
 ): Modifier = composed {
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     this.onGloballyPositioned { rootOrigin = it.positionInRoot() }
-        .pointerInput(path, selection, drag, copyModifier) {
+        .pointerInput(path, selection, drag, copyModifier, externalRequested) {
             detectDragGestures(
                 onDragStart = { at ->
-                    drag.copyRequested = copyModifier
-                    drag.start(if (path in selection) selection.toList() else listOf(path),
-                        rootOrigin + at, rootOrigin + at)
+                    val paths = if (path in selection) selection.toList() else listOf(path)
+                    if (externalRequested) {
+                        if (drag.externalStart?.invoke(paths) != true) drag.externalError?.invoke()
+                    } else {
+                        drag.copyRequested = copyModifier
+                        drag.start(paths, rootOrigin + at, rootOrigin + at)
+                    }
                 },
                 onDrag = { change, _ ->
                     change.consume()

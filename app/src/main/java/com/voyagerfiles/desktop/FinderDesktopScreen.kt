@@ -51,6 +51,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.voyagerfiles.R
@@ -239,6 +240,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     val trash by viewModel.trashState.collectAsState()
     val clipboardPaths by viewModel.clipboardPaths.collectAsState()
     val context = LocalContext.current
+    val rootView = LocalView.current
     LaunchedEffect(session?.id) {
         if (session == null) viewModel.openLocalRoot(Environment.getExternalStorageDirectory().path)
     }
@@ -266,6 +268,38 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             (0 until json.length()).map { json.getString(it) }
         }.getOrDefault(emptyList())
     ) }
+    // Only external content:// payloads enter Voyager's existing cancellable upload engine.
+    // Permissions remain alive until its onFinished callback, including cancellation.
+    DisposableEffect(rootView, controller) {
+        val listener = android.view.View.OnDragListener { _, event ->
+            val target = controller?.currentPath
+            val ready = target != null &&
+                viewModel.browseState.value.currentPath == target &&
+                FinderCrossAppTransfer.writableLocalFolder(target) &&
+                viewModel.operationState.value !is com.voyagerfiles.viewmodel.OperationState.Running
+            when (event.action) {
+                android.view.DragEvent.ACTION_DRAG_STARTED ->
+                    ready && FinderCrossAppTransfer.activity(context) != null
+                android.view.DragEvent.ACTION_DROP -> {
+                    val uris = FinderCrossAppTransfer.incomingUris(event)
+                    if (!ready || !FinderCrossAppPolicy.accepts(
+                            uris.map { it.toString() }, true, false)) false
+                    else {
+                        val activity = FinderCrossAppTransfer.activity(context)
+                        val permission = activity?.requestDragAndDropPermissions(event)
+                        if (permission == null) false
+                        else {
+                            viewModel.uploadDocuments(uris, target!!) { permission.release() }
+                            true
+                        }
+                    }
+                }
+                else -> true
+            }
+        }
+        rootView.setOnDragListener(listener)
+        onDispose { rootView.setOnDragListener(null) }
+    }
     val orderedFavorites = bookmarks.filter { it.source == FileSource.LOCAL }
         .sortedWith(compareBy { favoriteOrder.indexOf(it.path).let { index ->
             if (index < 0) Int.MAX_VALUE else index
@@ -452,6 +486,16 @@ fun FinderDesktopScreen(
     val columns by controller.columns.collectAsState()
     val chrome = rememberFinderWindowChrome()
     val dragState = remember(controller.session.id) { FinderDragDropState() }
+    val androidView = LocalView.current
+    SideEffect {
+        dragState.externalError = { /* Unsupported MIME or missing URI access; no source mutation. */ }
+        dragState.externalStart = { paths ->
+            val indexed = columns.flatMap { it.files }.associateBy { it.path }
+            val selectedFiles = paths.mapNotNull { indexed[it] }
+            selectedFiles.size == paths.size &&
+                runCatching { FinderCrossAppTransfer.start(androidView, selectedFiles) }.getOrDefault(false)
+        }
+    }
     LaunchedEffect(dragState, operationsAvailable) { dragState.enabled = operationsAvailable }
     LaunchedEffect(controller.session.rootPath) {
         dragState.allowedRoot = controller.session.rootPath
@@ -952,6 +996,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                     val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                     var ctrl by remember { mutableStateOf(false) }
                     var shift by remember { mutableStateOf(false) }
+                    var alt by remember { mutableStateOf(false) }
                     var keyboardFocused by remember { mutableStateOf(false) }
                     val rowColor = finderAnimatedMaterial(
                         if (pressed) colors.pressed
@@ -966,9 +1011,9 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         .onFocusChanged { keyboardFocused = it.isFocused }
                         .finderMarqueeItem(file.path, marquee)
                         .finderDragVisual(file.path, file.isDirectory, dragState)
-                        .finderDragSource(file.path, column?.selected.orEmpty(), dragState, ctrl)
+                        .finderDragSource(file.path, column?.selected.orEmpty(), dragState, ctrl, alt)
                         .then(if (file.isDirectory) Modifier.finderFolderDropTarget("icon:${file.path}", file.path, dragState) else Modifier)
-                        .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
+                        .finderMouseSelectionModifiers { c, sh, a -> ctrl = c; shift = sh; alt = a }
                         .finderRightClick(secondaryClick) {
                             controller.selectForContextMenu(columns.lastIndex, file)
                             menuOpen = true
@@ -1067,6 +1112,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                     val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                     var ctrl by remember { mutableStateOf(false) }
                     var shift by remember { mutableStateOf(false) }
+                    var alt by remember { mutableStateOf(false) }
                     var keyboardFocused by remember { mutableStateOf(false) }
                     val rowColor = finderAnimatedMaterial(
                         if (pressed) palette.pressed
@@ -1078,9 +1124,9 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         .background(rowColor).hoverable(interaction)
                         .onFocusChanged { keyboardFocused = it.isFocused }
                         .finderDragVisual(file.path, file.isDirectory, dragState)
-                        .finderDragSource(file.path, column.selected, dragState, ctrl)
+                        .finderDragSource(file.path, column.selected, dragState, ctrl, alt)
                         .then(if (file.isDirectory) Modifier.finderFolderDropTarget("column:${index}:${file.path}", file.path, dragState) else Modifier)
-                        .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
+                        .finderMouseSelectionModifiers { c, sh, a -> ctrl = c; shift = sh; alt = a }
                         .finderRightClick(secondaryClick) {
                             controller.selectForContextMenu(index, file)
                             menuOpen = true

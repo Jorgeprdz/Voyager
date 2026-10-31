@@ -90,6 +90,7 @@ internal fun FinderListView(
                 val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                 var ctrl by remember { mutableStateOf(false) }
                 var shift by remember { mutableStateOf(false) }
+                    var alt by remember { mutableStateOf(false) }
                 val hoverSource = remember { MutableInteractionSource() }
                 val hovered by hoverSource.collectIsHoveredAsState()
                 val pressed by hoverSource.collectIsPressedAsState()
@@ -105,9 +106,9 @@ internal fun FinderListView(
                     .onFocusChanged { keyboardFocused = it.isFocused }
                     .finderMarqueeItem(file.path, marquee)
                     .finderDragVisual(file.path, file.isDirectory, dragState)
-                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
+                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl, alt)
                     .then(if (file.isDirectory) Modifier.finderFolderDropTarget("list:${file.path}", file.path, dragState) else Modifier)
-                    .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
+                    .finderMouseSelectionModifiers { c, sh, a -> ctrl = c; shift = sh; alt = a }
                     .finderRightClick(secondaryClick) {
                         controller.selectForContextMenu(columns.lastIndex, file)
                         menu = true
@@ -216,6 +217,7 @@ internal fun FinderGalleryView(
                 val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                 var ctrl by remember { mutableStateOf(false) }
                 var shift by remember { mutableStateOf(false) }
+                    var alt by remember { mutableStateOf(false) }
                 val active = file.path in last?.selected.orEmpty()
                 var keyboardFocused by remember { mutableStateOf(false) }
                 val interaction = remember { MutableInteractionSource() }
@@ -229,8 +231,8 @@ internal fun FinderGalleryView(
                     .background(surface).hoverable(interaction)
                     .onFocusChanged { keyboardFocused = it.isFocused }
                     .finderDragVisual(file.path, file.isDirectory, dragState)
-                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
-                    .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
+                    .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl, alt)
+                    .finderMouseSelectionModifiers { c, sh, a -> ctrl = c; shift = sh; alt = a }
                     .then(if (file.isDirectory) Modifier.finderFolderDropTarget("gallery:${file.path}", file.path, dragState) else Modifier)
                     .finderRightClick(secondaryClick) {
                         controller.selectForContextMenu(columns.lastIndex, file)
