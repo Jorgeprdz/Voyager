@@ -1012,6 +1012,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
             }
             var completed = 0
             val errors = mutableListOf<String>()
+            try {
             for (source in chosen) {
                 val onProgress: (StreamTransferProgress) -> Unit = { progress ->
                     updateOperationProgress(TransferProgress(UiText.Resource(progressLabel),
@@ -1032,8 +1033,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     errors += "${source.substringAfterLast('/')}: ${error.localizedMessage ?: "error"}"
                 }
             }
-            refreshFiles()
-            desktopColumns?.refresh()
+            } finally {
+                // Previous entries may already be committed when a later entry is cancelled.
+                refreshFiles()
+                desktopColumns?.refresh()
+            }
             if (errors.isNotEmpty()) {
                 showSnackbar(UiText.Dynamic("${errors.size} elemento(s) fallaron: ${errors.joinToString("; ").take(400)}"))
             } else showSnackbar(UiText.Dynamic("$completed elemento(s) ${if (move) "movido(s)" else "copiado(s)"}"))
@@ -1183,6 +1187,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     )
                 }
             }
+            try {
             for (sourcePath in paths) {
                 val itemResult = itemResults.getValue(sourcePath)
                 val item = itemResult.getOrNull()
@@ -1258,10 +1263,14 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     if (firstError == null) firstError = error
                 }
             }
+            } finally {
+                // Clipboard batches can be cancelled after moving some sources.
+                refreshFiles()
+                desktopColumns?.refresh()
+            }
             if (operation == ClipboardOperation.CUT && failed == 0 && skipped == 0) {
                 clearClipboard()
             }
-            refreshFiles()
             if (failed > 0) {
                 showSnackbar(
                     OperationMessages.partial(
