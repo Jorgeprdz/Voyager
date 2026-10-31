@@ -4,16 +4,16 @@
 - IMPLEMENTATION_BRANCH: `feat/finderdex-r3-implementation` (crear sólo cuando Codex inicie)
 - BASELINE_BRANCH: `feat/finder-dex-foundation-01`
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
-- CURRENT_STAGE: `02-CROSS-APP-DRAG-DROP.md`
-- LAST_COMPLETED_STAGE: `01-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_02_IMPLEMENTED_CI_RUNNING`
-- NEXT_ACTION: `Verificar run 41176885241 para commit d44d96a0 de etapa 02; corregir cualquier fallo sin tocar R2.2, actualizar evidencias y continuar con 03-ONEDRIVE.md sólo después del gate`
+- CURRENT_STAGE: `03-ONEDRIVE.md`
+- LAST_COMPLETED_STAGE: `02-PARTIAL-PASS_AUTOMATED`
+- STATUS: `STAGE_02_PARTIAL_PASS_AUTOMATED_STAGE_03_READY`
+- NEXT_ACTION: `Leer 03-ONEDRIVE.md e implementar adaptador Graph seguro; registrar BLOCKED_EXTERNAL para registro de Microsoft/OAuth y continuar con etapas independientes tras validar CI`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive OAuth/client registration, user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
 |---|---|---|---|---|---|
 | 01 Google Drive | PARTIAL/PASS_AUTOMATED (contract + disconnected UI; no cloud I/O) | `3a30ebc` | [Run 41174902301](https://github.com/Jorgeprdz/Voyager/actions/runs/41174902301) SUCCESS: compile,  unit, lint, debug APK, signing checks; SHA256 `f47197ffaf7b55bf4679421d720200300a722af9f00fae79c1a7a6da6922c17c` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL: OAuth/consent, no real account access |
-| 02 Drag & drop externo | PARTIAL / CI_PENDING (Android global Alt+drag saliente + content:// entrante al directorio activo) | `d44d96a0` | [Run 41176885241](https://github.com/Jorgeprdz/Voyager/actions/runs/41176885241) IN_PROGRESS; no PASS todavía | PENDING_PHYSICAL_DEX | Compatibilidad MIME por app; pruebas con dos ventanas y permisos pendientes |
+| 02 Drag & drop externo | PARTIAL/PASS_AUTOMATED (global Alt+drag, content URI receive, hovered folder/sidebar destinations) | `d44d96a0` | [Run 41176885241](https://github.com/Jorgeprdz/Voyager/actions/runs/41176885241) SUCCESS: build, unit, lint, APK, signed package; SHA256 `35b4a53819c07365255ff87c4320b3c52ef9cdb59ed72f915f4937a20199ef37` | PENDING_PHYSICAL_DEX | Folder-as-source unsupported; external app acceptance and URI grants unverified physically |
 | 03 OneDrive | PLANNED | — | — | PENDING | Registro Microsoft por verificar |
 | 04 Analizador | PLANNED | — | — | PENDING | — |
 | 05 Recientes/red/Quick Share | PLANNED | — | — | PENDING | — |
@@ -67,3 +67,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Run 41176428850: compile y lint PASS, 527 unit tests ejecutados; 1 FAILED en `LocalizationResourceContractTest.productionUiCopyUsesAndroidResources`. Log y XML verificaron 15 textos de diálogos Desktop que no usaban recursos.
 - `d44d96a0`: reemplazadas las cadenas detectadas por `stringResource`, nuevas cadenas traducidas para locales soportados; tokens de diseño y geometría de R2.2 sin alterar.
 - Run 41176885241 IN_PROGRESS. No avanzar hasta PASS de build, unit y lint.
+
+### 2026-10-31 UTC — etapa 02 gate automatizado aprobado
+- Run [41176885241](https://github.com/Jorgeprdz/Voyager/actions/runs/41176885241) SUCCESS para código `d44d96a0`: compile + unit + lint + assemble + `apksigner` y launcher PASS.
+- Publicado `FinderDex-R3-APK` artifact ID `13033292445` (no integrado final), `FinderDex-R3-Tests` ID `13033855539`. App `com.finderdex.preview`; SHA256 verificado en log: `35b4a53819c07365255ff87c4320b3c52ef9cdb59ed72f915f4937a20199ef37`.
+- Seguridad: drag externo COPY solamente, jamás borra origen; permisos de drop se liberan al concluir el motor existente. Se preservan las rutas de drag interno R2.2 y los tokens visuales.
+- **PARTIAL** pese a gate automatizado: sin prueba real entre dos ventanas DeX, no se garantiza compatibilidad de cada app/MIME ni arrastre directo de carpetas como fuente. No se declara PASS_PHYSICAL.
+- Se pasa a etapa 03 porque no hay bloqueo P0 automatizado; la deuda física de etapa 02 queda explícita para etapa 09.
