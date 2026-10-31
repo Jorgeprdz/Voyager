@@ -7,7 +7,7 @@
 - CURRENT_STAGE: `09-HARDENING-DELIVERY.md`
 - LAST_COMPLETED_STAGE: `08-PARTIAL-PASS_AUTOMATED`
 - STATUS: `STAGE_09_FINAL_INTEGRATION_CI_PENDING`
-- NEXT_ACTION: `Verificar CI del siguiente commit etapa 09: build/test/lint/firma/launcher y SHA real. Si falla, corregir. Después actualizar informe final, conservar PARTIAL/BLOCKED_EXTERNAL y entregar script Termux`
+- NEXT_ACTION: `Verificar CI del fix fcef81a (renombrado solo por capitalización), run nuevo. Si PASS, registrar APK/SHA256 y cerrar stage 09 PARTIAL/BLOCKED_EXTERNAL`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -144,3 +144,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Tests de regresión `FinderR3SafetyContractTest`: drag externo copy-only/content URI, límites 64, renombrado 1000 archivos, colisión y extensiones.
 - Descargador `scripts/finderdex-r3-download.sh`: requiere Termux+gh+storage concedidos; valida run success y commit exacto, firma opcional local, SHA256 del APK y destino sin sobrescribir ni instalar.
 - Todavía no es PASS; debe completarse CI para el commit etapa 09 y registrarse SHA exacto del APK. Sin conexión a Termux físico, no afirmar descarga a Android.
+
+### 2026-10-31 UTC — corrección de gate etapa 09
+- [Run 41189166356](https://github.com/Jorgeprdz/Voyager/actions/runs/41189166356): build y lint PASS; unit tests FAILED, 547 ejecutadas/1 fallida/14 omitidas; APK/firma omitidos.
+- Causa verificada en log: `FinderR3SafetyContractTest.renamerDoesNotSilentlyChangeExtensions` falló por lógica de preview que trataba un renombrado de capitalización del **propio archivo** como colisión con otra selección.
+- Corregido en `fcef81ac09397201bd223e72cd83b9eb0e313c50`: compara nombres propuestos solo contra **otros** elementos seleccionados; el nombre propio se permite y las colisiones reales siguen prohibidas.
+- No declarar etapa 09 PASS hasta que termine el nuevo workflow para ese SHA.
