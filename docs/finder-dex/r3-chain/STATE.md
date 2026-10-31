@@ -4,10 +4,10 @@
 - IMPLEMENTATION_BRANCH: `feat/finderdex-r3-implementation` (crear sólo cuando Codex inicie)
 - BASELINE_BRANCH: `feat/finder-dex-foundation-01`
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
-- CURRENT_STAGE: `08-MOBILE-REDESIGN.md`
-- LAST_COMPLETED_STAGE: `07-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_08_PARTIAL_CI_RUNNING`
-- NEXT_ACTION: `Verificar run 41186976912 para commit 103aa72, corregir fallos, registrar PENDING_USER_VISUAL_REVIEW y avanzar a 09-HARDENING-DELIVERY.md sólo tras gate`
+- CURRENT_STAGE: `09-HARDENING-DELIVERY.md`
+- LAST_COMPLETED_STAGE: `08-PARTIAL-PASS_AUTOMATED`
+- STATUS: `STAGE_08_PARTIAL_PASS_AUTOMATED_STAGE_09_AUDIT`
+- NEXT_ACTION: `Ejecutar stage 09: auditoría integral de código/seguridad/CI; publicar script de descarga R3 y checklist físico; validar workflow del commit final y SHA256; no declarar integraciones externas completas`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -19,7 +19,7 @@
 | 05 Recientes/red/Quick Share | PARTIAL/PASS_AUTOMATED (historial local, mtime separado, conexiones guardadas en sidebar, system share sheet existente) | `b7f4bc4` | [Run 41185601902](https://github.com/Jorgeprdz/Voyager/actions/runs/41185601902) SUCCESS: build, unit, lint, APK; SHA256 `f6d40cae291fa45eadee609b6d596b355539856eb40ba3a77928dc4ff163cd34` | PENDING_PHYSICAL_DEX | Red usa browser Voyager tras cambiar a vista móvil; Quick Share depende del receptor del sistema |
 | 06 Pestañas y doble panel | PARTIAL/PASS_AUTOMATED (pestañas locales y panel secundario sólo navegación) | `7bda48a` | [Run 41186030196](https://github.com/Jorgeprdz/Voyager/actions/runs/41186030196) SUCCESS: build, unit, lint, signed APK; SHA256 `e95c84dbdf1f94fc39ff82e8888385f62f1ffa5e1155275e302c449362b75a90` | PENDING_PHYSICAL_DEX | Sin cross-panel copy/verify; pestañas no persistidas tras proceso; requiere prueba de selección/resize |
 | 07 Renombrado/transferencias | PARTIAL/PASS_AUTOMATED (preview, lotes locales y progreso/cancelación existentes) | `9d8d8df` | [Run 41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) SUCCESS: build, unit, lint, signed APK; SHA256 `f30fcd04e5a697876698504c8eed8bf3ba99fc9e3247bf5e6d8c4767efcaf379` | PENDING_PHYSICAL_DEX | No pause/resume/retry universal; UI preview solo prefijo/numero aunque planner incluye más reglas |
-| 08 Rediseño móvil FinderDex | PARTIAL / CI_PENDING (HomeScreen y BrowserScreen móviles azul hielo; touch targets existentes) | `103aa72` | [Run 41186976912](https://github.com/Jorgeprdz/Voyager/actions/runs/41186976912) IN_PROGRESS | PENDING_PHYSICAL_DEX | PENDING_USER_VISUAL_REVIEW: sin capturas ni prueba real Android 17; Quick Look/transfer center parcial |
+| 08 Rediseño móvil FinderDex | PARTIAL/PASS_AUTOMATED (HomeScreen y BrowserScreen azul hielo, sin aprobación visual) | `8de0a63` | [Run 41187079680](https://github.com/Jorgeprdz/Voyager/actions/runs/41187079680) SUCCESS build/unit/lint/debug APK/firmado; SHA256 `f9e78afd9e060a854fa34aebc1bde67da009ecabccb6a64927de6dac3263cd82` | PENDING_PHYSICAL_DEX | PENDING_USER_VISUAL_REVIEW: sin capturas ni prueba real Android 17; Quick Look/transfer center parcial |
 | 09 End-to-end y APK | PLANNED | — | — | PENDING | — |
 
 ## Registro cronológico
@@ -133,3 +133,8 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Commit `103aa72`: `FinderMobileTokens` derivado de paleta azul/hielo, HomeScreen con cards y navegación touch, BrowserScreen con superficies de navegación/acción móviles refinadas. Desktop R2.2 no recibió cambios visuales.
 - Se reutiliza BrowserScreen funcional de Voyager: selección múltiple, breadcrumbs, búsqueda, vista grid/list, operaciones existentes. No se declaró rediseño completo de cada pantalla ni aprobación visual.
 - `PENDING_USER_VISUAL_REVIEW`, `PENDING_PHYSICAL_DEX`, sin capturas ni emulador. CI [41186976912](https://github.com/Jorgeprdz/Voyager/actions/runs/41186976912) en curso.
+
+### 2026-10-31 UTC — cierre gate etapa 08 y comienzo etapa 09
+- [Run 41186976912](https://github.com/Jorgeprdz/Voyager/actions/runs/41186976912) FAILED solo por import `heightIn` omitido en `HomeScreen.kt`; no fue P0 funcional. Corregido en `8de0a6399dda8223a10999d47da414c0ea585ca3`.
+- [Run 41187079680](https://github.com/Jorgeprdz/Voyager/actions/runs/41187079680) SUCCESS build, unit, lint, assemble, launcher y firmado. Artifact `FinderDex-R3-APK` id `13037312278`; SHA256 `f9e78afd9e060a854fa34aebc1bde67da009ecabccb6a64927de6dac3263cd82`.
+- Sigue `PARTIAL/PENDING_USER_VISUAL_REVIEW/PENDING_PHYSICAL_DEX`: sin capturas ni aprobación usuario ni prueba física. CURRENT_STAGE pasa a `09-HARDENING-DELIVERY.md`.
