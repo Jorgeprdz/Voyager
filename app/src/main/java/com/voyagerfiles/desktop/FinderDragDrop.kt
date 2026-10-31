@@ -171,7 +171,7 @@ internal fun Modifier.finderDragSource(
 ): Modifier = composed {
     var rootOrigin by remember { mutableStateOf(Offset.Zero) }
     this.onGloballyPositioned { rootOrigin = it.positionInRoot() }
-        .pointerInput(path, selection, drag) {
+        .pointerInput(path, selection, drag, copyModifier) {
             detectDragGestures(
                 onDragStart = { at ->
                     drag.copyRequested = copyModifier
