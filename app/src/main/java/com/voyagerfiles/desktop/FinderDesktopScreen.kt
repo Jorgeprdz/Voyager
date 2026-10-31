@@ -4,6 +4,7 @@ import android.os.Environment
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import org.json.JSONArray
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.DropdownMenu
@@ -199,6 +200,17 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         return
     }
     val bookmarks by viewModel.bookmarks.collectAsState()
+    val favoritePrefs = remember(context) { context.getSharedPreferences("finderdex_favorites", Context.MODE_PRIVATE) }
+    var favoriteOrder by remember(favoritePrefs) { mutableStateOf(
+        runCatching {
+            val json = JSONArray(favoritePrefs.getString("order", "[]"))
+            (0 until json.length()).map { json.getString(it) }
+        }.getOrDefault(emptyList())
+    ) }
+    val orderedFavorites = bookmarks.filter { it.source == FileSource.LOCAL }
+        .sortedWith(compareBy { favoriteOrder.indexOf(it.path).let { index ->
+            if (index < 0) Int.MAX_VALUE else index
+        } })
     var volumes by remember(context) { mutableStateOf(emptyList<com.voyagerfiles.util.StorageDirectory>()) }
     LaunchedEffect(context) {
         volumes = withContext(Dispatchers.IO) { FileUtils.getStorageDirectories(context) }
@@ -231,7 +243,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
     LaunchedEffect(browser.files, controller) {
         if (!browser.isLoading) controller.refresh()
     }
-    FinderDesktopScreen(controller, mode, bookmarks.filter { it.source == FileSource.LOCAL }.map { it.name to it.path },
+    FinderDesktopScreen(controller, mode, orderedFavorites.map { it.name to it.path },
         volumes = volumes.map { it.name to it.path },
         onRoot = viewModel::openLocalRoot,
         onMobile = onMobile,
@@ -246,6 +258,16 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             viewModel.restoreSelectedTrash()
         },
         onRemoveFavorite = { path -> viewModel.removeBookmark(path, FileSource.LOCAL) },
+        onReorderFavorite = { path, delta ->
+            val current = orderedFavorites.map { it.path }.toMutableList()
+            val index = current.indexOf(path)
+            val next = index + delta
+            if (index >= 0 && next in current.indices) {
+                java.util.Collections.swap(current, index, next)
+                favoriteOrder = current
+                favoritePrefs.edit().putString("order", JSONArray(current).toString()).apply()
+            }
+        },
         onPickFavoriteImage = { path -> imageTarget = path; imagePicker.launch(arrayOf("image/*")) },
         onRemoveFavoriteImage = { path ->
             customImages[path]?.let { uri ->
@@ -343,6 +365,7 @@ fun FinderDesktopScreen(
     onRefreshTrash: () -> Unit = {},
     onRestoreTrash: (String) -> Unit = {},
     onRemoveFavorite: (String) -> Unit = {},
+    onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     onPickFavoriteImage: (String) -> Unit = {},
     onRemoveFavoriteImage: (String) -> Unit = {},
     onRoot: (String) -> Unit = {},
@@ -493,7 +516,7 @@ fun FinderDesktopScreen(
             singleLine = true, textStyle = TextStyle(color = Ink, fontSize = 13.sp))
         Row(Modifier.weight(1f)) {
             FinderSidebar(controller.currentPath, effectiveSidebarWidth.dp, bookmarks, volumes, onRoot,
-                favoriteImages, onRemoveFavorite, onPickFavoriteImage, onRemoveFavoriteImage, dragState)
+                favoriteImages, onRemoveFavorite, onReorderFavorite, onPickFavoriteImage, onRemoveFavoriteImage, dragState)
             Box(Modifier.fillMaxHeight().width(4.dp).background(Sidebar).pointerInput(density) {
                 detectHorizontalDragGestures { change, delta -> change.consume(); sidebarWidth = (sidebarWidth + delta/density).coerceIn(176f, 280f) }
             }) { Box(Modifier.fillMaxHeight().width(0.5.dp).align(Alignment.CenterEnd).background(Line)) }
@@ -666,6 +689,7 @@ private fun FinderToolbar(controller: FinderColumnController, chrome: FinderWind
 @Composable
 private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<String, String>>, volumes: List<Pair<String, String>>, onRoot: (String) -> Unit,
     favoriteImages: Map<String, String>, onRemoveFavorite: (String) -> Unit,
+    onReorderFavorite: (String, Int) -> Unit,
     onPickFavoriteImage: (String) -> Unit, onRemoveFavoriteImage: (String) -> Unit,
     dragState: FinderDragDropState) {
     val root = Environment.getExternalStorageDirectory().path
@@ -686,6 +710,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
                     SidebarItem(name, path, "folder-outline", currentPath == path, onRoot,
                         pinned = true, imageUri = favoriteImages[path],
                         onRemoveFavorite = onRemoveFavorite,
+                        onReorderFavorite = onReorderFavorite,
                         onPickImage = onPickFavoriteImage, onClearImage = onRemoveFavoriteImage,
                         dragState = dragState)
             }
@@ -710,6 +735,7 @@ private fun SidebarHeading(text: String, expanded: Boolean, onClick: () -> Unit)
 @Composable
 private fun SidebarItem(name: String, path: String, glyph: String, selected: Boolean, onRoot: (String) -> Unit,
     pinned: Boolean = false, imageUri: String? = null, onRemoveFavorite: (String) -> Unit = {},
+    onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     onPickImage: (String) -> Unit = {}, onClearImage: (String) -> Unit = {},
     dragState: FinderDragDropState? = null) {
     val interaction = remember { MutableInteractionSource() }
@@ -728,6 +754,10 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
         Spacer(Modifier.width(8.dp))
         Label(name, Modifier.weight(1f))
         if (pinned) DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text("Subir favorito") },
+                onClick = { menu = false; onReorderFavorite(path, -1) })
+            DropdownMenuItem(text = { Text("Bajar favorito") },
+                onClick = { menu = false; onReorderFavorite(path, 1) })
             DropdownMenuItem(text = { Text("Elegir imagen de carpeta…") },
                 onClick = { menu = false; onPickImage(path) })
             if (imageUri != null) DropdownMenuItem(text = { Text("Restablecer icono") },
