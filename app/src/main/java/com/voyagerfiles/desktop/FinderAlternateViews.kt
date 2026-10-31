@@ -97,7 +97,7 @@ internal fun FinderListView(
                 var keyboardFocused by remember { mutableStateOf(false) }
                 val surface = finderAnimatedMaterial(if (pressed) palette.pressed
                     else if (selected) palette.selection(false, glass.windowFocused)
-                    else if (hovered) palette.hover else Color.Transparent, selected)
+                    else Color.Transparent, selected)
                 Row(Modifier.fillMaxWidth().height(zoom.rowHeightDp.dp)
                     .padding(horizontal = 9.dp, vertical = 1.dp)
                     .clip(RoundedCornerShape(FinderContentTokens.LIST_ROW_CORNER_DP.dp))
@@ -122,12 +122,15 @@ internal fun FinderListView(
                     .finderFocusOutline(keyboardFocused)
                     .semantics { this.selected = selected }
                     .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(zoom.iconDp.dp))
-                    else FileThumbnailOrIcon(file, zoom.iconDp.dp)
+                    Box(Modifier.size((zoom.iconDp + 2f).dp).finderIconHover(hovered),
+                        contentAlignment = Alignment.Center) {
+                        if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(zoom.iconDp.dp))
+                        else FileThumbnailOrIcon(file, zoom.iconDp.dp)
+                    }
                     Spacer(Modifier.width(9.dp))
                     val rowInk = if (selected) palette.selectionText(false, glass.windowFocused) else palette.ink
                     Text(file.name, Modifier.weight(1f), color = rowInk, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, fontSize = 12.sp)
+                        overflow = TextOverflow.Ellipsis, fontSize = 13.sp)
                     if (listColumns.showSize) Text(if (file.isDirectory) "—" else file.formattedSize,
                         Modifier.width(100.dp), color = rowInk, fontSize = 11.sp, maxLines = 1)
                     if (listColumns.showType) Text(

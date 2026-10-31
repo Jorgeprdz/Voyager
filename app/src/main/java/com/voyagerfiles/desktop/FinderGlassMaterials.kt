@@ -57,7 +57,7 @@ internal data class FinderGlassPalette(
     companion object {
         val Light = FinderGlassPalette(
             window = Color(0xfff6f8fc),
-            sidebar = Color(0xe5e7f2ff),
+            sidebar = Color(0xe5e4f0fc),
             titlebar = Color(0xf2eef5fc),
             toolbar = Color(0xf0f3f7fd),
             content = Color(0xfffdfefe),
@@ -78,7 +78,7 @@ internal data class FinderGlassPalette(
             focusRing = Color(0xff377fe7),
             scrollbar = Color(0x6f657a94),
             scrollbarHover = Color(0xb558738f),
-            illuminatedEdge = Color(0x99ffffff),
+            illuminatedEdge = Color(0xc0ffffff),
             feedback = Color(0xfffff2d7),
             progress = Color(0xffeaf3ff),
             dragHint = Color(0xffe6f1ff),

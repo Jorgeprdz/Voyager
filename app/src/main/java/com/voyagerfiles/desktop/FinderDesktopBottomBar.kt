@@ -162,14 +162,15 @@ internal fun FinderStatusBar(controller: FinderColumnController, columns: List<F
                 horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 val count=current?.files?.size?:0
                 val countLabel = "$count " + if (count == 1) "elemento" else "elementos"
-                val selectionLabel = if (selected.isEmpty()) "" else
-                    " · ${selected.size} seleccionados" + if (tight) "" else " · ${FileItem.formatFileSize(bytes)}"
+                val selectionLabel = " · ${selected.size} seleccionados" +
+                    if (selected.isNotEmpty() && !tight) " · ${FileItem.formatFileSize(bytes)}" else ""
                 val label = countLabel + selectionLabel
-                Text(label,color=p.secondaryInk,fontSize=11.sp,maxLines=1,
+                Text(label,color=p.secondaryInk,fontSize=12.sp,maxLines=1,
                     overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
                 if(!tight)free?.let{
-                    Text(FileItem.formatFileSize(it)+" libres",color=p.secondaryInk,fontSize=11.sp,maxLines=1)
+                    Text(FileItem.formatFileSize(it)+" libres",color=p.secondaryInk,fontSize=12.sp,maxLines=1)
                 }
+                if (!tight) Box(Modifier.width(1.dp).height(16.dp).background(p.separator))
                 FinderZoomControl(viewStyle,zoomIndex,onZoom,tight)
             }
         }
@@ -189,7 +190,7 @@ private fun FinderZoomControl(view:FinderViewStyle,selected:Int,onChange:(Int)->
                 stringResource(R.string.finderdex_zoom_increase),color=p.ink,fontSize=11.sp,
             modifier=Modifier.clip(RoundedCornerShape(8.dp)).clickable{menu=true}
                 .onFocusChanged{tracker.update("zoom:compact",it.isFocused)}
-                .semantics{contentDescription=zoomAccessibleLabel}.padding(7.dp))
+                .semantics{contentDescription=zoomAccessibleLabel}.padding(horizontal=6.dp,vertical=3.dp))
         FinderGlassMenu(expanded=menu,onDismissRequest={menu=false}){
             val labels = listOf(
                 stringResource(R.string.finderdex_zoom_very_small),

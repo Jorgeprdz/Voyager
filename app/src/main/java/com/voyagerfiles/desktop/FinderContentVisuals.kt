@@ -1,13 +1,18 @@
 package com.voyagerfiles.desktop
 
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.*
@@ -22,9 +27,9 @@ internal object FinderContentTokens {
     const val ICON_CELL_CORNER_DP = 12f
     const val ICON_LABEL_CORNER_DP = 7f
     const val ICON_GRID_OUTER_HORIZONTAL_DP = 16f
-    const val ICON_GRID_OUTER_VERTICAL_DP = 18f
+    const val ICON_GRID_OUTER_VERTICAL_DP = 12f
     const val ICON_GRID_COLUMN_GAP_DP = 10f
-    const val ICON_GRID_ROW_GAP_DP = 10f
+    const val ICON_GRID_ROW_GAP_DP = 7f
     const val LIST_ROW_HEIGHT_DP = 37f
     const val LIST_HEADER_HEIGHT_DP = 34f
     const val LIST_ROW_CORNER_DP = 9f
@@ -62,6 +67,21 @@ internal object FinderContentTokens {
         "txt", "md" -> "TXT"
         else -> null
     }
+}
+
+/** Draw-only scaling. The icon keeps its original layout and all pointer handlers stay on the row. */
+@Composable
+internal fun Modifier.finderIconHover(hovered: Boolean): Modifier {
+    val reducedMotion = LocalFinderMaterials.current.reducedMotion
+    val scale by animateFloatAsState(
+        targetValue = if (hovered && !reducedMotion) 1.06f else 1f,
+        animationSpec = tween(
+            durationMillis = if (reducedMotion) 0 else if (hovered) 150 else 120,
+            easing = LinearOutSlowInEasing,
+        ),
+        label = "Finder icon hover scale",
+    )
+    return this.graphicsLayer(scaleX = scale, scaleY = scale)
 }
 
 internal data class FinderListColumns(val showSize: Boolean, val showDate: Boolean,

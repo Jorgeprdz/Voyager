@@ -15,6 +15,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -302,6 +304,46 @@ internal fun FinderToolbarSearch(
     }
 }
 
+/**
+ * The old bottom breadcrumb rendered the storage root's raw basename ("0") on
+ * a separate line. Keep all ancestor navigation and path-copy actions here,
+ * leaving the footer to status and zoom only.
+ */
+@Composable
+internal fun FinderToolbarBreadcrumb(
+    controller: FinderColumnController, title: String, modifier: Modifier = Modifier,
+) {
+    val p = LocalFinderMaterials.current.palette
+    val clipboard = LocalClipboardManager.current
+    var open by remember { mutableStateOf(false) }
+    val columns = controller.columns.value
+    Box(modifier, contentAlignment = Alignment.CenterStart) {
+        Text(title, Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { open = true }
+            .padding(horizontal = 7.dp, vertical = 6.dp)
+            .semantics { contentDescription = "Ruta actual: " + controller.currentPath },
+            color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+            overflow = TextOverflow.Ellipsis, maxLines = 1)
+        FinderGlassMenu(expanded = open, onDismissRequest = { open = false }) {
+            columns.forEachIndexed { index, column ->
+                val name = if (index == 0) "Almacenamiento" else
+                    column.path.substringAfterLast('/').ifEmpty { "/" }
+                DropdownMenuItem(text = { Text(name) },
+                    onClick = { open = false; controller.navigateColumn(index) })
+            }
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_path_copy)) },
+                onClick = { clipboard.setText(AnnotatedString(controller.currentPath)); open = false })
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_path_parent)) },
+                enabled = columns.size > 1,
+                onClick = {
+                    if (columns.size > 1) controller.navigateColumn(columns.lastIndex - 1)
+                    open = false
+                })
+        }
+    }
+}
+
 @Composable
 internal fun FinderToolbar(
     controller: FinderColumnController, chrome: FinderWindowChrome,
@@ -359,9 +401,8 @@ internal fun FinderToolbar(
                         FinderToolbarButton("Adelante", "forward", enabled = controller.canForward) { controller.forward() }
                     }
                 }
-                if (plan.showTitle) Text(currentTitle, Modifier.weight(1f),
-                    color = p.ink, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    overflow = TextOverflow.Ellipsis, maxLines = 1)
+                if (plan.showTitle) FinderToolbarBreadcrumb(controller, currentTitle,
+                    Modifier.weight(1f))
                 FinderToolbarViewSelector(viewStyle, setViewStyle, plan.fullViewSelector)
                 if (plan.directFileActions) FinderToolbarCapsule {
                     FinderToolbarButton("Nueva carpeta", "folder-outline", enabled = canCreateFolder) { onNewFolder() }

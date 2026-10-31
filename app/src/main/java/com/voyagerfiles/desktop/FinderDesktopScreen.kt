@@ -684,8 +684,7 @@ fun FinderDesktopScreen(
                 ?: "Arrastra a una carpeta para mover · Se pedirá confirmación",
                 color = Accent)
         }
-        FinderPathBar(controller, columns, effectiveSidebarWidth + dividerWidth.value,
-            shell.compactToolbar)
+        // Breadcrumbs now live in the toolbar; the footer is a single status row.
         FinderStatusBar(controller, columns, effectiveSidebarWidth + dividerWidth.value,
             shell.statusBarHeightDp, shell.compactToolbar, viewStyle, zoomIndex) { index ->
             zoomByView[viewStyle.ordinal] = FinderZoomPresets.clamp(viewStyle, index)
@@ -837,7 +836,7 @@ private fun SidebarHeading(text: String, expanded: Boolean, onClick: () -> Unit)
         focusTracker.update("section:$text", it.isFocused)
     }.clickable(onClick = onClick).finderFocusOutline(focused).padding(7.dp, 6.dp),
         verticalAlignment = Alignment.CenterVertically) {
-        Label(text, Modifier.weight(1f), Muted, 11, true)
+        Label(text, Modifier.weight(1f), Muted, 12, true)
         FinderGlyph(if (expanded) "down" else "forward", modifier = Modifier.size(10.dp))
     }
 }
@@ -884,7 +883,7 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
             Spacer(Modifier.width(8.dp))
             Label(name, Modifier.weight(1f),
                 color = if (selected) palette.selectionText(false, material.windowFocused) else palette.ink,
-                size = 12, bold = selected)
+                size = 13, bold = selected)
         }
         if (pinned) FinderGlassMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_up)) },
@@ -944,10 +943,8 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                     val rowColor = finderAnimatedMaterial(
                         if (pressed) colors.pressed
                         else if (selected) colors.selection(false, glass.windowFocused)
-                        else if (hovered) colors.hover else Color.Transparent, selected)
+                        else Color.Transparent, selected)
                     Column(Modifier.fillMaxWidth().height(zoom.cellHeightDp.dp)
-                        .then(if (hovered && !pressed) Modifier.shadow(2.dp,
-                            RoundedCornerShape(FinderContentTokens.ICON_CELL_CORNER_DP.dp)) else Modifier)
                         .clip(RoundedCornerShape(FinderContentTokens.ICON_CELL_CORNER_DP.dp))
                         .background(rowColor)
                         .border(.7.dp, if (selected) colors.accent.copy(alpha = .52f) else Color.Transparent,
@@ -973,6 +970,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         .finderFocusOutline(keyboardFocused)
                         .semantics { this.selected = selected }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(Modifier.size((zoom.iconDp + 16f).dp, (zoom.iconDp + 10f).dp)
+                            .finderIconHover(hovered)
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (selected) colors.selected.copy(alpha = .55f) else Color.Transparent),
                             contentAlignment = Alignment.Center) {
@@ -985,11 +983,12 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                                 }
                             }
                         }
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(1.dp))
                         BasicText(file.name, Modifier.clip(RoundedCornerShape(FinderContentTokens.ICON_LABEL_CORNER_DP.dp))
                             .background(if (selected) colors.selection(false, glass.windowFocused) else Color.Transparent).padding(4.dp, 2.dp),
                             style = TextStyle(color = if (selected) colors.selectionText(false, glass.windowFocused) else colors.ink, fontSize = 12.sp,
-                                fontFamily = FontFamily.SansSerif, textAlign = TextAlign.Center), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Medium,
+                                textAlign = TextAlign.Center, lineHeight = 16.sp), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         FinderFileMenu(menuOpen, { menuOpen = false }, file.isDirectory, operationsAvailable,
                             if (file.path in column?.selected.orEmpty()) column?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                             onFileAction(it, file)
