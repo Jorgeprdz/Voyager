@@ -124,6 +124,7 @@ internal class FinderDragDropState {
         if (pending != null) {
             awaitingTransfer = true
             receiving = true
+            pending = null
         }
     }
     fun completeTransfer(success: Boolean) {
