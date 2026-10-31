@@ -585,4 +585,6 @@
     <string name="finderdex_copy_items_title">复制项目</string>
     <string name="finderdex_move_items_title">移动项目</string>
     <string name="finderdex_confirm_drop">将 %2$d 个项目%1$s到 %3$s？</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · 未连接</string>
+    <string name="finderdex_onedrive_unavailable">尚未连接。访问 OneDrive 文件前，必须完成 Microsoft 应用注册、OAuth 配置并取得你的授权。</string>
 </resources>

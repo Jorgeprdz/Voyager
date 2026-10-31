@@ -588,4 +588,6 @@
     <string name="finderdex_copy_items_title">항목 복사</string>
     <string name="finderdex_move_items_title">항목 이동</string>
     <string name="finderdex_confirm_drop">%2$d개 항목을 %3$s(으)로 %1$s하시겠습니까?</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · 연결되지 않음</string>
+    <string name="finderdex_onedrive_unavailable">연결되지 않았습니다. OneDrive 파일에 접근하려면 Microsoft 앱 등록, OAuth 설정 및 사용자의 승인이 필요합니다.</string>
 </resources>

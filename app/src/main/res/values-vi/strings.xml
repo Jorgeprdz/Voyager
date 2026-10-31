@@ -588,4 +588,6 @@
     <string name="finderdex_copy_items_title">Sao chép mục</string>
     <string name="finderdex_move_items_title">Di chuyển mục</string>
     <string name="finderdex_confirm_drop">%1$s %2$d mục vào %3$s?</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · chưa kết nối</string>
+    <string name="finderdex_onedrive_unavailable">Chưa kết nối. OneDrive yêu cầu đăng ký ứng dụng với Microsoft, cấu hình OAuth và sự cho phép của bạn trước khi truy cập tệp.</string>
 </resources>

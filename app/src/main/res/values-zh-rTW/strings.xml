@@ -588,4 +588,6 @@
     <string name="finderdex_copy_items_title">複製項目</string>
     <string name="finderdex_move_items_title">移動項目</string>
     <string name="finderdex_confirm_drop">將 %2$d 個項目%1$s到 %3$s？</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · 尚未連線</string>
+    <string name="finderdex_onedrive_unavailable">尚未連線。存取 OneDrive 檔案前，必須完成 Microsoft 應用程式註冊、OAuth 設定並取得你的授權。</string>
 </resources>

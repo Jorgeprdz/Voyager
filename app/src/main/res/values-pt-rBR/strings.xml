@@ -600,4 +600,6 @@
     <string name="finderdex_copy_items_title">Copiar itens</string>
     <string name="finderdex_move_items_title">Mover itens</string>
     <string name="finderdex_confirm_drop">%1$s %2$d itens para %3$s?</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · não conectado</string>
+    <string name="finderdex_onedrive_unavailable">Não conectado. O OneDrive exige o registro do aplicativo na Microsoft, a configuração OAuth e sua autorização antes de acessar arquivos.</string>
 </resources>

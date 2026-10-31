@@ -176,6 +176,9 @@ dependencies {
         exclude(group = "xpp3", module = "xpp3")
     }
 
+    // Microsoft Graph HTTP transport (MIT/Apache2), no embedded OAuth secrets
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Image loading - Coil (Apache 2.0)
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("androidx.exifinterface:exifinterface:1.3.7")

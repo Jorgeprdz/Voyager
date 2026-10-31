@@ -588,4 +588,6 @@
     <string name="finderdex_copy_items_title">項目をコピー</string>
     <string name="finderdex_move_items_title">項目を移動</string>
     <string name="finderdex_confirm_drop">%2$d 個の項目を %3$s に%1$sしますか？</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · 未接続</string>
+    <string name="finderdex_onedrive_unavailable">未接続です。OneDrive のファイルにアクセスするには、Microsoft へのアプリ登録、OAuth の設定、ユーザーの許可が必要です。</string>
 </resources>

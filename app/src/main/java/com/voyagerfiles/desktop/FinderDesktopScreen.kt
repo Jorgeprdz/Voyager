@@ -851,6 +851,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
     val glass = LocalFinderMaterials.current.palette
     val sidebarScroll = rememberScrollState()
     var showDriveStatus by remember { mutableStateOf(false) }
+    var showOneDriveStatus by remember { mutableStateOf(false) }
     Box(Modifier.width(width).fillMaxHeight()
         // Light layered glass, without blur on file content or extra pointer interceptors.
         .shadow(3.dp, RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp), clip = false)
@@ -890,6 +891,8 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
             // Never route a cloud item into the local filesystem or accept local folder drops here.
             SidebarItem(stringResource(R.string.finderdex_cloud_drive_disconnected), "cloud:google-drive", "drive",
                 false, { showDriveStatus = true }, dragState = null, rail = rail)
+            SidebarItem(stringResource(R.string.finderdex_onedrive_disconnected), "cloud:onedrive", "drive",
+                false, { showOneDriveStatus = true }, dragState = null, rail = rail)
         }
     }
     FinderVerticalScrollbar(sidebarScroll, Modifier.align(Alignment.CenterEnd))
@@ -899,6 +902,12 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
         title = { Text(stringResource(R.string.finderdex_cloud_drive_title)) },
         text = { Text(stringResource(R.string.finderdex_cloud_drive_unavailable)) },
         confirmButton = { TextButton(onClick = { showDriveStatus = false }) { Text(stringResource(R.string.finderdex_cloud_drive_ok)) } },
+    )
+    if (showOneDriveStatus) AlertDialog(
+        onDismissRequest = { showOneDriveStatus = false },
+        title = { Text(stringResource(R.string.finderdex_onedrive_title)) },
+        text = { Text(stringResource(R.string.finderdex_onedrive_unavailable)) },
+        confirmButton = { TextButton(onClick = { showOneDriveStatus = false }) { Text(stringResource(R.string.finderdex_cloud_drive_ok)) } },
     )
 }
 

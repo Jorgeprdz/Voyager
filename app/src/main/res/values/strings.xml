@@ -617,4 +617,7 @@
     <string name="finderdex_copy_items_title">Copy items</string>
     <string name="finderdex_move_items_title">Move items</string>
     <string name="finderdex_confirm_drop">%1$s %2$d item(s) to %3$s?</string>
+    <string name="finderdex_onedrive_title" translatable="false">OneDrive</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · disconnected</string>
+    <string name="finderdex_onedrive_unavailable">Not connected. OneDrive requires Microsoft app registration, OAuth setup and your authorization before accessing files.</string>
 </resources>
