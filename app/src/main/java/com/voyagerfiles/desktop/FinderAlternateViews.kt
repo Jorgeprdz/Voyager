@@ -4,6 +4,11 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -48,6 +53,9 @@ internal fun FinderListView(
             .let { if (descending) it.reversed() else it }
     }
     val marquee = remember(last?.path) { FinderMarqueeState() }
+    val listState = rememberLazyListState()
+    var listBounds by remember { mutableStateOf(Rect.Zero) }
+    FinderEdgeAutoScroll(marquee, dragState, listBounds) { listState.scrollBy(it) }
     Box(modifier.background(Color.White).testTag("finder-list")
         .finderMarqueeGesture(controller, marquee, dragState)) {
     Column(Modifier.fillMaxSize()) {
@@ -57,7 +65,9 @@ internal fun FinderListView(
             Text("Tamaño", Modifier.width(100.dp), color = ink, fontSize = 11.sp)
             Text("Modificado", Modifier.width(128.dp), color = ink, fontSize = 11.sp)
         }
-        LazyColumn(contentPadding = PaddingValues(vertical = 5.dp)) {
+        LazyColumn(state = listState,
+            modifier = Modifier.onGloballyPositioned { listBounds = it.boundsInRoot() },
+            contentPadding = PaddingValues(vertical = 5.dp)) {
             items(files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
                 var ctrl by remember { mutableStateOf(false) }
