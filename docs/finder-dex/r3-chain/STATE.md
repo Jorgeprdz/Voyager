@@ -6,8 +6,8 @@
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
 - CURRENT_STAGE: `09-HARDENING-DELIVERY.md`
 - LAST_COMPLETED_STAGE: `08-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_08_PARTIAL_PASS_AUTOMATED_STAGE_09_AUDIT`
-- NEXT_ACTION: `Ejecutar stage 09: auditoría integral de código/seguridad/CI; publicar script de descarga R3 y checklist físico; validar workflow del commit final y SHA256; no declarar integraciones externas completas`
+- STATUS: `STAGE_09_FINAL_INTEGRATION_CI_PENDING`
+- NEXT_ACTION: `Verificar CI del siguiente commit etapa 09: build/test/lint/firma/launcher y SHA real. Si falla, corregir. Después actualizar informe final, conservar PARTIAL/BLOCKED_EXTERNAL y entregar script Termux`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -20,7 +20,7 @@
 | 06 Pestañas y doble panel | PARTIAL/PASS_AUTOMATED (pestañas locales y panel secundario sólo navegación) | `7bda48a` | [Run 41186030196](https://github.com/Jorgeprdz/Voyager/actions/runs/41186030196) SUCCESS: build, unit, lint, signed APK; SHA256 `e95c84dbdf1f94fc39ff82e8888385f62f1ffa5e1155275e302c449362b75a90` | PENDING_PHYSICAL_DEX | Sin cross-panel copy/verify; pestañas no persistidas tras proceso; requiere prueba de selección/resize |
 | 07 Renombrado/transferencias | PARTIAL/PASS_AUTOMATED (preview, lotes locales y progreso/cancelación existentes) | `9d8d8df` | [Run 41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) SUCCESS: build, unit, lint, signed APK; SHA256 `f30fcd04e5a697876698504c8eed8bf3ba99fc9e3247bf5e6d8c4767efcaf379` | PENDING_PHYSICAL_DEX | No pause/resume/retry universal; UI preview solo prefijo/numero aunque planner incluye más reglas |
 | 08 Rediseño móvil FinderDex | PARTIAL/PASS_AUTOMATED (HomeScreen y BrowserScreen azul hielo, sin aprobación visual) | `8de0a63` | [Run 41187079680](https://github.com/Jorgeprdz/Voyager/actions/runs/41187079680) SUCCESS build/unit/lint/debug APK/firmado; SHA256 `f9e78afd9e060a854fa34aebc1bde67da009ecabccb6a64927de6dac3263cd82` | PENDING_PHYSICAL_DEX | PENDING_USER_VISUAL_REVIEW: sin capturas ni prueba real Android 17; Quick Look/transfer center parcial |
-| 09 End-to-end y APK | PLANNED | — | — | PENDING | — |
+| 09 End-to-end y APK | PARTIAL / CI_PENDING (auditoría, safety tests, downloader Termux, APK integrada; sin E2E físico) | siguiente commit | PENDING_FINAL_CI | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL nubes; PENDING_USER_VISUAL_REVIEW; no tests instrumentados ejecutados |
 
 ## Registro cronológico
 Agregar nuevas entradas a continuación, con fecha UTC, SHA, evidencias y decisiones. No borrar ni reemplazar registros anteriores. Nunca guardar datos sensibles.
@@ -138,3 +138,9 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - [Run 41186976912](https://github.com/Jorgeprdz/Voyager/actions/runs/41186976912) FAILED solo por import `heightIn` omitido en `HomeScreen.kt`; no fue P0 funcional. Corregido en `8de0a6399dda8223a10999d47da414c0ea585ca3`.
 - [Run 41187079680](https://github.com/Jorgeprdz/Voyager/actions/runs/41187079680) SUCCESS build, unit, lint, assemble, launcher y firmado. Artifact `FinderDex-R3-APK` id `13037312278`; SHA256 `f9e78afd9e060a854fa34aebc1bde67da009ecabccb6a64927de6dac3263cd82`.
 - Sigue `PARTIAL/PENDING_USER_VISUAL_REVIEW/PENDING_PHYSICAL_DEX`: sin capturas ni aprobación usuario ni prueba física. CURRENT_STAGE pasa a `09-HARDENING-DELIVERY.md`.
+
+### 2026-10-31 UTC — auditoría etapa 09 en publicación
+- Preparado `09-AUDIT-REPORT.md` con matriz individual de cobertura y checklist físico sin pruebas ficticias.
+- Tests de regresión `FinderR3SafetyContractTest`: drag externo copy-only/content URI, límites 64, renombrado 1000 archivos, colisión y extensiones.
+- Descargador `scripts/finderdex-r3-download.sh`: requiere Termux+gh+storage concedidos; valida run success y commit exacto, firma opcional local, SHA256 del APK y destino sin sobrescribir ni instalar.
+- Todavía no es PASS; debe completarse CI para el commit etapa 09 y registrarse SHA exacto del APK. Sin conexión a Termux físico, no afirmar descarga a Android.
