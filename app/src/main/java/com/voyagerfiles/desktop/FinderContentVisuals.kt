@@ -21,10 +21,10 @@ internal object FinderContentTokens {
     const val ICON_THUMBNAIL_DP = 98f
     const val ICON_CELL_CORNER_DP = 12f
     const val ICON_LABEL_CORNER_DP = 7f
-    const val ICON_GRID_OUTER_HORIZONTAL_DP = 20f
+    const val ICON_GRID_OUTER_HORIZONTAL_DP = 16f
     const val ICON_GRID_OUTER_VERTICAL_DP = 18f
-    const val ICON_GRID_COLUMN_GAP_DP = 12f
-    const val ICON_GRID_ROW_GAP_DP = 12f
+    const val ICON_GRID_COLUMN_GAP_DP = 10f
+    const val ICON_GRID_ROW_GAP_DP = 10f
     const val LIST_ROW_HEIGHT_DP = 37f
     const val LIST_HEADER_HEIGHT_DP = 34f
     const val LIST_ROW_CORNER_DP = 9f
@@ -73,9 +73,9 @@ internal data class FinderFolderColors(
 ) {
     companion object {
         val Light = FinderFolderColors(
-            Color(0xff8ad5f5), Color(0xff76d0f7), Color(0xff2e9ed9), Color(0xffc7f0ff))
+            Color(0xff91d2f0), Color(0xffa0dff7), Color(0xff449ccf), Color(0xffd8f2ff))
         val Dark = FinderFolderColors(
-            Color(0xff417ca8), Color(0xff56aada), Color(0xff2771b0), Color(0xff9cdaff))
+            Color(0xff5085ad), Color(0xff6eb2dd), Color(0xff3475ad), Color(0xffb4e3ff))
     }
 }
 

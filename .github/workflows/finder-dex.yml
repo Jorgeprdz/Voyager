@@ -96,16 +96,21 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         with:
-          name: FinderDex-R2-debug-apk
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/androidTest/debug/*.apk
+          name: FinderDex-R2.1-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
+        with:
+          name: FinderDex-R2.1-tests
+          path: app/build/outputs/apk/androidTest/debug/*.apk
           retention-days: 30
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: FinderDex-verification
+          name: FinderDex-R2.1-verification
           path: |
             app/build/reports/
             app/build/test-results/

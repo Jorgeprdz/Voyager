@@ -57,11 +57,11 @@ internal data class FinderGlassPalette(
     companion object {
         val Light = FinderGlassPalette(
             window = Color(0xfff6f8fc),
-            sidebar = Color(0xdfe8f0fa),
-            titlebar = Color(0xeaeaf2fc),
-            toolbar = Color(0xeaf1f5fc),
+            sidebar = Color(0xe5e7f2ff),
+            titlebar = Color(0xf2eef5fc),
+            toolbar = Color(0xf0f3f7fd),
             content = Color(0xfffdfefe),
-            footer = Color(0xfff8fafe),
+            footer = Color(0xfaf7faff),
             ink = Color(0xff253348),
             secondaryInk = Color(0xff65758c),
             accent = Color(0xff1975d2),
@@ -86,11 +86,11 @@ internal data class FinderGlassPalette(
         )
         val Dark = FinderGlassPalette(
             window = Color(0xff171e2a),
-            sidebar = Color(0xef283447),
-            titlebar = Color(0xf02a3548),
-            toolbar = Color(0xf02a3548),
+            sidebar = Color(0xf02a3a50),
+            titlebar = Color(0xf0324055),
+            toolbar = Color(0xf02b394d),
             content = Color(0xff1d2634),
-            footer = Color(0xff202a39),
+            footer = Color(0xff233146),
             ink = Color(0xffedf3fa),
             secondaryInk = Color(0xffadbace),
             accent = Color(0xff8bc0ff),
@@ -138,7 +138,7 @@ internal data class FinderMaterials(
     val reducedMotion: Boolean,
     val desktopBlurSupported: Boolean,
 ) {
-    val hoverMillis: Int get() = if (reducedMotion) 0 else 100
+    val hoverMillis: Int get() = if (reducedMotion) 0 else 140
     val selectionMillis: Int get() = if (reducedMotion) 0 else 135
     val surfaceMillis: Int get() = if (reducedMotion) 0 else 185
 }
