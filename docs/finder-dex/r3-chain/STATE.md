@@ -4,10 +4,10 @@
 - IMPLEMENTATION_BRANCH: `feat/finderdex-r3-implementation` (crear sólo cuando Codex inicie)
 - BASELINE_BRANCH: `feat/finder-dex-foundation-01`
 - BASELINE_SHA_AT_PLAN_CREATION: `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`
-- CURRENT_STAGE: `09-HARDENING-DELIVERY.md`
-- LAST_COMPLETED_STAGE: `08-PARTIAL-PASS_AUTOMATED`
-- STATUS: `STAGE_09_FINAL_INTEGRATION_CI_PENDING`
-- NEXT_ACTION: `Verificar CI del fix fcef81a (renombrado solo por capitalización), run nuevo. Si PASS, registrar APK/SHA256 y cerrar stage 09 PARTIAL/BLOCKED_EXTERNAL`
+- CURRENT_STAGE: `09-HARDENING-DELIVERY.md` (cierre automatizado; aceptación física/OAuth pendiente)
+- LAST_COMPLETED_STAGE: `09-PARTIAL-PASS_AUTOMATED`
+- STATUS: `FINAL_APK_PASS_AUTOMATED_PARTIAL_EXTERNAL_BLOCKED`
+- NEXT_ACTION: `Acción externa indispensable: OAuth legítimo para Google Drive/OneDrive; aceptación física Samsung DeX/Android 17 y revisión visual móvil; implementar funciones R3 parciales según 09-AUDIT-REPORT.md antes de producción`
 - BLOCKERS: `BLOCKED_EXTERNAL: Google Drive and OneDrive application registration/OAuth/user consent; PENDING_PHYSICAL_DEX; local Android/Termux storage unavailable in this execution environment`
 
 | Etapa | Estado | Commit/SHA | Workflow/Tests | DeX físico | Bloqueos |
@@ -20,7 +20,7 @@
 | 06 Pestañas y doble panel | PARTIAL/PASS_AUTOMATED (pestañas locales y panel secundario sólo navegación) | `7bda48a` | [Run 41186030196](https://github.com/Jorgeprdz/Voyager/actions/runs/41186030196) SUCCESS: build, unit, lint, signed APK; SHA256 `e95c84dbdf1f94fc39ff82e8888385f62f1ffa5e1155275e302c449362b75a90` | PENDING_PHYSICAL_DEX | Sin cross-panel copy/verify; pestañas no persistidas tras proceso; requiere prueba de selección/resize |
 | 07 Renombrado/transferencias | PARTIAL/PASS_AUTOMATED (preview, lotes locales y progreso/cancelación existentes) | `9d8d8df` | [Run 41186542130](https://github.com/Jorgeprdz/Voyager/actions/runs/41186542130) SUCCESS: build, unit, lint, signed APK; SHA256 `f30fcd04e5a697876698504c8eed8bf3ba99fc9e3247bf5e6d8c4767efcaf379` | PENDING_PHYSICAL_DEX | No pause/resume/retry universal; UI preview solo prefijo/numero aunque planner incluye más reglas |
 | 08 Rediseño móvil FinderDex | PARTIAL/PASS_AUTOMATED (HomeScreen y BrowserScreen azul hielo, sin aprobación visual) | `8de0a63` | [Run 41187079680](https://github.com/Jorgeprdz/Voyager/actions/runs/41187079680) SUCCESS build/unit/lint/debug APK/firmado; SHA256 `f9e78afd9e060a854fa34aebc1bde67da009ecabccb6a64927de6dac3263cd82` | PENDING_PHYSICAL_DEX | PENDING_USER_VISUAL_REVIEW: sin capturas ni prueba real Android 17; Quick Look/transfer center parcial |
-| 09 End-to-end y APK | PARTIAL / CI_PENDING (auditoría, safety tests, downloader Termux, APK integrada; sin E2E físico) | siguiente commit | PENDING_FINAL_CI | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL nubes; PENDING_USER_VISUAL_REVIEW; no tests instrumentados ejecutados |
+| 09 End-to-end y APK | PARTIAL/PASS_AUTOMATED (auditoría, seguridad, script, APK integrada compilada) | `fcef81a` | [Run 41189634134](https://github.com/Jorgeprdz/Voyager/actions/runs/41189634134) SUCCESS: build, unit, lint, APK firmada; artifact ID `13038377043`, SHA256 `87467e717097adf647660a161e86a6151e2d6e27c0087079fd18314a7d8fe098` | PENDING_PHYSICAL_DEX | BLOCKED_EXTERNAL nubes; PENDING_USER_VISUAL_REVIEW; no tests instrumentados ejecutados |
 
 ## Registro cronológico
 Agregar nuevas entradas a continuación, con fecha UTC, SHA, evidencias y decisiones. No borrar ni reemplazar registros anteriores. Nunca guardar datos sensibles.
@@ -150,3 +150,10 @@ Actualizar al pasar a cada etapa. No declarar PASS sólo por presencia de códig
 - Causa verificada en log: `FinderR3SafetyContractTest.renamerDoesNotSilentlyChangeExtensions` falló por lógica de preview que trataba un renombrado de capitalización del **propio archivo** como colisión con otra selección.
 - Corregido en `fcef81ac09397201bd223e72cd83b9eb0e313c50`: compara nombres propuestos solo contra **otros** elementos seleccionados; el nombre propio se permite y las colisiones reales siguen prohibidas.
 - No declarar etapa 09 PASS hasta que termine el nuevo workflow para ese SHA.
+
+### 2026-10-31 UTC — cierre de CI etapa 09 y entrega de evaluación
+- Run [41189634134](https://github.com/Jorgeprdz/Voyager/actions/runs/41189634134) **SUCCESS** para código `fcef81ac09397201bd223e72cd83b9eb0e313c50`: compilación Android + compileAndroidTest, unit tests, lint, ensamblado APK principal y AndroidTest, `apksigner`, `aapt` y launcher.
+- Artefacto real `FinderDex-R3-APK` ID `13038377043`; `app-debug.apk`, paquete `com.finderdex.preview`. SHA256 de logs `87467e717097adf647660a161e86a6151e2d6e27c0087079fd18314a7d8fe098`.
+- Artefacto ZIP descargado a contenedor de trabajo, APK extraída a `/mnt/data/FinderDex-R3-debug.apk`, hash local coincide exactamente, ZIP íntegro y APK contiene `AndroidManifest.xml` y `classes.dex`. No se instaló, ni se copió directamente a Descargas del teléfono.
+- Artifact de pruebas `13038446846` y reportes de verificación `13038387084`. Build de **evaluación**, NO producción: Drive/OneDrive `BLOCKED_EXTERNAL`, doble panel/nube/centro transferencias `PARTIAL`, DeX `PENDING_PHYSICAL_DEX`, móvil `PENDING_USER_VISUAL_REVIEW`.
+- No se ejecutaron tests instrumentados en hardware pese a compilar/empaquetar `androidTest`; no se realizaron operaciones en archivos reales del usuario. Rama estable R2.2 protegida en SHA `a5bd2dcd6be376cd867a4b411277f6d3e8f68cf6`.

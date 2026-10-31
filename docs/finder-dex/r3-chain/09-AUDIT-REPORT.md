@@ -63,3 +63,13 @@ Este informe no declara la funcionalidad completa por el mero hecho de compilar.
 ## Decisión
 
 **No declarar R3 completo/producción**. El APK integra el código parcial de las etapas 01–08 y puede distribuirse como **build de evaluación** después de CI satisfactorio. Permanecen `BLOCKED_EXTERNAL`, `PENDING_PHYSICAL_DEX`, `PENDING_USER_VISUAL_REVIEW` y funciones `PARTIAL` descritas arriba. La rama estable R2.2 no se modifica.
+
+## CI final y binario publicado — 2026-10-31 UTC
+
+- Último commit de **código**: `fcef81ac09397201bd223e72cd83b9eb0e313c50` (corrige renombrado del propio archivo únicamente por capitalización).
+- [Workflow 41189634134](https://github.com/Jorgeprdz/Voyager/actions/runs/41189634134) **SUCCESS**: compila, pruebas unitarias, lint, APK y firma/launcher.
+- Artifact principal `FinderDex-R3-APK` id `13038377043`; archivo `app-debug.apk` de 28,126,205 bytes.
+- SHA256 oficial en log y comprobado tras descargar/descomprimir: `87467e717097adf647660a161e86a6151e2d6e27c0087079fd18314a7d8fe098`.
+- Ejecutada verificación ZIP CRC, `AndroidManifest.xml`, `classes.dex`, hash SHA256 exacto; no se ejecutaron tests Android instrumentados en dispositivo, ni pruebas físicas DeX, ni OAuth ni descarga directa al Termux.
+- Artefacto de tests Android `13038446846`; artifact reportes `13038387084`.
+- El resultado se mantiene `PARTIAL/BLOCKED_EXTERNAL/PENDING_PHYSICAL_DEX/PENDING_USER_VISUAL_REVIEW`; no declarar función completa ni lista para producción.
