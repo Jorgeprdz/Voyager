@@ -156,7 +156,8 @@ class FinderColumnControllerTest {
             assertEquals("a.txt", File(docs, "a.txt").readText())
         } finally { scope.cancel() }
     }
-\n    @Test fun windowModeUsesActualWindowAndHeight() {
+
+    @Test fun windowModeUsesActualWindowAndHeight() {
         assertEquals(DesktopMode.COMPACT, DesktopModeController.mode(500f, 700f))
         assertEquals(DesktopMode.ADAPTED, DesktopModeController.mode(700f, 700f))
         assertEquals(DesktopMode.FULL, DesktopModeController.mode(1200f, 700f))
