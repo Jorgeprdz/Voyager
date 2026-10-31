@@ -639,4 +639,5 @@
     <string name="finderdex_bulk_number">Numbering</string>
     <string name="finderdex_bulk_preview">Preview</string>
     <string name="finderdex_bulk_invalid">Invalid or conflicting name</string>
+    <string name="finderdex_mobile_title" translatable="false">FinderDex</string>
 </resources>

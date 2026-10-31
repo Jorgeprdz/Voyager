@@ -132,6 +132,7 @@ import com.voyagerfiles.audio.AudioToneInstaller
 import com.voyagerfiles.ui.components.AudioToneMenuItems
 import com.voyagerfiles.ui.components.rememberAudioToneAction
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.FinderMobileTokens
 import com.voyagerfiles.ui.components.FileSortMenu
 import com.voyagerfiles.data.model.Bookmark
 import com.voyagerfiles.data.model.LocalFileVisibility
@@ -491,6 +492,7 @@ fun BrowserScreen(
     }
 
     Scaffold(
+        containerColor = FinderMobileTokens.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
@@ -707,15 +709,15 @@ fun BrowserScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = FinderMobileTokens.ice,
+                        navigationIconContentColor = FinderMobileTokens.navy,
+                        titleContentColor = FinderMobileTokens.navy,
+                        actionIconContentColor = FinderMobileTokens.navy,
                     ),
                 )
             } else {
                 Surface(
-                    color = MaterialTheme.colorScheme.surface,
+                    color = FinderMobileTokens.surface,
                 ) {
                     Column(
                         modifier = Modifier
@@ -882,7 +884,7 @@ fun BrowserScreen(
                     exit = slideOutVertically(targetOffsetY = { it }),
                 ) {
                     BottomAppBar(
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        containerColor = FinderMobileTokens.ice,
                     ) {
                         Text(
                             pluralStringResource(
@@ -923,7 +925,7 @@ fun BrowserScreen(
                 Box {
                     FloatingActionButton(
                         onClick = { showCreateMenu = true },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        containerColor = FinderMobileTokens.ice,
                     ) {
                         Icon(Icons.Filled.CreateNewFolder, stringResource(R.string.content_desc_create))
                     }

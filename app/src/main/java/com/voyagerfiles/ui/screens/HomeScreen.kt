@@ -65,6 +65,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.FinderMobileTokens
 import com.voyagerfiles.ui.components.TranslationNotice
 import com.voyagerfiles.ui.components.rememberTranslationLinkOpener
 import com.voyagerfiles.data.index.StorageCategory
@@ -126,11 +127,16 @@ fun HomeScreen(
     val localBookmarks = bookmarks.filter { it.source == FileSource.LOCAL }
 
     Scaffold(
+        containerColor = FinderMobileTokens.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
+                title = {
+                    Text(stringResource(R.string.finderdex_mobile_title),
+                        color = FinderMobileTokens.navy,
+                        style = MaterialTheme.typography.titleLarge)
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = FinderMobileTokens.surface,
                 ),
                 actions = {
                     IconButton(onClick = onNavigateToSearch) {
@@ -148,7 +154,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -505,8 +511,8 @@ internal fun StorageVolumeCard(
             .clickable(enabled = volume.isAvailable, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (isInternal)
-                MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant,
+                FinderMobileTokens.ice
+            else FinderMobileTokens.surface,
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -515,25 +521,19 @@ internal fun StorageVolumeCard(
                     if (isInternal) Icons.Filled.PhoneAndroid else Icons.Filled.SdStorage,
                     contentDescription = null,
                     modifier = Modifier.size(32.dp),
-                    tint = if (isInternal)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = FinderMobileTokens.folderBlue,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         volume.description,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (isInternal)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface,
+                        color = FinderMobileTokens.navy,
                     )
                     Text(
                         statusLabel ?: storageUsage ?: volume.path.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isInternal)
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = FinderMobileTokens.secondaryInk,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -544,8 +544,8 @@ internal fun StorageVolumeCard(
                 LinearProgressIndicator(
                     progress = { storageInfo.usedPercentage },
                     modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                    color = FinderMobileTokens.folderBlue,
+                    trackColor = FinderMobileTokens.edge,
                 )
             }
         }
@@ -617,9 +617,10 @@ private fun QuickAccessCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.heightIn(min = 94.dp).clickable(onClick = onClick),
+        shape = FinderMobileTokens.cardShape,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = FinderMobileTokens.surface,
         ),
     ) {
         Column(
@@ -632,13 +633,13 @@ private fun QuickAccessCard(
                 icon,
                 contentDescription = label,
                 modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = FinderMobileTokens.folderBlue,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = FinderMobileTokens.navy,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
