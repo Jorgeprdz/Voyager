@@ -661,7 +661,7 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
         .background(if (selected) Color(0xffdcdfe6) else if (hovered) Color(0xffe6e7ec) else Color.Transparent)
         .hoverable(interaction)
         .then(if (dragState != null) Modifier.finderFolderDropTarget("sidebar:$path", path, dragState) else Modifier)
-        .finderDragVisual(path, true, dragState ?: remember { FinderDragDropState() })
+        .then(if (dragState != null) Modifier.finderDragVisual(path, true, dragState) else Modifier)
         .finderRightClick { if (pinned) menu = true }
         .clickable { onRoot(path) }.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         if (imageUri != null) AsyncImage(model = Uri.parse(imageUri), contentDescription = null,
