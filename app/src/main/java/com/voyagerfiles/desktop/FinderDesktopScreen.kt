@@ -216,6 +216,18 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
             when (action) {
                 FinderFileAction.COPY -> viewModel.copyToClipboard(listOf(file.path), false)
                 FinderFileAction.CUT -> viewModel.cutToClipboard(listOf(file.path), false)
+                FinderFileAction.OPEN_WITH -> FileUtils.openFileWith(context, file)
+                    .onFailure { message = it.localizedMessage ?: "No se pudo abrir" }
+                FinderFileAction.SHARE -> FileUtils.shareFiles(context, listOf(file))
+                    .onFailure { message = it.localizedMessage ?: "No se pudo compartir" }
+                FinderFileAction.PASTE_INTO -> if (file.isDirectory) viewModel.pasteIntoDesktopFolder(file.path)
+                FinderFileAction.DUPLICATE -> {
+                    val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
+                    val paths = if (file.path in selected) selected.toList() else listOf(file.path)
+                    if (viewModel.browseState.value.currentPath == controller.currentPath)
+                        viewModel.duplicateDesktopPaths(paths)
+                    else message = "Espera a que termine la navegación antes de duplicar"
+                }
                 FinderFileAction.ZIP -> {
                     val current = viewModel.browseState.value
                     val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
