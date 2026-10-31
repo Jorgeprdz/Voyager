@@ -1593,8 +1593,8 @@ class FileBrowserViewModel @JvmOverloads constructor(
         @StringRes progressLabel: Int,
         @StringRes operationName: Int,
         @StringRes cancelledMessage: Int = R.string.transfer_cancelled,
-        block: suspend () -> Unit,
         onFinished: () -> Unit = {},
+        block: suspend () -> Unit,
     ) {
         val started = operationController.launch(
             label = UiText.Resource(progressLabel),
