@@ -28,6 +28,7 @@ class FinderColumnController(
     val columns = _columns.asStateFlow()
     private var nextId = 0L
     private var selectionAnchor: String? = null
+    private var keyboardCursor: String? = null
     private val jobs = mutableMapOf<Long, Job>()
     private val past = ArrayDeque<List<FinderColumn>>()
     private val future = ArrayDeque<List<FinderColumn>>()
@@ -88,6 +89,7 @@ class FinderColumnController(
             else -> setOf(file.path)
         }
         if (!extend) selectionAnchor = file.path
+        keyboardCursor = file.path
         _columns.value = columns.mapIndexed { i, c -> if (i == index) c.copy(selected = selection) else c }
         onLocation(currentPath, selection)
     }
@@ -102,7 +104,7 @@ class FinderColumnController(
         _columns.value = columns.mapIndexed { index, column ->
             if (index == columns.lastIndex) column.copy(selected = selection) else column
         }
-        if (selection.isEmpty()) selectionAnchor = null
+        if (selection.isEmpty()) { selectionAnchor = null; keyboardCursor = null }
         else if (selectionAnchor !in selection) selectionAnchor = selection.first()
         onLocation(currentPath, selection)
     }
@@ -114,9 +116,11 @@ class FinderColumnController(
         val last = _columns.value.lastOrNull() ?: return
         if (last.files.isEmpty() || last.loading) return
         val anchor = last.files.indexOfFirst { it.path == selectionAnchor }
-        val current = last.files.indexOfFirst { it.path in last.selected }
+        val current = last.files.indexOfFirst { it.path == keyboardCursor }
+            .takeIf { it >= 0 } ?: last.files.indexOfFirst { it.path in last.selected }
         val start = if (current >= 0) current else if (delta >= 0) -1 else last.files.size
         val target = (start + delta).coerceIn(0, last.files.lastIndex)
+        keyboardCursor = last.files[target].path
         if (extend) {
             val from = if (anchor >= 0) anchor else (if (current >= 0) current else target)
             selectionAnchor = last.files[from].path
