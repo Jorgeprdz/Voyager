@@ -10,53 +10,133 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import java.io.File
 
-internal data class FinderPendingMove(val paths: List<String>, val destination: String)
-private data class FinderDropTarget(val path: String, val rect: Rect)
+internal enum class FinderDropAction { MOVE, COPY }
+internal data class FinderPendingMove(
+    val paths: List<String>,
+    val destination: String,
+    val action: FinderDropAction = FinderDropAction.MOVE,
+)
+private data class FinderDropTarget(val path: String, val rect: Rect, val allowed: Boolean)
 
-/** A drop never deletes anything. It only queues a confirmed move through FileOperationCoordinator. */
+/** Pointer coordinates and visual state are separate from Voyager's real transfer lifecycle. */
 internal class FinderDragDropState {
     private val targets = mutableStateMapOf<String, FinderDropTarget>()
+    var allowedRoot: String = "/"
     var draggingPaths by mutableStateOf<List<String>>(emptyList())
         private set
-    private var position by mutableStateOf(Offset.Unspecified)
+    var ghostPaths by mutableStateOf<List<String>>(emptyList())
+        private set
+    var cursorPosition by mutableStateOf(Offset.Unspecified)
+        private set
+    private var sourcePosition = Offset.Zero
+    var ghostDestination by mutableStateOf(Offset.Zero)
+        private set
+    var returning by mutableStateOf(false)
+        private set
+    var receiving by mutableStateOf(false)
+        private set
+    var copyRequested by mutableStateOf(false)
+    var hoveredDestination by mutableStateOf<String?>(null)
+        private set
+    var springFolder by mutableStateOf<String?>(null)
+        private set
     var pending by mutableStateOf<FinderPendingMove?>(null)
         private set
 
-    fun register(id: String, path: String, rect: Rect) {
-        val value = FinderDropTarget(path, rect)
-        if (targets[id] != value) targets[id] = value
-    }
-    fun unregister(id: String) { targets.remove(id) }
-    fun clearTargets() { targets.clear() }
-    fun start(paths: List<String>, at: Offset) {
-        draggingPaths = paths.distinct()
-        position = at
-    }
-    fun move(at: Offset) { position = at }
+    private fun withinRoot(path: String): Boolean =
+        allowedRoot == "/" || path == allowedRoot || path.startsWith("$allowedRoot/")
 
-    private fun destination(): String? {
-        if (draggingPaths.isEmpty() || !position.isSpecified) return null
-        return targets.values
-            .filter { it.rect.contains(position) }
+    private fun canTarget(path: String): Boolean =
+        withinRoot(path) && File(path).isDirectory && File(path).canWrite()
+
+    fun register(id: String, path: String, rect: Rect) {
+        val candidate = FinderDropTarget(path, rect, canTarget(path))
+        if (targets[id] != candidate) targets[id] = candidate
+    }
+    fun unregister(id: String) {
+        targets.remove(id)
+        if (draggingPaths.isNotEmpty()) resolveHover()
+    }
+    fun clearTargets() { targets.clear(); hoveredDestination = null }
+    fun start(paths: List<String>, at: Offset, from: Offset = at) {
+        val valid = paths.distinct().filter(::withinRoot)
+        if (valid.isEmpty()) return
+        draggingPaths = valid
+        ghostPaths = valid
+        cursorPosition = at
+        sourcePosition = from
+        ghostDestination = at
+        returning = false
+        receiving = false
+        pending = null
+        resolveHover()
+    }
+    fun move(at: Offset) {
+        if (draggingPaths.isEmpty()) return
+        cursorPosition = at
+        resolveHover()
+    }
+
+    private fun target(): FinderDropTarget? {
+        if (draggingPaths.isEmpty() || !cursorPosition.isSpecified) return null
+        return targets.values.asSequence()
+            .filter { it.rect.contains(cursorPosition) }
             .sortedBy { it.rect.width * it.rect.height }
-            .map { it.path }
-            .firstOrNull { target ->
-                draggingPaths.all { source ->
-                    target != source &&
-                        !target.startsWith("$source/") &&
-                        java.io.File(source).parent != target
+            .firstOrNull { candidate ->
+                candidate.allowed && draggingPaths.all { source ->
+                    withinRoot(source) && source != candidate.path &&
+                        !candidate.path.startsWith("$source/") &&
+                        File(source).parent != candidate.path
                 }
             }
     }
-    val hoveredDestination: String? get() = destination()
+    private fun resolveHover() {
+        hoveredDestination = target()?.path
+        if (springFolder != null && hoveredDestination == null &&
+            draggingPaths.isEmpty()) springFolder = null
+    }
+
+    fun openSpringFolder(folder: String) {
+        if (hoveredDestination == folder && draggingPaths.isNotEmpty() && canTarget(folder)) {
+            springFolder = folder
+        }
+    }
+    fun closeSpringFolder() { springFolder = null }
 
     fun end() {
-        destination()?.let { pending = FinderPendingMove(draggingPaths.toList(), it) }
-        cancel()
+        val destination = target()
+        if (destination != null) {
+            pending = FinderPendingMove(draggingPaths.toList(), destination.path,
+                if (copyRequested) FinderDropAction.COPY else FinderDropAction.MOVE)
+            ghostDestination = destination.rect.center
+            receiving = true
+            returning = false
+            draggingPaths = emptyList()
+            hoveredDestination = null
+            springFolder = null
+        } else cancel()
     }
-    fun cancel() { draggingPaths = emptyList(); position = Offset.Unspecified }
-    fun dismiss() { pending = null }
+    fun cancel() {
+        draggingPaths = emptyList()
+        hoveredDestination = null
+        springFolder = null
+        if (ghostPaths.isNotEmpty()) {
+            returning = true
+            receiving = false
+            ghostDestination = sourcePosition
+        }
+    }
+    fun clearGhost() {
+        ghostPaths = emptyList()
+        receiving = false
+        returning = false
+    }
+    fun dismiss() {
+        pending = null
+        if (ghostPaths.isNotEmpty() && !receiving) cancel()
+    }
 }
 
 internal fun Modifier.finderDragSource(
@@ -69,7 +149,8 @@ internal fun Modifier.finderDragSource(
         .pointerInput(path, selection, drag) {
             detectDragGestures(
                 onDragStart = { at ->
-                    drag.start(if (path in selection) selection.toList() else listOf(path), rootOrigin + at)
+                    drag.start(if (path in selection) selection.toList() else listOf(path),
+                        rootOrigin + at, rootOrigin + at)
                 },
                 onDrag = { change, _ ->
                     change.consume()
