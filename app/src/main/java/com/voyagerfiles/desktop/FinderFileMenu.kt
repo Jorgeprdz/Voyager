@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.*
 
 enum class FinderFileAction {
-    OPEN, QUICK_LOOK, COPY, CUT, RENAME, ZIP, INFO, FAVORITE, TRASH, DELETE
+    OPEN, OPEN_WITH, QUICK_LOOK, COPY, CUT, PASTE_INTO, DUPLICATE, RENAME, ZIP, INFO, SHARE, FAVORITE, TRASH, DELETE
 }
 
 /** A mouse secondary press is not a touch long-press: support both independently. */
@@ -36,11 +36,17 @@ internal fun FinderFileMenu(
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         funAction(FinderFileAction.OPEN, "Abrir", onDismiss, onAction)
+        if (!isDirectory) {
+            funAction(FinderFileAction.OPEN_WITH, "Abrir con…", onDismiss, onAction)
+            funAction(FinderFileAction.SHARE, "Compartir", onDismiss, onAction)
+        }
         if (!isDirectory) funAction(FinderFileAction.QUICK_LOOK, "Vista previa   Espacio", onDismiss, onAction)
         funAction(FinderFileAction.INFO, "Obtener información", onDismiss, onAction)
         if (operationsAvailable) {
             funAction(FinderFileAction.COPY, "Copiar   Ctrl+C", onDismiss, onAction)
             funAction(FinderFileAction.CUT, "Cortar   Ctrl+X", onDismiss, onAction)
+            if (isDirectory) funAction(FinderFileAction.PASTE_INTO, "Pegar dentro de esta carpeta", onDismiss, onAction)
+            funAction(FinderFileAction.DUPLICATE, "Duplicar", onDismiss, onAction)
             funAction(FinderFileAction.RENAME, "Renombrar", onDismiss, onAction)
             funAction(FinderFileAction.ZIP, "Comprimir ZIP", onDismiss, onAction)
             if (isDirectory) funAction(FinderFileAction.FAVORITE, "Añadir a favoritos", onDismiss, onAction)
