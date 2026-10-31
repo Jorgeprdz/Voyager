@@ -479,8 +479,9 @@ fun FinderDesktopScreen(
         LocalFinderControlFocus provides focusTracker,
     ) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
+    val availableWindowWidth = maxWidth.value
     val shell = FinderWindowGeometry.resolve(
-        maxWidth.value, maxHeight.value, sidebarWidth,
+        availableWindowWidth, maxHeight.value, sidebarWidth,
         chrome.layout.trailing / density,
     )
     val effectiveSidebarWidth = shell.sidebarWidthDp
@@ -546,7 +547,7 @@ fun FinderDesktopScreen(
                 else -> false
             }
         }) {
-        FinderToolbar(controller, chrome, effectiveSidebarWidth, dividerWidth.value, maxWidth.value,
+        FinderToolbar(controller, chrome, effectiveSidebarWidth, dividerWidth.value, availableWindowWidth,
             shell.compactToolbar, shell.minimalToolbar,
             viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
             showPreview, { showPreview = !showPreview }, descending, { descending = !descending },
