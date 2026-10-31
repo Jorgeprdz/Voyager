@@ -2,6 +2,7 @@ package com.voyagerfiles.desktop
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -135,5 +136,36 @@ internal fun FinderMarqueeOverlay(marquee: FinderMarqueeState, modifier: Modifie
         drawRect(Color(0xff087cf1).copy(alpha = .13f), topLeft = local, size = rectSize)
         drawRect(Color(0xff087cf1).copy(alpha = .7f), topLeft = local,
             size = rectSize, style = Stroke(width = 1.5f))
+    }
+}
+
+/** Pure edge velocity in pixels per animation tick; zero outside an active viewport. */
+internal fun finderVerticalEdgeSpeed(pointer: Offset, viewport: Rect, zone: Float = 56f): Float {
+    if (!pointer.x.isFinite() || !pointer.y.isFinite() || viewport.isEmpty ||
+        pointer.x < viewport.left || pointer.x > viewport.right) return 0f
+    return when {
+        pointer.y >= viewport.top && pointer.y < viewport.top + zone ->
+            -22f * (1f - ((pointer.y - viewport.top) / zone)).coerceIn(0f, 1f)
+        pointer.y <= viewport.bottom && pointer.y > viewport.bottom - zone ->
+            22f * (1f - ((viewport.bottom - pointer.y) / zone)).coerceIn(0f, 1f)
+        else -> 0f
+    }
+}
+
+@Composable
+internal fun FinderEdgeAutoScroll(
+    marquee: FinderMarqueeState,
+    drag: FinderDragDropState,
+    viewport: Rect,
+    scrollBy: suspend (Float) -> Unit,
+) {
+    val active = marquee.active || drag.draggingPaths.isNotEmpty()
+    LaunchedEffect(active, viewport) {
+        if (active && !viewport.isEmpty) while (true) {
+            val pointer = if (marquee.active) marquee.end else drag.cursorPosition
+            val speed = finderVerticalEdgeSpeed(pointer, viewport)
+            if (speed != 0f) scrollBy(speed)
+            delay(16L)
+        }
     }
 }
