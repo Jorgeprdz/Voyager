@@ -13,19 +13,35 @@ enum class FinderFileAction {
     OPEN, OPEN_WITH, QUICK_LOOK, COPY, CUT, PASTE_INTO, DUPLICATE, RENAME, ZIP, EXTRACT, INFO, SHARE, FAVORITE, TRASH, DELETE
 }
 
+/** Tracks the latest mouse press without saving transient pointer state in Compose snapshots. */
+internal class FinderSecondaryClickGate {
+    private var lastPressSecondary = false
+    fun recordPress(secondary: Boolean) { lastPressSecondary = secondary }
+    fun allowsPrimaryClick(): Boolean = !lastPressSecondary
+}
+
+/** A context menu preserves every selected item when invoked on that selection. */
+internal fun finderContextSelection(target: String, selected: Set<String>): Set<String> =
+    if (target in selected) selected else setOf(target)
+
 /** A mouse secondary press is not a touch long-press: support both independently. */
-internal fun Modifier.finderRightClick(onRightClick: () -> Unit): Modifier =
-    pointerInput(onRightClick) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent()
-                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                    event.changes.forEach { it.consume() }
-                    onRightClick()
-                }
+internal fun Modifier.finderRightClick(
+    gate: FinderSecondaryClickGate? = null,
+    onRightClick: () -> Unit,
+): Modifier = pointerInput(onRightClick, gate) {
+    awaitPointerEventScope {
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            if (event.type != PointerEventType.Press) continue
+            val secondary = event.buttons.isSecondaryPressed
+            gate?.recordPress(secondary)
+            if (secondary) {
+                event.changes.forEach { it.consume() }
+                onRightClick()
             }
         }
     }
+}
 
 @Composable
 internal fun FinderFileMenu(

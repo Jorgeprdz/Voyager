@@ -572,4 +572,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">类型</string>
+    <string name="finderdex_favorite_up">上移收藏项</string>
+    <string name="finderdex_favorite_down">下移收藏项</string>
+    <string name="finderdex_favorite_pick_icon">选择文件夹图片…</string>
+    <string name="finderdex_favorite_reset_icon">重置图标</string>
+    <string name="finderdex_favorite_remove">从收藏中移除</string>
+    <string name="finderdex_zoom_accessibility">图标大小</string>
 </resources>

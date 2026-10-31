@@ -120,7 +120,7 @@ private fun FinderPathSegment(path:String,current:Boolean,compact:Boolean,
                 .background(if(hovered)p.hover else androidx.compose.ui.graphics.Color.Transparent)
                 .hoverable(interaction)
                 .pointerHoverIcon(PointerIcon.Hand)
-                .finderRightClick(onContext)
+                .finderRightClick { onContext() }
                 .onFocusChanged{tracker.update("breadcrumb:"+path,it.isFocused)}
                 .combinedClickable(onClick=onClick,onLongClick=onContext)
                 .semantics{contentDescription=path}
@@ -175,6 +175,7 @@ internal fun FinderStatusBar(controller: FinderColumnController, columns: List<F
 private fun FinderZoomControl(view:FinderViewStyle,selected:Int,onChange:(Int)->Unit,compact:Boolean) {
     val p=LocalFinderMaterials.current.palette
     val max=FinderZoomPresets.maxIndex(view)
+    val zoomAccessibleLabel = stringResource(R.string.finderdex_zoom_accessibility)
     var menu by remember { mutableStateOf(false) }
     val tracker=LocalFinderControlFocus.current
     if(compact) Box {
@@ -182,7 +183,7 @@ private fun FinderZoomControl(view:FinderViewStyle,selected:Int,onChange:(Int)->
                 stringResource(R.string.finderdex_zoom_increase),color=p.ink,fontSize=11.sp,
             modifier=Modifier.clip(RoundedCornerShape(8.dp)).clickable{menu=true}
                 .onFocusChanged{tracker.update("zoom:compact",it.isFocused)}
-                .semantics{contentDescription="Ajustar tamaño de iconos"}.padding(7.dp))
+                .semantics{contentDescription=zoomAccessibleLabel}.padding(7.dp))
         FinderGlassMenu(expanded=menu,onDismissRequest={menu=false}){
             val labels = listOf(
                 stringResource(R.string.finderdex_zoom_very_small),
@@ -203,7 +204,7 @@ private fun FinderZoomControl(view:FinderViewStyle,selected:Int,onChange:(Int)->
             valueRange=0f..max.toFloat(),steps=max-1,
             modifier=Modifier.width(116.dp).height(32.dp)
                 .onFocusChanged{tracker.update("zoom:slider",it.isFocused)}
-                .semantics{contentDescription="Tamaño de iconos"},
+                .semantics{contentDescription=zoomAccessibleLabel},
             colors=SliderDefaults.colors(thumbColor=p.accent,activeTrackColor=p.accent,
                 inactiveTrackColor=p.separator))
         Text(stringResource(R.string.finderdex_zoom_increase),color=p.secondaryInk,fontSize=11.sp)

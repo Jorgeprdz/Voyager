@@ -575,4 +575,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">種類</string>
+    <string name="finderdex_favorite_up">お気に入りを上へ</string>
+    <string name="finderdex_favorite_down">お気に入りを下へ</string>
+    <string name="finderdex_favorite_pick_icon">フォルダー画像を選択…</string>
+    <string name="finderdex_favorite_reset_icon">アイコンをリセット</string>
+    <string name="finderdex_favorite_remove">お気に入りから削除</string>
+    <string name="finderdex_zoom_accessibility">アイコンのサイズ</string>
 </resources>

@@ -602,4 +602,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">Type</string>
+    <string name="finderdex_favorite_up">Move favorite up</string>
+    <string name="finderdex_favorite_down">Move favorite down</string>
+    <string name="finderdex_favorite_pick_icon">Choose folder image…</string>
+    <string name="finderdex_favorite_reset_icon">Reset icon</string>
+    <string name="finderdex_favorite_remove">Remove from favorites</string>
+    <string name="finderdex_zoom_accessibility">Icon size</string>
 </resources>

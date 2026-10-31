@@ -87,6 +87,7 @@ internal fun FinderListView(
             contentPadding = PaddingValues(vertical = 5.dp)) {
             items(files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
+                val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                 var ctrl by remember { mutableStateOf(false) }
                 var shift by remember { mutableStateOf(false) }
                 val hoverSource = remember { MutableInteractionSource() }
@@ -107,16 +108,17 @@ internal fun FinderListView(
                     .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
                     .then(if (file.isDirectory) Modifier.finderFolderDropTarget("list:${file.path}", file.path, dragState) else Modifier)
                     .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
-                    .finderRightClick {
-                        if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
+                    .finderRightClick(secondaryClick) {
+                        controller.selectForContextMenu(columns.lastIndex, file)
                         menu = true
                     }
                     .combinedClickable(interactionSource = hoverSource, indication = null,
-                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
-                        onDoubleClick = {
+                        onClick = { if (secondaryClick.allowsPrimaryClick())
+                            controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
+                        onDoubleClick = { if (secondaryClick.allowsPrimaryClick()) {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
-                        },
-                        onLongClick = { controller.selectOnly(columns.lastIndex, file); menu = true })
+                        } },
+                        onLongClick = { controller.selectForContextMenu(columns.lastIndex, file); menu = true })
                     .finderFocusOutline(keyboardFocused)
                     .semantics { this.selected = selected }
                     .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -208,6 +210,7 @@ internal fun FinderGalleryView(
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
+                val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                 var ctrl by remember { mutableStateOf(false) }
                 var shift by remember { mutableStateOf(false) }
                 val active = file.path in last?.selected.orEmpty()
@@ -226,18 +229,19 @@ internal fun FinderGalleryView(
                     .finderDragSource(file.path, last?.selected.orEmpty(), dragState, ctrl)
                     .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
                     .then(if (file.isDirectory) Modifier.finderFolderDropTarget("gallery:${file.path}", file.path, dragState) else Modifier)
-                    .finderRightClick {
-                        if (file.path !in last?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
+                    .finderRightClick(secondaryClick) {
+                        controller.selectForContextMenu(columns.lastIndex, file)
                         menu = true
                     }
                     .finderFocusOutline(keyboardFocused)
                     .semantics { this.selected = active }
                     .combinedClickable(interactionSource = interaction, indication = null,
-                        onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
-                        onDoubleClick = {
+                        onClick = { if (secondaryClick.allowsPrimaryClick())
+                            controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
+                        onDoubleClick = { if (secondaryClick.allowsPrimaryClick()) {
                             if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
-                        },
-                        onLongClick = { menu = true })
+                        } },
+                        onLongClick = { controller.selectForContextMenu(columns.lastIndex, file); menu = true })
                     .padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     if (file.isDirectory) FinderGlyph("folder",
                         modifier = Modifier.size(zoom.iconDp.dp))

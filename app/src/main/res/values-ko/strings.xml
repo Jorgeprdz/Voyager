@@ -575,4 +575,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">유형</string>
+    <string name="finderdex_favorite_up">즐겨찾기 위로 이동</string>
+    <string name="finderdex_favorite_down">즐겨찾기 아래로 이동</string>
+    <string name="finderdex_favorite_pick_icon">폴더 이미지 선택…</string>
+    <string name="finderdex_favorite_reset_icon">아이콘 초기화</string>
+    <string name="finderdex_favorite_remove">즐겨찾기에서 제거</string>
+    <string name="finderdex_zoom_accessibility">아이콘 크기</string>
 </resources>

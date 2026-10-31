@@ -76,7 +76,10 @@ internal fun Modifier.finderMarqueeItem(path: String, marquee: FinderMarqueeStat
     this.onGloballyPositioned { marquee.register(path, it.boundsInRoot()) }
 }
 
-/** Parent gesture only activates if the pointer begins on truly empty canvas. */
+internal fun finderPrimarySelectionPress(primary: Boolean, secondary: Boolean): Boolean =
+    primary && !secondary
+
+/** Parent gesture only activates if a primary pointer begins on truly empty canvas. */
 internal fun Modifier.finderMarqueeGesture(
     controller: FinderColumnController,
     marquee: FinderMarqueeState,
@@ -85,14 +88,18 @@ internal fun Modifier.finderMarqueeGesture(
     var origin by remember { mutableStateOf(Offset.Zero) }
     var started by remember { mutableStateOf(false) }
     var additive by remember { mutableStateOf(false) }
+    var primaryGesture by remember { mutableStateOf(false) }
     this.onGloballyPositioned { origin = it.positionInRoot() }
         .pointerInput(Unit) {
             awaitPointerEventScope {
                 while (true) {
                     val event = awaitPointerEvent()
-                    if (event.type == PointerEventType.Press) additive =
-                        event.keyboardModifiers.isCtrlPressed || event.keyboardModifiers.isMetaPressed ||
-                            event.keyboardModifiers.isShiftPressed
+                    if (event.type == PointerEventType.Press) {
+                        primaryGesture = finderPrimarySelectionPress(
+                            event.buttons.isPrimaryPressed, event.buttons.isSecondaryPressed)
+                        additive = event.keyboardModifiers.isCtrlPressed ||
+                            event.keyboardModifiers.isMetaPressed || event.keyboardModifiers.isShiftPressed
+                    }
                 }
             }
         }
@@ -100,7 +107,7 @@ internal fun Modifier.finderMarqueeGesture(
             detectDragGestures(
                 onDragStart = { offset ->
                     val start = origin + offset
-                    started = drag.draggingPaths.isEmpty() &&
+                    started = primaryGesture && drag.draggingPaths.isEmpty() &&
                         marquee.startDrag(start, controller.columns.value.lastOrNull()?.selected.orEmpty(), additive)
                 },
                 onDrag = { change, _ ->
@@ -120,7 +127,9 @@ internal fun Modifier.finderMarqueeGesture(
                     val event = awaitPointerEvent()
                     val pointer = event.changes.firstOrNull()
                     if (event.type == PointerEventType.Press)
-                        pressedAt = pointer?.position?.let { origin + it }
+                        pressedAt = if (finderPrimarySelectionPress(
+                                event.buttons.isPrimaryPressed, event.buttons.isSecondaryPressed))
+                            pointer?.position?.let { origin + it } else null
                     if (event.type == PointerEventType.Release) {
                         val release = pointer?.position?.let { origin + it }
                         val down = pressedAt

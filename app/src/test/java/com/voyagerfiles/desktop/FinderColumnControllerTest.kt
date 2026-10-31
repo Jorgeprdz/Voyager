@@ -157,6 +157,45 @@ class FinderColumnControllerTest {
         } finally { scope.cancel() }
     }
 
+
+    @Test fun rightClickSelectedBatchPreservesAllItemsAndNewTargetReplacesIt() = runBlocking {
+        val root = temporary.newFolder()
+        listOf("a.txt", "b.txt", "c.txt").forEach { File(root, it).writeText(it) }
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        try {
+            val controller = FinderColumnController(scope, session(root.path), LocalFileProvider()::listFiles)
+            controller.start(); settle(controller)
+            val files = controller.columns.value.last().files
+            controller.selectOnly(0, files[0])
+            controller.selectOnly(0, files[1], additive = true)
+            val before = controller.columns.value.last().selected
+            controller.selectForContextMenu(0, files[1])
+            assertEquals(before, controller.columns.value.last().selected)
+            assertEquals(root.path, controller.currentPath)
+            controller.selectForContextMenu(0, files[2])
+            assertEquals(setOf(files[2].path), controller.columns.value.last().selected)
+            assertEquals(root.path, controller.currentPath)
+        } finally { scope.cancel() }
+    }
+
+    @Test fun ancestorContextClickDoesNotOpenFolderOrDiscardHistory() = runBlocking {
+        val root = temporary.newFolder()
+        val docs = File(root, "Documents").apply { mkdir() }
+        File(docs, "notes.txt").writeText("safe")
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
+        try {
+            val controller = FinderColumnController(scope, session(root.path), LocalFileProvider()::listFiles)
+            controller.start(); settle(controller)
+            val folder = controller.columns.value[0].files.single()
+            controller.select(0, folder); settle(controller)
+            assertEquals(docs.path, controller.currentPath)
+            controller.selectForContextMenu(0, folder)
+            assertEquals(setOf(folder.path), controller.columns.value[0].selected)
+            assertEquals(docs.path, controller.currentPath)
+            assertEquals(2, controller.columns.value.size)
+        } finally { scope.cancel() }
+    }
+
     @Test fun windowModeUsesActualWindowAndHeight() {
         assertEquals(DesktopMode.COMPACT, DesktopModeController.mode(500f, 700f))
         assertEquals(DesktopMode.ADAPTED, DesktopModeController.mode(700f, 700f))

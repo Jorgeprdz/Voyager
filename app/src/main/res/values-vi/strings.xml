@@ -575,4 +575,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">Loại</string>
+    <string name="finderdex_favorite_up">Đưa mục yêu thích lên</string>
+    <string name="finderdex_favorite_down">Đưa mục yêu thích xuống</string>
+    <string name="finderdex_favorite_pick_icon">Chọn ảnh thư mục…</string>
+    <string name="finderdex_favorite_reset_icon">Đặt lại biểu tượng</string>
+    <string name="finderdex_favorite_remove">Xóa khỏi mục yêu thích</string>
+    <string name="finderdex_zoom_accessibility">Kích thước biểu tượng</string>
 </resources>

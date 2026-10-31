@@ -587,4 +587,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">Tipo</string>
+    <string name="finderdex_favorite_up">Sposta preferito in alto</string>
+    <string name="finderdex_favorite_down">Sposta preferito in basso</string>
+    <string name="finderdex_favorite_pick_icon">Scegli immagine cartella…</string>
+    <string name="finderdex_favorite_reset_icon">Ripristina icona</string>
+    <string name="finderdex_favorite_remove">Rimuovi dai preferiti</string>
+    <string name="finderdex_zoom_accessibility">Dimensione icone</string>
 </resources>

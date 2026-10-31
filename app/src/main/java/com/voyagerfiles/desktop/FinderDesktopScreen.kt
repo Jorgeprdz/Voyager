@@ -513,7 +513,8 @@ fun FinderDesktopScreen(
     var showTrash by remember { mutableStateOf(false) }
     var newFolderName by remember { mutableStateOf("") }
     fun execute(action: FinderFileAction, file: FileItem) {
-        val selectedPaths = columns.lastOrNull()?.selected.orEmpty()
+        val owningColumn = columns.lastOrNull { col -> col.files.any { it.path == file.path } }
+        val selectedPaths = owningColumn?.selected.orEmpty()
         val effectivePaths = if (file.path in selectedPaths) selectedPaths.toList() else listOf(file.path)
         when (action) {
             FinderFileAction.COPY -> onCopyPaths(effectivePaths, false)
@@ -527,9 +528,8 @@ fun FinderDesktopScreen(
             FinderFileAction.RENAME -> { renameFile = file; renameText = file.name }
             FinderFileAction.TRASH, FinderFileAction.DELETE -> {
                 deleteFile = file; permanentDelete = action == FinderFileAction.DELETE
-                val selected = columns.lastOrNull()?.selected.orEmpty()
-                pendingDeletePaths = if (file.path in selected) {
-                    columns.lastOrNull()?.files.orEmpty().filter { it.path in selected }.map { it.path }
+                pendingDeletePaths = if (file.path in selectedPaths) {
+                    owningColumn?.files.orEmpty().filter { it.path in selectedPaths }.map { it.path }
                 } else listOf(file.path)
             }
             else -> onFileAction(action, file)
@@ -877,15 +877,15 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
                 color = if (selected) palette.selectionText(false, material.windowFocused) else palette.ink)
         }
         if (pinned) FinderGlassMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text("Subir favorito") },
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_up)) },
                 onClick = { menu = false; onReorderFavorite(path, -1) })
-            DropdownMenuItem(text = { Text("Bajar favorito") },
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_down)) },
                 onClick = { menu = false; onReorderFavorite(path, 1) })
-            DropdownMenuItem(text = { Text("Elegir imagen de carpeta…") },
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_pick_icon)) },
                 onClick = { menu = false; onPickImage(path) })
-            if (imageUri != null) DropdownMenuItem(text = { Text("Restablecer icono") },
+            if (imageUri != null) DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_reset_icon)) },
                 onClick = { menu = false; onClearImage(path) })
-            DropdownMenuItem(text = { Text("Quitar de favoritos") },
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_favorite_remove)) },
                 onClick = { menu = false; onRemoveFavorite(path) })
         }
     }
@@ -927,6 +927,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                     val hovered by interaction.collectIsHoveredAsState()
                     val pressed by interaction.collectIsPressedAsState()
                     var menuOpen by remember { mutableStateOf(false) }
+                    val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                     var ctrl by remember { mutableStateOf(false) }
                     var shift by remember { mutableStateOf(false) }
                     var keyboardFocused by remember { mutableStateOf(false) }
@@ -943,14 +944,17 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                         .finderDragSource(file.path, column?.selected.orEmpty(), dragState, ctrl)
                         .then(if (file.isDirectory) Modifier.finderFolderDropTarget("icon:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
-                        .finderRightClick {
-                            if (file.path !in column?.selected.orEmpty()) controller.selectOnly(columns.lastIndex, file)
+                        .finderRightClick(secondaryClick) {
+                            controller.selectForContextMenu(columns.lastIndex, file)
                             menuOpen = true
                         }
                         .combinedClickable(interactionSource = interaction, indication = null,
-                            onClick = { controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
-                            onDoubleClick = { if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file) },
-                            onLongClick = { controller.selectOnly(columns.lastIndex, file); menuOpen = true })
+                            onClick = { if (secondaryClick.allowsPrimaryClick())
+                                controller.selectOnly(columns.lastIndex, file, ctrl, shift, files.map { it.path }) },
+                            onDoubleClick = { if (secondaryClick.allowsPrimaryClick()) {
+                                if (file.isDirectory) controller.select(columns.lastIndex, file) else onOpen(file)
+                            } },
+                            onLongClick = { controller.selectForContextMenu(columns.lastIndex, file); menuOpen = true })
                         .finderFocusOutline(keyboardFocused)
                         .semantics { this.selected = selected }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(Modifier.size((zoom.iconDp + 16f).dp, (zoom.iconDp + 10f).dp)
@@ -1033,6 +1037,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                     val hovered by interaction.collectIsHoveredAsState()
                     val pressed by interaction.collectIsPressedAsState()
                     var menuOpen by remember { mutableStateOf(false) }
+                    val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                     var ctrl by remember { mutableStateOf(false) }
                     var shift by remember { mutableStateOf(false) }
                     var keyboardFocused by remember { mutableStateOf(false) }
@@ -1049,15 +1054,20 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                         .finderDragSource(file.path, column.selected, dragState, ctrl)
                         .then(if (file.isDirectory) Modifier.finderFolderDropTarget("column:${index}:${file.path}", file.path, dragState) else Modifier)
                         .finderMouseSelectionModifiers { c, sh -> ctrl = c; shift = sh }
-                        .finderRightClick { menuOpen = true }
+                        .finderRightClick(secondaryClick) {
+                            controller.selectForContextMenu(index, file)
+                            menuOpen = true
+                        }
                         .combinedClickable(interactionSource = interaction, indication = null,
-                            onClick = {
+                            onClick = { if (secondaryClick.allowsPrimaryClick()) {
                                 if (index == controller.columns.value.lastIndex && (ctrl || shift))
                                     controller.selectOnly(index, file, ctrl, shift, filtered.map { it.path })
                                 else controller.select(index, file)
-                            },
-                            onDoubleClick = { if (file.isDirectory) controller.select(index, file) else onOpen(file) },
-                            onLongClick = { menuOpen = true })
+                            } },
+                            onDoubleClick = { if (secondaryClick.allowsPrimaryClick()) {
+                                if (file.isDirectory) controller.select(index, file) else onOpen(file)
+                            } },
+                            onLongClick = { controller.selectForContextMenu(index, file); menuOpen = true })
                         .finderFocusOutline(keyboardFocused)
                         .semantics { this.selected = selected }.padding(horizontal = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (file.isDirectory) FinderGlyph("folder", modifier = Modifier.size(zoom.iconDp.dp))

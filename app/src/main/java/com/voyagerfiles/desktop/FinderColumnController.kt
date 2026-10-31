@@ -97,6 +97,22 @@ class FinderColumnController(
         onLocation(currentPath, selection)
     }
 
+    /** Context-click never navigates or toggles an already selected item. */
+    fun selectForContextMenu(index: Int, file: FileItem) {
+        val columns = _columns.value
+        val column = columns.getOrNull(index) ?: return
+        if (column.files.none { it.path == file.path }) return
+        val nextSelection = finderContextSelection(file.path, column.selected)
+        if (nextSelection === column.selected) return
+        if (index == columns.lastIndex) {
+            selectOnly(index, file)
+        } else {
+            _columns.value = columns.mapIndexed { i, c ->
+                if (i == index) c.copy(selected = nextSelection) else c
+            }
+        }
+    }
+
     /** One authoritative selection for mouse, keyboard, marquee and file operations. */
     fun selectPaths(paths: Set<String>, extendExisting: Boolean = false) {
         val columns = _columns.value

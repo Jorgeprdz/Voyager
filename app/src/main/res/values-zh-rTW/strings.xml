@@ -575,4 +575,10 @@
     <string name="finderdex_zoom_decrease">A−</string>
     <string name="finderdex_zoom_increase">A+</string>
     <string name="finderdex_column_type">類型</string>
+    <string name="finderdex_favorite_up">上移最愛項目</string>
+    <string name="finderdex_favorite_down">下移最愛項目</string>
+    <string name="finderdex_favorite_pick_icon">選擇資料夾圖片…</string>
+    <string name="finderdex_favorite_reset_icon">重設圖示</string>
+    <string name="finderdex_favorite_remove">從最愛移除</string>
+    <string name="finderdex_zoom_accessibility">圖示大小</string>
 </resources>
