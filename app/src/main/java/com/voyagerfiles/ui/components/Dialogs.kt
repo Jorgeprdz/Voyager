@@ -37,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.FinderMobileTokens
 import com.voyagerfiles.data.model.ConnectionProtocol
 import com.voyagerfiles.data.model.RemoteConnection
 import com.voyagerfiles.data.remote.sftp.SshKeyGenerator
@@ -75,6 +76,8 @@ fun CreateItemDialog(
                 },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                shape = FinderMobileTokens.controlShape,
+                colors = finderMobileInputColors(),
             )
         },
         confirmButton = {
@@ -116,6 +119,8 @@ fun RenameDialog(
                 },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
+                shape = FinderMobileTokens.controlShape,
+                colors = finderMobileInputColors(),
             )
         },
         confirmButton = {
@@ -244,6 +249,8 @@ fun ConnectionDialog(
                     label = { Text(stringResource(R.string.connection_display_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -266,6 +273,8 @@ fun ConnectionDialog(
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
 
                 if (protocol == ConnectionProtocol.FTP) {
@@ -310,6 +319,8 @@ fun ConnectionDialog(
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -325,6 +336,8 @@ fun ConnectionDialog(
                     label = { Text(stringResource(R.string.connection_username)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -336,6 +349,8 @@ fun ConnectionDialog(
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
 
                 if (protocol == ConnectionProtocol.SFTP) {
@@ -346,6 +361,8 @@ fun ConnectionDialog(
                         label = { Text(stringResource(R.string.connection_private_key_path)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = FinderMobileTokens.controlShape,
+                        colors = finderMobileInputColors(),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
@@ -419,6 +436,8 @@ fun ConnectionDialog(
                         },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = FinderMobileTokens.controlShape,
+                        colors = finderMobileInputColors(),
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -427,6 +446,8 @@ fun ConnectionDialog(
                         label = { Text(stringResource(R.string.connection_domain)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
+                        shape = FinderMobileTokens.controlShape,
+                        colors = finderMobileInputColors(),
                     )
                 }
 
@@ -438,6 +459,8 @@ fun ConnectionDialog(
                     label = { Text(stringResource(R.string.connection_remote_path)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
             }
         },
