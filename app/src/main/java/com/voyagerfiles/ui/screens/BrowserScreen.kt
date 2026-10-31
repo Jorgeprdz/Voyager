@@ -73,15 +73,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -133,6 +130,9 @@ import com.voyagerfiles.ui.components.AudioToneMenuItems
 import com.voyagerfiles.ui.components.rememberAudioToneAction
 import com.voyagerfiles.R
 import com.voyagerfiles.ui.theme.FinderMobileTokens
+import com.voyagerfiles.ui.components.FinderMobileCreateButton
+import com.voyagerfiles.ui.components.FinderMobileFilterPill
+import com.voyagerfiles.ui.components.FinderMobileSearchField
 import com.voyagerfiles.ui.components.FileSortMenu
 import com.voyagerfiles.data.model.Bookmark
 import com.voyagerfiles.data.model.LocalFileVisibility
@@ -492,7 +492,7 @@ fun BrowserScreen(
     }
 
     Scaffold(
-        containerColor = FinderMobileTokens.background,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
@@ -709,15 +709,15 @@ fun BrowserScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = FinderMobileTokens.ice,
-                        navigationIconContentColor = FinderMobileTokens.navy,
-                        titleContentColor = FinderMobileTokens.navy,
-                        actionIconContentColor = FinderMobileTokens.navy,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 )
             } else {
                 Surface(
-                    color = FinderMobileTokens.surface,
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
                     Column(
                         modifier = Modifier
@@ -737,9 +737,9 @@ fun BrowserScreen(
                             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                                 Text(state.currentPath.substringAfterLast('/').ifBlank { context.getString(R.string.finderdex_mobile_title) },
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleMedium)
+                                    color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
                                 Text(state.files.size.toString(),
-                                    color = FinderMobileTokens.secondaryInk, style = MaterialTheme.typography.labelSmall)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                             }
                             if (searchBarMode == SearchBarMode.COMPACT) {
                                 IconButton(onClick = { compactSearchExpanded = true }) {
@@ -891,7 +891,7 @@ fun BrowserScreen(
                     exit = slideOutVertically(targetOffsetY = { it }),
                 ) {
                     BottomAppBar(
-                        containerColor = FinderMobileTokens.ice,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ) {
                         Text(
                             pluralStringResource(
@@ -930,12 +930,10 @@ fun BrowserScreen(
         floatingActionButton = {
             if (!isSelectionMode && runningOperation == null) {
                 Box {
-                    FloatingActionButton(
+                    FinderMobileCreateButton(
                         onClick = { showCreateMenu = true },
-                        containerColor = FinderMobileTokens.ice,
-                    ) {
-                        Icon(Icons.Filled.CreateNewFolder, stringResource(R.string.content_desc_create))
-                    }
+                        contentDescription = stringResource(R.string.content_desc_create),
+                    )
                     BrowserCreateMenu(
                         expanded = showCreateMenu,
                         model = createMenuModel,
@@ -1495,23 +1493,14 @@ private fun BrowserSearchField(
     LaunchedEffect(onCloseSearch != null) {
         if (onCloseSearch != null) searchFocus.requestFocus()
     }
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-        trailingIcon = {
-            if (onCloseSearch != null) {
-                IconButton(onClick = onCloseSearch) {
-                    Icon(Icons.Filled.Close, stringResource(R.string.action_close_search))
-                }
-            } else if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Filled.Close, stringResource(R.string.content_desc_clear_search))
-                }
-            }
-        },
-        placeholder = { Text(stringResource(R.string.browser_search_placeholder)) },
-        singleLine = true,
+    FinderMobileSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = stringResource(R.string.browser_search_placeholder),
+        clearDescription = stringResource(
+            if (onCloseSearch != null) R.string.action_close_search else R.string.content_desc_clear_search,
+        ),
+        onClose = onCloseSearch,
         modifier = modifier.focusRequester(searchFocus).testTag(BROWSER_SEARCH_TEST_TAG),
     )
 }
@@ -1529,10 +1518,10 @@ private fun FileTypeFilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(FileTypeFilter.entries, key = { it.name }) { filter ->
-            FilterChip(
+            FinderMobileFilterPill(
+                label = stringResource(filter.labelRes),
                 selected = selectedFilter == filter,
                 onClick = { onFilterChange(filter) },
-                label = { Text(stringResource(filter.labelRes)) },
             )
         }
     }
