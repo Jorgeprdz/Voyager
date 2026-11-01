@@ -1198,13 +1198,16 @@ private fun SidebarItem(name: String, path: String, glyph: String, selected: Boo
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FinderIconView(controller: FinderColumnController, columns: List<FinderColumn>, query: String,
-    descending: Boolean, sortBy: SortBy, modifier: Modifier, onOpen: (FileItem) -> Unit,
+    descending: Boolean, sortBy: SortBy, groupBy: GroupBy, groupDescending: Boolean,
+    modifier: Modifier, onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean, clipboardAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState, zoom: FinderViewDensity) {
     val column = columns.lastOrNull()
-    val files = remember(column?.files, query, descending, sortBy) {
-        finderOrderFiles(column?.files.orEmpty().filter { it.name.contains(query, true) }, sortBy, descending)
+    val groups = remember(column?.files, query, descending, sortBy, groupBy, groupDescending) {
+        finderGroups(column?.files.orEmpty().filter { it.name.contains(query, true) },
+            sortBy, descending, groupBy, groupDescending)
     }
+    val files = remember(groups) { finderFlatten(groups) }
     val marquee = remember(column?.path) { FinderMarqueeState() }
     val savedScroll = remember(controller.session.id, column?.path) { (column?.scrollIndex ?: 0) to (column?.scrollOffset ?: 0) }
     var scrollRestored by remember(controller.session.id, column?.path) { mutableStateOf(false) }
@@ -1238,7 +1241,14 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                     vertical = FinderContentTokens.ICON_GRID_OUTER_VERTICAL_DP.dp),
                 horizontalArrangement = Arrangement.spacedBy(FinderContentTokens.ICON_GRID_COLUMN_GAP_DP.dp),
                 verticalArrangement = Arrangement.spacedBy(FinderContentTokens.ICON_GRID_ROW_GAP_DP.dp)) {
-                items(files, key = { it.path }) { file ->
+                groups.forEach { group ->
+                    if (groupBy != GroupBy.NONE) {
+                        item(key = "header:" + group.key,
+                            span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                            FinderGroupHeader(group.heading, group.files.size)
+                        }
+                    }
+                    items(group.files, key = { it.path }) { file ->
                     val selected = file.path in column?.selected.orEmpty()
                     val interaction = remember { MutableInteractionSource() }
                     val hovered by interaction.collectIsHoveredAsState()
@@ -1303,6 +1313,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
                             onFileAction(it, file)
                         }
                     }
+                    }
                 }
             }
         }
@@ -1317,7 +1328,7 @@ private fun FinderIconView(controller: FinderColumnController, columns: List<Fin
 }
 
 @Composable
-private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, sortBy: SortBy, modifier: Modifier, onOpen: (FileItem) -> Unit,
+private fun FinderWorkspace(controller: FinderColumnController, columns: List<FinderColumn>, query: String, descending: Boolean, sortBy: SortBy, groupBy: GroupBy, groupDescending: Boolean, modifier: Modifier, onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean, clipboardAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState, zoom: FinderViewDensity) {
     val horizontal = rememberScrollState()
@@ -1325,7 +1336,8 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
     Row(modifier.fillMaxHeight().testTag("finder-columns").horizontalScroll(horizontal)) {
         columns.forEachIndexed { index, column ->
             key(column.id) {
-                ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, sortBy, onOpen,
+                ColumnView(controller, index, column, index == columns.indexOfLast { it.selected.isNotEmpty() }, if (index == columns.lastIndex) query else "", descending, sortBy,
+                    groupBy, groupDescending, onOpen,
                     operationsAvailable && index == columns.lastIndex, clipboardAvailable, onFileAction, dragState, zoom)
             }
         }
@@ -1335,7 +1347,7 @@ private fun FinderWorkspace(controller: FinderColumnController, columns: List<Fi
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, sortBy: SortBy, onOpen: (FileItem) -> Unit,
+private fun ColumnView(controller: FinderColumnController, index: Int, column: FinderColumn, active: Boolean, query: String, descending: Boolean, sortBy: SortBy, groupBy: GroupBy, groupDescending: Boolean, onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean, clipboardAvailable: Boolean, onFileAction: (FinderFileAction, FileItem) -> Unit,
     dragState: FinderDragDropState, zoom: FinderViewDensity) {
     val scroll = rememberLazyListState(column.scrollIndex, column.scrollOffset)
@@ -1349,12 +1361,18 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
     val palette = glass.palette
     Row(Modifier.width(FinderContentTokens.COLUMN_WIDTH_DP.dp).fillMaxHeight()) {
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            val filtered = remember(column.files, query, descending, sortBy) {
-                finderOrderFiles(column.files.filter { it.name.contains(query, true) }, sortBy, descending)
+            val groups = remember(column.files, query, descending, sortBy, groupBy, groupDescending) {
+                finderGroups(column.files.filter { it.name.contains(query, true) }, sortBy,
+                    descending, groupBy, groupDescending)
             }
+            val filtered = remember(groups) { finderFlatten(groups) }
             LazyColumn(state = scroll, modifier = Modifier.fillMaxSize()
                 .onGloballyPositioned { columnBounds = it.boundsInRoot() }.padding(horizontal = 5.dp), contentPadding = PaddingValues(vertical = 7.dp)) {
-                itemsIndexed(filtered, key = { _, f -> f.path }) { _, file ->
+                groups.forEach { group ->
+                    if (groupBy != GroupBy.NONE) {
+                        item(key = "header:" + group.key) { FinderGroupHeader(group.heading, group.files.size) }
+                    }
+                    itemsIndexed(group.files, key = { _, f -> f.path }) { _, file ->
                     val selected = file.path in column.selected
                     val interaction = remember { MutableInteractionSource() }
                     val hovered by interaction.collectIsHoveredAsState()
@@ -1406,6 +1424,7 @@ private fun ColumnView(controller: FinderColumnController, index: Int, column: F
                             if (file.path in column.selected) column.selected.size else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                             onFileAction(it, file)
                         }
+                    }
                     }
                 }
             }
