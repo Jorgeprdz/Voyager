@@ -702,4 +702,5 @@
     <string name="finderdex_brightness_dark">Dark</string>
     <string name="finderdex_high_contrast">High contrast</string>
     <string name="finderdex_reduce_transparency">Reduce transparency</string>
+    <string name="finderdex_dynamic_colors">Dynamic system colors</string>
 </resources>
