@@ -86,12 +86,18 @@ object FileArrangementEngine {
         }
         GroupBy.TYPE -> when {
             file.isDirectory -> GroupKey("folder", "Carpetas", 0)
-            file.isImage -> GroupKey("image", "Imágenes", 1)
-            file.isVideo -> GroupKey("video", "Videos", 2)
-            file.isAudio -> GroupKey("audio", "Audio", 3)
+            file.extension.lowercase(Locale.ROOT) in setOf("jpg","jpeg","png","gif","webp","heic","avif","bmp","svg") ->
+                GroupKey("image", "Imágenes", 1)
+            file.extension.lowercase(Locale.ROOT) in setOf("mp4","mkv","avi","mov","webm","m4v") ->
+                GroupKey("video", "Videos", 2)
+            file.extension.lowercase(Locale.ROOT) in setOf("mp3","wav","m4a","flac","ogg","aac","opus") ->
+                GroupKey("audio", "Audio", 3)
             file.isArchive -> GroupKey("archive", "Comprimidos", 4)
             file.isApk -> GroupKey("app", "Aplicaciones", 5)
-            file.isText || file.isPdf || file.isOfficeDocument -> GroupKey("document", "Documentos", 6)
+            file.extension.lowercase(Locale.ROOT) in setOf(
+                "pdf","doc","docx","odt","txt","md","csv","xls","xlsx","ppt","pptx","rtf",
+                "json","xml","html","css","kt","java","js","py","sql","log") ->
+                GroupKey("document", "Documentos", 6)
             file.extension.isBlank() -> GroupKey("no-extension", "Sin extensión", 7)
             else -> GroupKey("other", "Otros", 8)
         }
@@ -141,7 +147,9 @@ object FileArrangementEngine {
                     b.lastModified.time.takeIf { it > 0 })
                 SortBy.SIZE -> compareNullableLong(a.size.takeUnless { a.isDirectory || it < 0 },
                     b.size.takeUnless { b.isDirectory || it < 0 })
-                SortBy.TYPE -> typeLabel(a).compareTo(typeLabel(b))
+                SortBy.TYPE -> groupKey(a, GroupBy.TYPE, Instant.EPOCH, ZoneId.of("UTC")).rank
+                    .compareTo(groupKey(b, GroupBy.TYPE, Instant.EPOCH, ZoneId.of("UTC")).rank)
+                    .takeIf { it != 0 } ?: typeLabel(a).compareTo(typeLabel(b))
             }
             if (primary == 0) tie.compare(a, b) else primary
         }
