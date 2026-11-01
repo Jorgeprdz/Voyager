@@ -111,6 +111,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
 ) : AndroidViewModel(application) {
 
     private val prefs = PreferencesManager(application)
+    private val arrangementStore = com.voyagerfiles.data.local.FileArrangementStore(application)
     private val db = AppDatabase.getInstance(application)
     private val connectionDao = db.connectionDao()
     private val connectionRepository = ConnectionRepository(connectionDao, AndroidCredentialCipher())
@@ -230,18 +231,6 @@ class FileBrowserViewModel @JvmOverloads constructor(
                 val changed = _browseState.value.showHidden != show
                 _browseState.update { it.copy(showHidden = show) }
                 if (changed && _browseState.value.currentPath != "/") refreshFiles()
-            }
-        }
-        viewModelScope.launch {
-            prefs.sortBy.distinctUntilChanged().collect { sort ->
-                _browseState.update { it.copy(sortBy = sort) }
-                if (_browseState.value.files.isNotEmpty()) resortFiles()
-            }
-        }
-        viewModelScope.launch {
-            prefs.sortOrder.distinctUntilChanged().collect { order ->
-                _browseState.update { it.copy(sortOrder = order) }
-                if (_browseState.value.files.isNotEmpty()) resortFiles()
             }
         }
         viewModelScope.launch {
@@ -595,15 +584,27 @@ class FileBrowserViewModel @JvmOverloads constructor(
 
     private fun sortFiles(files: List<FileItem>): List<FileItem> {
         val state = _browseState.value
-        val comparator = when (state.sortBy) {
-            SortBy.NAME -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
-            SortBy.SIZE -> compareBy { it.size }
-            SortBy.DATE -> compareBy { it.lastModified }
-            SortBy.TYPE -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.extension }
-                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+        return com.voyagerfiles.data.model.FileArrangementEngine.order(
+            files, com.voyagerfiles.data.model.FileArrangement(
+                sortBy = state.sortBy, sortOrder = state.sortOrder,
+                groupBy = state.groupBy, groupOrder = state.groupOrder,
+            ),
+        )
+    }
+
+    private fun updateArrangement(change: (com.voyagerfiles.data.model.FileArrangement) -> com.voyagerfiles.data.model.FileArrangement) {
+        val sessionId = _activeSession.value?.id ?: "local:default"
+        val state = _browseState.value
+        val updated = change(com.voyagerfiles.data.model.FileArrangement(
+            sortBy = state.sortBy, sortOrder = state.sortOrder,
+            groupBy = state.groupBy, groupOrder = state.groupOrder,
+        ))
+        arrangementStore.write(sessionId, updated)
+        _browseState.update {
+            it.copy(sortBy = updated.sortBy, sortOrder = updated.sortOrder,
+                groupBy = updated.groupBy, groupOrder = updated.groupOrder)
         }
-        val ordered = if (state.sortOrder == SortOrder.DESCENDING) comparator.reversed() else comparator
-        return files.sortedWith(compareByDescending<FileItem> { it.isDirectory }.then(ordered))
+        resortFiles()
     }
 
     fun toggleSelection(path: String) {
@@ -1870,13 +1871,14 @@ class FileBrowserViewModel @JvmOverloads constructor(
         viewModelScope.launch { prefs.setLimitedAccessAccepted(accepted) }
     }
 
-    fun setSortBy(sortBy: SortBy) {
-        viewModelScope.launch { prefs.setSortBy(sortBy) }
-    }
+    fun setSortBy(sortBy: SortBy) = updateArrangement { it.copy(sortBy = sortBy) }
 
-    fun setSortOrder(order: SortOrder) {
-        viewModelScope.launch { prefs.setSortOrder(order) }
-    }
+    fun setSortOrder(order: SortOrder) = updateArrangement { it.copy(sortOrder = order) }
+
+    fun setGroupBy(by: com.voyagerfiles.data.model.GroupBy) =
+        updateArrangement { it.copy(groupBy = by) }
+
+    fun setGroupOrder(order: SortOrder) = updateArrangement { it.copy(groupOrder = order) }
 
     fun setViewMode(mode: ViewMode) {
         viewModelScope.launch { prefs.setViewMode(mode) }
@@ -1908,8 +1910,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
         scrollMemory.enter(session.id, session.currentPath, returning = true)
         _activeSession.value = session
+        val arrangement = arrangementStore.read(session.id)
         _browseState.update {
             it.copy(
+                sortBy = arrangement.sortBy, sortOrder = arrangement.sortOrder,
+                groupBy = arrangement.groupBy, groupOrder = arrangement.groupOrder,
                 currentPath = session.currentPath,
                 source = session.source,
                 selectedFiles = emptySet(),
