@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
+import com.voyagerfiles.ui.theme.FinderStyle
 
 /**
  * App-owned popup only. Keeps Material3 keyboard/ESC/outside-click positioning while
@@ -24,12 +25,13 @@ internal fun FinderGlassMenu(
     val p=LocalFinderMaterials.current.palette
     val t=LocalFinderSemanticTokens.current
     val shape=RoundedCornerShape(t.menuRadiusDp.dp)
+    val menuSurface=if (t.appearance.style == FinderStyle.GLASS) p.titlebar else p.footer
     val colors=MaterialTheme.colorScheme.copy(
-        surface=p.titlebar, surfaceContainer=p.titlebar,
+        surface=menuSurface, surfaceContainer=menuSurface,
         onSurface=p.ink, onSurfaceVariant=p.secondaryInk)
     MaterialTheme(colorScheme=colors) {
         DropdownMenu(expanded=expanded,onDismissRequest=onDismissRequest,
-            modifier=Modifier.clip(shape).background(p.titlebar)
+            modifier=Modifier.clip(shape).background(menuSurface)
                 .border(t.borderDp.dp,p.edge,shape)) {
             content()
         }
