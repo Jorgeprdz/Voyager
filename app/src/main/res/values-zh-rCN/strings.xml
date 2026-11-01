@@ -630,4 +630,16 @@
     <string name="r31_preserve_extension">Preserve extension</string>
     <string name="r31_last_week">Last 7 days</string>
     <string name="r31_remove_history">Remove</string>
+
+    <string name="search_in_current_folder">Limit to current folder</string>
+    <string name="search_include_subfolders">Include subfolders</string>
+    <string name="search_min_mb">Min size (MB)</string>
+    <string name="search_max_mb">Max size (MB)</string>
+    <string name="search_modified_any">Any date</string>
+    <string name="search_modified_7">Last 7 days</string>
+    <string name="search_modified_30">Last 30 days</string>
+    <string name="search_modified_365">Last year</string>
+    <string name="search_saved_queries">Saved searches</string>
+    <string name="search_save_current">Save search</string>
+    <string name="search_invalid_range">Minimum size must not exceed maximum</string>
 </resources>
