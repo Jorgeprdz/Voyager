@@ -90,11 +90,17 @@ object FinderMobileTokens {
 /** Apply only inside AppNavigation's mobile branch; Desktop remains on VoyagerTheme. */
 @Composable
 fun FinderMobileTheme(content: @Composable () -> Unit) {
+    val appearance = LocalFinderAppearance.current
+    val tokens = LocalFinderSemanticTokens.current
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    // Legacy Glass retains its original mobile palette. Non-Glass uses the shared
+    // app scheme so sheets, dialogs and browser chrome resolve the same roles.
+    val defaultGlass = appearance == FinderAppearance()
     MaterialTheme(
-        colorScheme = FinderMobileTokens.colorScheme(dark),
+        colorScheme = if (defaultGlass) FinderMobileTokens.colorScheme(dark)
+            else MaterialTheme.colorScheme,
         typography = MaterialTheme.typography,
-        shapes = FinderMobileTokens.shapes,
+        shapes = if (defaultGlass) FinderMobileTokens.shapes else FinderAppearanceResolver.shapes(tokens),
         content = content,
     )
 }
