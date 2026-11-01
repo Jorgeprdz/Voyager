@@ -40,6 +40,11 @@ import com.voyagerfiles.ui.theme.AppTheme
 import com.voyagerfiles.ui.theme.VoyagerTheme
 import java.io.FileNotFoundException
 import java.io.InputStream
+import java.io.OutputStream
+import java.io.FilterOutputStream
+import java.io.IOException
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -225,10 +230,18 @@ private class IncomingArchiveProvider(
     private val sourceUri: Uri,
 ) : FileProvider {
     private val destination = SafFileProvider(context, treeUri)
+    private val entries = AtomicInteger()
+    private val writtenBytes = AtomicLong()
     val rootPath: String get() = destination.rootPath
     override suspend fun listFiles(path: String) = destination.listFiles(path)
-    override suspend fun createDirectory(path: String, name: String) = destination.createDirectory(path, name)
-    override suspend fun createFile(path: String, name: String) = destination.createFile(path, name)
+    override suspend fun createDirectory(path: String, name: String): Result<FileItem> =
+        if (entries.incrementAndGet() > MAX_ENTRIES)
+            Result.failure(IOException("Extraction exceeds 25,000 entries"))
+        else destination.createDirectory(path, name)
+    override suspend fun createFile(path: String, name: String): Result<FileItem> =
+        if (entries.incrementAndGet() > MAX_ENTRIES)
+            Result.failure(IOException("Extraction exceeds 25,000 entries"))
+        else destination.createFile(path, name)
     override suspend fun delete(path: String) = destination.delete(path)
     override suspend fun rename(oldPath: String, newName: String) = destination.rename(oldPath, newName)
     override suspend fun copy(sourcePath: String, destPath: String) = destination.copy(sourcePath, destPath)
@@ -240,9 +253,31 @@ private class IncomingArchiveProvider(
                     ?: throw FileNotFoundException("External archive access expired")
             }
         } else destination.getInputStream(path)
-    override suspend fun getOutputStream(path: String) = destination.getOutputStream(path)
+    override suspend fun getOutputStream(path: String): Result<OutputStream> =
+        destination.getOutputStream(path).map { target ->
+            object : FilterOutputStream(target) {
+                private fun budget(amount: Int) {
+                    val total = writtenBytes.addAndGet(amount.toLong())
+                    if (total > MAX_EXTRACTED_BYTES) {
+                        throw IOException("Extraction exceeds the 2 GiB safety budget")
+                    }
+                }
+                override fun write(b: Int) {
+                    budget(1)
+                    out.write(b)
+                }
+                override fun write(bytes: ByteArray, off: Int, len: Int) {
+                    if (len > 0) budget(len)
+                    out.write(bytes, off, len)
+                }
+            }
+        }
     override suspend fun exists(path: String) = destination.exists(path)
     override suspend fun getFileInfo(path: String) = destination.getFileInfo(path)
     override fun getParentPath(path: String) = destination.getParentPath(path)
     override fun ignoresNameCase(path: String) = destination.ignoresNameCase(path)
+    private companion object {
+        const val MAX_ENTRIES = 25_000
+        const val MAX_EXTRACTED_BYTES = 2L * 1024 * 1024 * 1024
+    }
 }
