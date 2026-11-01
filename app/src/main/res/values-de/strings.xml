@@ -671,4 +671,5 @@
     <string name="finderdex_modified_date">Date modified</string>
     <string name="finderdex_groups_descending">Groups: descending</string>
     <string name="finderdex_groups_ascending">Groups: ascending</string>
+    <string name="r321_other">Andere</string>
 </resources>
