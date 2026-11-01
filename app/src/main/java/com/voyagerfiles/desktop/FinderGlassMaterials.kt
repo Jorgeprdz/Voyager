@@ -20,6 +20,10 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import com.voyagerfiles.ui.theme.LocalFinderAppearance
+import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
+import com.voyagerfiles.ui.theme.FinderAppearance
+import com.voyagerfiles.ui.theme.FinderStyle
 
 /**
  * Desktop-only material palette. Alpha represents glass-like layering *inside* the app,
@@ -190,9 +194,42 @@ internal fun rememberFinderMaterials(): FinderMaterials {
             } else onDispose {}
         } else onDispose {}
     }
-    // Capability is reported only, not activated by changing Android window flags/theme.
-    return FinderMaterials(if (isDark) FinderGlassPalette.Dark else FinderGlassPalette.Light,
-        focused, reducedMotion, eligibleForWindowBlur && compositorEnabled)
+    // Use the same semantic scheme as mobile. The default Glass palette is retained
+    // byte-for-byte for existing installations; alternate styles alter every surface role.
+    val style = LocalFinderAppearance.current
+    val t = LocalFinderSemanticTokens.current
+    val base = if (isDark) FinderGlassPalette.Dark else FinderGlassPalette.Light
+    val palette = if (style == FinderAppearance()) base else base.copy(
+        window = t.background,
+        sidebar = t.navigation.copy(alpha = t.glassAlpha),
+        titlebar = t.navigation.copy(alpha = t.glassAlpha),
+        toolbar = t.raised.copy(alpha = t.glassAlpha),
+        content = t.surface,
+        footer = t.raised.copy(alpha = t.glassAlpha),
+        ink = t.onSurface,
+        secondaryInk = t.secondaryText,
+        accent = t.accent,
+        icon = t.accent,
+        separator = t.border,
+        edge = t.border,
+        hover = t.accent.copy(alpha = if (style.highContrast) .4f else .20f),
+        pressed = t.accent.copy(alpha = if (style.highContrast) .65f else .30f),
+        selected = t.selected,
+        selectedStrong = t.accent,
+        selectedInactive = t.raised,
+        selectedText = t.onSelected,
+        selectedStrongText = if (t.dark) Color.Black else Color.White,
+        focusRing = t.focus,
+        scrollbar = t.secondaryText.copy(alpha = .65f),
+        scrollbarHover = t.secondaryText,
+        illuminatedEdge = t.border,
+        feedback = if (t.dark) Color(0xFF493A2B) else Color(0xFFFFF0CF),
+        progress = t.raised,
+        dragHint = t.raised,
+        dark = t.dark,
+    )
+    return FinderMaterials(palette, focused, reducedMotion,
+        !style.reduceTransparency && eligibleForWindowBlur && compositorEnabled)
 }
 
 @Composable
