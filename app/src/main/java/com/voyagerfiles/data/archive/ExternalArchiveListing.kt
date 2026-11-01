@@ -33,8 +33,8 @@ object ExternalArchiveListingReader {
                     ArchiveFormat.ZIP -> inspectZip(stream, cacheDir)
                     ArchiveFormat.TAR -> inspectTar(stream)
                     ArchiveFormat.TAR_GZIP -> GzipCompressorInputStream.builder()
-                        .setInputStream(stream).setDecompressConcatenated(true).get().use(::inspectTar)
-                    ArchiveFormat.TAR_BZIP2 -> BZip2CompressorInputStream(stream, true).use(::inspectTar)
+                        .setInputStream(stream).setDecompressConcatenated(true).get().use { inspectTar(it) }
+                    ArchiveFormat.TAR_BZIP2 -> BZip2CompressorInputStream(stream, true).use { inspectTar(it) }
                     ArchiveFormat.GZIP, ArchiveFormat.BZIP2 -> {
                         ExternalArchiveListing(listOf(ExternalArchiveEntry(format.stem(name), false, null)), true)
                     }
