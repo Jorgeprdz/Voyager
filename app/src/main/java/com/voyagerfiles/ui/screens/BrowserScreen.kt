@@ -1552,10 +1552,10 @@ private fun FileTypeFilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(FileTypeFilter.entries, key = { it.name }) { filter ->
-            FilterChip(
+            FinderMobileFilterPill(
+                label = stringResource(filter.labelRes),
                 selected = selectedFilter == filter,
                 onClick = { onFilterChange(filter) },
-                label = { Text(stringResource(filter.labelRes)) },
             )
         }
     }
