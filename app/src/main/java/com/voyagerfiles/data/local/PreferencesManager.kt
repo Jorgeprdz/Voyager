@@ -37,6 +37,7 @@ class PreferencesManager(private val context: Context) {
         val FINDER_BRIGHTNESS = stringPreferencesKey("finder_brightness")
         val FINDER_CONTRAST = booleanPreferencesKey("finder_high_contrast")
         val FINDER_REDUCE_TRANSPARENCY = booleanPreferencesKey("finder_reduce_transparency")
+        val FINDER_DYNAMIC = booleanPreferencesKey("finder_dynamic_colors")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
         val USE_TRASH = booleanPreferencesKey("use_trash")
         val CONFIRM_REMOTE_DOWNLOADS = booleanPreferencesKey("confirm_remote_downloads")
@@ -66,6 +67,7 @@ class PreferencesManager(private val context: Context) {
                 .getOrDefault(FinderBrightness.AUTOMATIC),
             highContrast = prefs[Keys.FINDER_CONTRAST] ?: false,
             reduceTransparency = prefs[Keys.FINDER_REDUCE_TRANSPARENCY] ?: false,
+            dynamicColors = prefs[Keys.FINDER_DYNAMIC] ?: true,
         )
     }
 
@@ -75,6 +77,7 @@ class PreferencesManager(private val context: Context) {
             it[Keys.FINDER_BRIGHTNESS] = value.brightness.name
             it[Keys.FINDER_CONTRAST] = value.highContrast
             it[Keys.FINDER_REDUCE_TRANSPARENCY] = value.reduceTransparency
+            it[Keys.FINDER_DYNAMIC] = value.dynamicColors
         }
     }
 
