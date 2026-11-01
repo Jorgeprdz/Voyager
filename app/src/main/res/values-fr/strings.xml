@@ -672,4 +672,15 @@
     <string name="finderdex_groups_descending">Groups: descending</string>
     <string name="finderdex_groups_ascending">Groups: ascending</string>
     <string name="r321_other">Autres</string>
+    <string name="finderdex_appearance_title">FinderDex style</string>
+    <string name="finderdex_style_glass">FinderDex Glass</string>
+    <string name="finderdex_style_material">Android Material</string>
+    <string name="finderdex_style_oneui">Samsung One UI</string>
+    <string name="finderdex_style_fluent">Windows Fluent</string>
+    <string name="finderdex_brightness_title">Display mode</string>
+    <string name="finderdex_brightness_auto">Automatic</string>
+    <string name="finderdex_brightness_light">Light</string>
+    <string name="finderdex_brightness_dark">Dark</string>
+    <string name="finderdex_high_contrast">High contrast</string>
+    <string name="finderdex_reduce_transparency">Reduce transparency</string>
 </resources>
