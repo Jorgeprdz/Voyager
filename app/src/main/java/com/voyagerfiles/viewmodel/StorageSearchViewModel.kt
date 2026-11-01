@@ -92,7 +92,10 @@ class StorageSearchViewModel @JvmOverloads constructor(
     }
 
     fun setModifiedWithinDays(days: Int?) {
-        _state.update { it.copy(modifiedWithinDays = days?.takeIf { value -> value > 0 }) }
+        _state.update { it.copy(
+            modifiedWithinDays = days?.takeIf { value -> value > 0 },
+            filters = it.filters.copy(modifiedAfterMillis = null),
+        ) }
     }
 
     private fun activeFilters(state: StorageSearchState): StorageSearchFilters = state.filters.copy(
@@ -100,7 +103,7 @@ class StorageSearchViewModel @JvmOverloads constructor(
         maxSizeBytes = state.maximumMegabytes.toLongOrNull()?.times(1_048_576L),
         modifiedAfterMillis = state.modifiedWithinDays?.let { days ->
             System.currentTimeMillis() - days * 86_400_000L
-        },
+        } ?: state.filters.modifiedAfterMillis,
     )
 
     fun saveCurrentSearch() {
