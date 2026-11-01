@@ -1,6 +1,8 @@
 package com.voyagerfiles.app
 
 import android.net.Uri
+import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
@@ -73,7 +75,15 @@ class ExternalArchiveActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val source = intent?.data
+        val source = when (intent?.action) {
+            Intent.ACTION_SEND -> {
+                if (Build.VERSION.SDK_INT >= 33)
+                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                else @Suppress("DEPRECATION")
+                    intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            }
+            else -> intent?.data
+        }
         val mime = intent?.type ?: source?.let { contentResolver.getType(it) }
         if (source == null || !ExternalArchiveIntent.isSupportedUri(source.scheme, mime)) {
             finish()
