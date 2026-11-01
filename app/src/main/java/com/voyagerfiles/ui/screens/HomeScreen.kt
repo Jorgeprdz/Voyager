@@ -181,8 +181,11 @@ fun HomeScreen(
                                     if (info != null && info.total > 0) {
                                         Spacer(Modifier.height(12.dp))
                                         LinearProgressIndicator(progress = { (info.used.toFloat() / info.total).coerceIn(0f, 1f) },
-                                            modifier = Modifier.fillMaxWidth().height(5.dp), color = androidx.compose.ui.graphics.Color(0xFF85D4FF),
-                                            trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = .15f))
+                                            modifier = Modifier.fillMaxWidth().height(5.dp),
+                                            color = if (glassDefault) androidx.compose.ui.graphics.Color(0xFF85D4FF)
+                                                else MaterialTheme.colorScheme.primary,
+                                            trackColor = if (glassDefault) androidx.compose.ui.graphics.Color.White.copy(alpha = .15f)
+                                                else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .20f))
                                         Text("${FileItem.formatFileSize(info.available)} ${stringResource(R.string.home_storage_available)}",
                                             Modifier.padding(top = 8.dp), color = if (glassDefault) FinderMobileTokens.ice
                                                 else MaterialTheme.colorScheme.onPrimaryContainer,
