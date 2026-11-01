@@ -55,7 +55,7 @@ class StorageSearchViewModel @JvmOverloads constructor(
         else ContextCompat.checkSelfPermission(application, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
     },
 ) : AndroidViewModel(application) {
-    private val savedPrefs = application.getSharedPreferences("finderdex_saved_searches_v1", Application.MODE_PRIVATE)
+    private val savedPrefs = application.getSharedPreferences("finderdex_saved_searches_v1", android.content.Context.MODE_PRIVATE)
     private val _state = MutableStateFlow(StorageSearchState(savedSearches = readSavedSearches()))
     val state = _state.asStateFlow()
     private var scanJob: Job? = null
