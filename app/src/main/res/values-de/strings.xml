@@ -657,4 +657,12 @@
     <string name="search_saved_queries">Saved searches</string>
     <string name="search_save_current">Save search</string>
     <string name="search_invalid_range">Minimum size must not exceed maximum</string>
+
+    <string name="external_archive_contents">Archive contents</string>
+    <string name="external_archive_choose_destination">Choose extraction folder</string>
+    <string name="external_archive_loading">Reading archive</string>
+    <string name="external_archive_partial">Showing only the first 250 entries</string>
+    <string name="external_archive_failed">Archive error: %1$s</string>
+    <string name="external_archive_complete">Extraction finished in the selected folder</string>
+    <string name="external_archive_missing">The shared archive is no longer accessible</string>
 </resources>
