@@ -104,7 +104,7 @@ object FinderAppearanceResolver {
         }
         val contrast = value.highContrast
         val solid = value.reduceTransparency || contrast
-        fun color(index: Int) = Color(c[index])
+        fun color(index: Int) = Color(c[index].toInt())
         val radii = when (value.style) {
             FinderStyle.GLASS -> listOf(8, 8, 12, 20)
             FinderStyle.MATERIAL -> listOf(16, 12, 16, 28)
