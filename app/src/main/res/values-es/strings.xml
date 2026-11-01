@@ -665,4 +665,10 @@
     <string name="external_archive_failed">Error del comprimido: %1$s</string>
     <string name="external_archive_complete">Extracción terminada en la carpeta elegida</string>
     <string name="external_archive_missing">El archivo compartido ya no está accesible</string>
+
+    <string name="finderdex_group_by">Agrupar por</string>
+    <string name="finderdex_group_none">Ninguno</string>
+    <string name="finderdex_modified_date">Fecha de modificación</string>
+    <string name="finderdex_groups_descending">Grupos: descendente</string>
+    <string name="finderdex_groups_ascending">Grupos: ascendente</string>
 </resources>
