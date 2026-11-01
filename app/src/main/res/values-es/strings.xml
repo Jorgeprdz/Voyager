@@ -657,4 +657,12 @@
     <string name="search_saved_queries">Búsquedas guardadas</string>
     <string name="search_save_current">Guardar búsqueda</string>
     <string name="search_invalid_range">El tamaño mínimo no puede superar al máximo</string>
+
+    <string name="external_archive_contents">Contenido del comprimido</string>
+    <string name="external_archive_choose_destination">Elegir carpeta de extracción</string>
+    <string name="external_archive_loading">Leyendo comprimido</string>
+    <string name="external_archive_partial">Se muestran solo los primeros 250 elementos</string>
+    <string name="external_archive_failed">Error del comprimido: %1$s</string>
+    <string name="external_archive_complete">Extracción terminada en la carpeta elegida</string>
+    <string name="external_archive_missing">El archivo compartido ya no está accesible</string>
 </resources>
