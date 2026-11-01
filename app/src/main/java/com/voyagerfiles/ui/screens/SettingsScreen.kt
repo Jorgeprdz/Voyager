@@ -63,6 +63,7 @@ import com.voyagerfiles.ui.components.rememberTranslationLinkOpener
 import com.voyagerfiles.data.model.SessionAutoCloseTimeout
 import com.voyagerfiles.data.model.SearchBarMode
 import com.voyagerfiles.ui.theme.AppTheme
+import com.voyagerfiles.ui.components.FinderStyleSelector
 import com.voyagerfiles.ui.theme.BlackColors
 import com.voyagerfiles.ui.theme.DarkColors
 import com.voyagerfiles.ui.theme.ForestColors
@@ -95,6 +96,7 @@ fun SettingsScreen(
     onOpenShizuku: () -> Unit = {},
 ) {
     val currentTheme by viewModel.theme.collectAsState()
+    val finderAppearance by viewModel.finderAppearance.collectAsState()
     val openTranslationLink = rememberTranslationLinkOpener()
     val browseState by viewModel.browseState.collectAsState()
     val useTrash by viewModel.useTrash.collectAsState()
@@ -135,6 +137,12 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
+            Spacer(modifier = Modifier.height(12.dp))
+            FinderStyleSelector(finderAppearance, viewModel::setFinderAppearance)
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(stringResource(R.string.settings_theme),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(12.dp))
 
             ScrollableTabRow(
