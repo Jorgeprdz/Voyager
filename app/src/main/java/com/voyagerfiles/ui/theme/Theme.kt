@@ -499,7 +499,7 @@ fun VoyagerTheme(
         appearance.brightness == FinderBrightness.AUTOMATIC) {
         isDarkTheme(appTheme, systemIsDark)
     } else FinderAppearanceResolver.resolveDark(appearance.brightness, systemIsDark)
-    val tokens = FinderAppearanceResolver.tokens(appearance, darkTheme)
+    val fallbackTokens = FinderAppearanceResolver.tokens(appearance, darkTheme)
     val colorScheme = when {
         // Upgrade-safe default: preserve the legacy theme and its existing customized colors.
         appearance == FinderAppearance() &&
@@ -507,11 +507,32 @@ fun VoyagerTheme(
             if (systemIsDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         appearance == FinderAppearance() ->
             getColorScheme(appTheme, systemIsDark, customColorScheme)
-        else -> FinderAppearanceResolver.scheme(tokens,
+        else -> FinderAppearanceResolver.scheme(fallbackTokens,
             if (appearance.style == FinderStyle.MATERIAL && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
             } else null)
     }
+    val usingDynamicMaterial = appearance.style == FinderStyle.MATERIAL &&
+        appearance.dynamicColors && !appearance.highContrast &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // DeX and Material must resolve the SAME dynamic scheme, not a fallback/dynamic mix.
+    val tokens = if (usingDynamicMaterial) fallbackTokens.copy(
+        background = colorScheme.background,
+        surface = colorScheme.surface,
+        navigation = colorScheme.surfaceContainerLow,
+        raised = colorScheme.surfaceContainer,
+        accent = colorScheme.primary,
+        onAccent = colorScheme.onPrimary,
+        onSurface = colorScheme.onSurface,
+        secondaryText = colorScheme.onSurfaceVariant,
+        border = colorScheme.outline,
+        selected = colorScheme.primaryContainer,
+        onSelected = colorScheme.onPrimaryContainer,
+        selectedInactive = colorScheme.surfaceContainerHigh,
+        focus = colorScheme.primary,
+        folder = colorScheme.primary,
+        folderFront = colorScheme.secondary,
+    ) else fallbackTokens
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
