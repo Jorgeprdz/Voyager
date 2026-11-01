@@ -1,7 +1,7 @@
 name: FinderDex debug
 on:
   push:
-    branches: [feat/finder-dex-foundation-01, feat/finderdex-r3-implementation]
+    branches: [feat/finder-dex-foundation-01, feat/finderdex-r3-implementation, feat/finderdex-r3.4-combined-evaluation]
     paths-ignore: ['docs/**']
   workflow_dispatch:
 permissions:
@@ -101,21 +101,21 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         with:
-          name: FinderDex-${{ github.ref_name == 'feat/finderdex-r3-implementation' && 'R3' || 'R2.2' }}-APK
+          name: FinderDex-${{ github.ref_name == 'feat/finderdex-r3.4-combined-evaluation' && 'R3.4-Evaluation' || github.ref_name == 'feat/finderdex-r3-implementation' && 'R3' || 'R2.2' }}-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         if: ${{ !cancelled() && steps.apk.outcome == 'success' }}
         with:
-          name: FinderDex-${{ github.ref_name == 'feat/finderdex-r3-implementation' && 'R3' || 'R2.2' }}-Tests
+          name: FinderDex-${{ github.ref_name == 'feat/finderdex-r3.4-combined-evaluation' && 'R3.4-Evaluation' || github.ref_name == 'feat/finderdex-r3-implementation' && 'R3' || 'R2.2' }}-Tests
           path: app/build/outputs/apk/androidTest/debug/*.apk
           retention-days: 30
           if-no-files-found: error
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: FinderDex-${{ github.ref_name == 'feat/finderdex-r3-implementation' && 'R3' || 'R2.2' }}-verification
+          name: FinderDex-${{ github.ref_name == 'feat/finderdex-r3.4-combined-evaluation' && 'R3.4-Evaluation' || github.ref_name == 'feat/finderdex-r3-implementation' && 'R3' || 'R2.2' }}-verification
           path: |
             app/build/reports/
             app/build/test-results/
