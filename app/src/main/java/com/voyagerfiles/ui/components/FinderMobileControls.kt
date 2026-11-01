@@ -47,7 +47,7 @@ fun FinderMobileSearchField(
         onValueChange = onQueryChange,
         modifier = modifier.heightIn(min = 52.dp),
         singleLine = true,
-        shape = FinderMobileTokens.controlShape,
+        shape = MaterialTheme.shapes.medium,
         placeholder = { Text(placeholder, maxLines = 1) },
         leadingIcon = { Icon(Icons.Filled.Search, null, tint = MaterialTheme.colorScheme.primary) },
         trailingIcon = {
