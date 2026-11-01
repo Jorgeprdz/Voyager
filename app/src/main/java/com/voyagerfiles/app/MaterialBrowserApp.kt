@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import com.voyagerfiles.viewmodel.FileBrowserViewModel
 import com.voyagerfiles.viewmodel.TransferOperationController
+import com.voyagerfiles.viewmodel.AndroidTransferHistoryStore
 
 class VoyagerApp : Application(), ViewModelStoreOwner {
     override val viewModelStore = ViewModelStore()
@@ -16,6 +17,6 @@ class VoyagerApp : Application(), ViewModelStoreOwner {
     val transfers by lazy {
         TransferOperationController(startForeground = {
             ContextCompat.startForegroundService(this, Intent(this, TransferService::class.java))
-        })
+        }, historyStore = AndroidTransferHistoryStore(this))
     }
 }
