@@ -645,4 +645,16 @@
     <string name="r31_preserve_extension">Preservar extensión</string>
     <string name="r31_last_week">Últimos 7 días</string>
     <string name="r31_remove_history">Quitar</string>
+
+    <string name="search_in_current_folder">Buscar en la carpeta actual</string>
+    <string name="search_include_subfolders">Incluir subcarpetas</string>
+    <string name="search_min_mb">Tamaño mínimo (MB)</string>
+    <string name="search_max_mb">Tamaño máximo (MB)</string>
+    <string name="search_modified_any">Cualquier fecha</string>
+    <string name="search_modified_7">Últimos 7 días</string>
+    <string name="search_modified_30">Últimos 30 días</string>
+    <string name="search_modified_365">Último año</string>
+    <string name="search_saved_queries">Búsquedas guardadas</string>
+    <string name="search_save_current">Guardar búsqueda</string>
+    <string name="search_invalid_range">El tamaño mínimo no puede superar al máximo</string>
 </resources>
