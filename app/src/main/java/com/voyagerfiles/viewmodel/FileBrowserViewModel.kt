@@ -177,6 +177,12 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val trashState: StateFlow<TrashState> = _trashState.asStateFlow()
 
     val theme = prefs.theme.stateIn(viewModelScope, SharingStarted.Eagerly, AppTheme.SYSTEM)
+    val finderAppearance = prefs.finderAppearance.stateIn(
+        viewModelScope, SharingStarted.Eagerly, com.voyagerfiles.ui.theme.FinderAppearance(),
+    )
+    fun setFinderAppearance(value: com.voyagerfiles.ui.theme.FinderAppearance) {
+        viewModelScope.launch { prefs.setFinderAppearance(value) }
+    }
     val searchBarMode = prefs.searchBarMode.stateIn(viewModelScope, SharingStarted.Eagerly, SearchBarMode.TOP)
     val confirmRemoteDownloads = prefs.confirmRemoteDownloads.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
