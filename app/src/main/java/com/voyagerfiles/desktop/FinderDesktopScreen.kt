@@ -583,8 +583,26 @@ internal fun FinderDesktopScreen(
     var showPreview by rememberSaveable { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
     var searching by remember { mutableStateOf(false) }
-    var descending by rememberSaveable { mutableStateOf(false) }
-    var sortBy by rememberSaveable { mutableStateOf(SortBy.NAME) }
+    val arrangementStore = remember(localContext) {
+        com.voyagerfiles.data.local.FileArrangementStore(localContext)
+    }
+    val initialArrangement = remember(controller.session.id) { arrangementStore.read(controller.session.id) }
+    var descending by remember(controller.session.id) {
+        mutableStateOf(initialArrangement.sortOrder == SortOrder.DESCENDING)
+    }
+    var sortBy by remember(controller.session.id) { mutableStateOf(initialArrangement.sortBy) }
+    var groupBy by remember(controller.session.id) { mutableStateOf(initialArrangement.groupBy) }
+    var groupDescending by remember(controller.session.id) {
+        mutableStateOf(initialArrangement.groupOrder == SortOrder.DESCENDING)
+    }
+    SideEffect {
+        arrangementStore.write(controller.session.id, FileArrangement(
+            sortBy = sortBy,
+            sortOrder = if (descending) SortOrder.DESCENDING else SortOrder.ASCENDING,
+            groupBy = groupBy,
+            groupOrder = if (groupDescending) SortOrder.DESCENDING else SortOrder.ASCENDING,
+        ))
+    }
     var quickLook by remember { mutableStateOf<FileItem?>(null) }
     var infoFile by remember { mutableStateOf<FileItem?>(null) }
     var renameFile by remember { mutableStateOf<FileItem?>(null) }
@@ -613,6 +631,29 @@ internal fun FinderDesktopScreen(
             parentOf = secondaryProvider::getParentPath)
     }
     val secondaryColumns by secondaryController.columns.collectAsState()
+    val initialSecondaryArrangement = remember(secondarySession.id) {
+        arrangementStore.read(secondarySession.id)
+    }
+    var secondaryDescending by remember(secondarySession.id) {
+        mutableStateOf(initialSecondaryArrangement.sortOrder == SortOrder.DESCENDING)
+    }
+    var secondarySortBy by remember(secondarySession.id) {
+        mutableStateOf(initialSecondaryArrangement.sortBy)
+    }
+    var secondaryGroupBy by remember(secondarySession.id) {
+        mutableStateOf(initialSecondaryArrangement.groupBy)
+    }
+    var secondaryGroupDescending by remember(secondarySession.id) {
+        mutableStateOf(initialSecondaryArrangement.groupOrder == SortOrder.DESCENDING)
+    }
+    SideEffect {
+        arrangementStore.write(secondarySession.id, FileArrangement(
+            sortBy = secondarySortBy,
+            sortOrder = if (secondaryDescending) SortOrder.DESCENDING else SortOrder.ASCENDING,
+            groupBy = secondaryGroupBy,
+            groupOrder = if (secondaryGroupDescending) SortOrder.DESCENDING else SortOrder.ASCENDING,
+        ))
+    }
     SideEffect {
         dragState.externalError = { /* Unsupported MIME or missing URI access; no source mutation. */ }
         dragState.externalStart = { paths ->
@@ -706,9 +747,9 @@ internal fun FinderDesktopScreen(
                         Key.DirectionUp -> -columnDelta
                         else -> columnDelta
                     }
-                    val visibleOrder = finderOrderFiles(
+                    val visibleOrder = finderGroups(
                         columns.lastOrNull()?.files.orEmpty().filter { it.name.contains(search, true) },
-                        sortBy, descending).map { it.path }
+                        sortBy, descending, groupBy, groupDescending).flatMap { it.files }.map { it.path }
                     controller.moveSelectionBy(step, event.isShiftPressed, visibleOrder)
                     true
                 }
@@ -771,6 +812,8 @@ internal fun FinderDesktopScreen(
             viewStyle, { viewStyle = it }, searching, search, { searching = !searching; if (!searching) search = "" }, { search = it },
             showPreview, { showPreview = !showPreview }, descending, { descending = !descending },
             sortBy, { sortBy = it }, onMobile,
+            groupBy = groupBy, setGroupBy = { groupBy = it },
+            groupDescending = groupDescending, toggleGroupDirection = { groupDescending = !groupDescending },
             canCreateFolder = operationsAvailable,
             onNewFolder = { newFolderName = ""; newFolderDialog = true },
             onTrash = { onRefreshTrash(); showTrash = true },
@@ -829,10 +872,10 @@ internal fun FinderDesktopScreen(
                 Box(Modifier.fillMaxHeight().width(1.dp).align(Alignment.CenterEnd).background(palette.separator))
             }
             when (viewStyle) {
-                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
-                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
-                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f).background(palette.content), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
-                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.ICONS -> FinderIconView(controller, columns, search, descending, sortBy, groupBy, groupDescending, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.LIST -> FinderListView(controller, columns, search, descending, sortBy, groupBy, groupDescending, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.COLUMNS -> FinderWorkspace(controller, columns, search, descending, sortBy, groupBy, groupDescending, Modifier.weight(if (splitVisible) splitRatio else 1f).background(palette.content), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
+                FinderViewStyle.GALLERY -> FinderGalleryView(controller, columns, search, descending, sortBy, groupBy, groupDescending, Modifier.weight(if (splitVisible) splitRatio else 1f), onOpen, operationsAvailable, clipboardAvailable, ::execute, dragState, zoomDensity)
             }
             if (splitVisible) {
                 Box(Modifier.fillMaxHeight().width(8.dp).background(palette.separator)
@@ -846,6 +889,13 @@ internal fun FinderDesktopScreen(
                 Column(Modifier.weight(1f - splitRatio)) {
                     Row(Modifier.fillMaxWidth().background(palette.toolbar), verticalAlignment = Alignment.CenterVertically) {
                         Label(secondaryController.currentPath.substringAfterLast('/'), Modifier.weight(1f).padding(8.dp), color = palette.ink)
+                        FinderPaneArrangementMenu(
+                            sortBy = secondarySortBy, onSort = { secondarySortBy = it },
+                            descending = secondaryDescending, onToggleDirection = { secondaryDescending = !secondaryDescending },
+                            groupBy = secondaryGroupBy, onGroupBy = { secondaryGroupBy = it },
+                            groupDescending = secondaryGroupDescending,
+                            onToggleGroupDirection = { secondaryGroupDescending = !secondaryGroupDescending },
+                        )
                         val primarySelection = columns.lastOrNull()?.selected.orEmpty().toList()
                         val secondarySelection = secondaryColumns.lastOrNull()?.selected.orEmpty().toList()
                         TextButton(enabled = !operationRunning && primarySelection.isNotEmpty(), onClick = {
@@ -861,7 +911,8 @@ internal fun FinderDesktopScreen(
                             dragState.requestTransfer(secondarySelection, controller.currentPath, FinderDropAction.MOVE)
                         }) { Text("← ${stringResource(R.string.action_move)}") }
                     }
-                    FinderIconView(secondaryController, secondaryColumns, "", false, SortBy.NAME,
+                    FinderIconView(secondaryController, secondaryColumns, "", secondaryDescending,
+                        secondarySortBy, secondaryGroupBy, secondaryGroupDescending,
                         Modifier.weight(1f), onOpen, false, false,
                         { _, _ -> }, dragState, zoomDensity)
                 }
