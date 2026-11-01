@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
 
 /**
  * App-owned popup only. Keeps Material3 keyboard/ESC/outside-click positioning while
@@ -21,14 +22,15 @@ internal fun FinderGlassMenu(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p=LocalFinderMaterials.current.palette
-    val shape=RoundedCornerShape(13.dp)
+    val t=LocalFinderSemanticTokens.current
+    val shape=RoundedCornerShape(t.menuRadiusDp.dp)
     val colors=MaterialTheme.colorScheme.copy(
         surface=p.titlebar, surfaceContainer=p.titlebar,
         onSurface=p.ink, onSurfaceVariant=p.secondaryInk)
     MaterialTheme(colorScheme=colors) {
         DropdownMenu(expanded=expanded,onDismissRequest=onDismissRequest,
             modifier=Modifier.clip(shape).background(p.titlebar)
-                .border(.8.dp,p.edge,shape)) {
+                .border(t.borderDp.dp,p.edge,shape)) {
             content()
         }
     }
