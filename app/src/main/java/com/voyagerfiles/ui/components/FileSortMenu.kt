@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import com.voyagerfiles.R
+import com.voyagerfiles.data.model.GroupBy
 import com.voyagerfiles.data.model.SortBy
 import com.voyagerfiles.data.model.SortOrder
 
@@ -27,6 +28,10 @@ fun FileSortMenu(
     sortOrder: SortOrder,
     onSortByChange: (SortBy) -> Unit,
     onSortOrderChange: (SortOrder) -> Unit,
+    groupBy: GroupBy = GroupBy.NONE,
+    groupOrder: SortOrder = SortOrder.ASCENDING,
+    onGroupByChange: (GroupBy) -> Unit = {},
+    onGroupOrderChange: (SortOrder) -> Unit = {},
 ) {
     var showSortMenu by remember { mutableStateOf(false) }
     Box {
@@ -61,6 +66,41 @@ fun FileSortMenu(
                     },
                 )
             }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.finderdex_group_by)) },
+                enabled = false, onClick = {},
+            )
+            GroupBy.entries.forEach { group ->
+                val name = when (group) {
+                    GroupBy.NONE -> R.string.finderdex_group_none
+                    GroupBy.NAME -> R.string.browser_sort_name
+                    GroupBy.DATE -> R.string.finderdex_modified_date
+                    GroupBy.TYPE -> R.string.browser_sort_type
+                    GroupBy.SIZE -> R.string.browser_sort_size
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(name)) },
+                    trailingIcon = {
+                        if (group == groupBy) Icon(
+                            if (groupOrder == SortOrder.ASCENDING) Icons.Filled.KeyboardArrowUp
+                            else Icons.Filled.KeyboardArrowDown, null)
+                    },
+                    onClick = { onGroupByChange(group); showSortMenu = false },
+                )
+            }
+            DropdownMenuItem(
+                text = { Text(stringResource(
+                    if (groupOrder == SortOrder.ASCENDING) R.string.finderdex_groups_descending
+                    else R.string.finderdex_groups_ascending
+                )) },
+                enabled = groupBy != GroupBy.NONE,
+                onClick = {
+                    onGroupOrderChange(if (groupOrder == SortOrder.ASCENDING) SortOrder.DESCENDING
+                        else SortOrder.ASCENDING)
+                    showSortMenu = false
+                },
+            )
             HorizontalDivider()
             DropdownMenuItem(
                 text = {
