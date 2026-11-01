@@ -504,7 +504,7 @@ fun BrowserScreen(
     }
 
     Scaffold(
-        containerColor = FinderMobileTokens.background,
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
@@ -721,15 +721,15 @@ fun BrowserScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = FinderMobileTokens.ice,
-                        navigationIconContentColor = FinderMobileTokens.navy,
-                        titleContentColor = FinderMobileTokens.navy,
-                        actionIconContentColor = FinderMobileTokens.navy,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 )
             } else {
                 Surface(
-                    color = FinderMobileTokens.surface,
+                    color = MaterialTheme.colorScheme.surface,
                 ) {
                     Column(
                         modifier = Modifier
@@ -749,9 +749,9 @@ fun BrowserScreen(
                             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                                 Text(state.currentPath.substringAfterLast('/').ifBlank { context.getString(R.string.finderdex_mobile_title) },
                                     maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    color = FinderMobileTokens.navy, style = MaterialTheme.typography.titleMedium)
+                                    color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
                                 Text(state.files.size.toString(),
-                                    color = FinderMobileTokens.secondaryInk, style = MaterialTheme.typography.labelSmall)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
                             }
                             if (searchBarMode == SearchBarMode.COMPACT) {
                                 IconButton(onClick = { compactSearchExpanded = true }) {
@@ -907,7 +907,7 @@ fun BrowserScreen(
                     exit = slideOutVertically(targetOffsetY = { it }),
                 ) {
                     BottomAppBar(
-                        containerColor = FinderMobileTokens.ice,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     ) {
                         Text(
                             pluralStringResource(
