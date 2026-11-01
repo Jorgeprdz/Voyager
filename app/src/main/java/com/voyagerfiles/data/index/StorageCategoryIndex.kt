@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.voyagerfiles.R
 import com.voyagerfiles.data.model.FileItem
 import com.voyagerfiles.data.model.FileTypeFilter
+import com.voyagerfiles.data.model.FileTypeFilter
 import com.voyagerfiles.util.StorageVolumeInfo
 import java.io.IOException
 import java.nio.file.Files
@@ -53,6 +54,23 @@ data class CategoryIndexState(
     val staleEntries: Int = 0,
 )
 
+
+/** Search options are combined before publishing, so partial results obey every active filter. */
+data class StorageSearchFilters(
+    val type: FileTypeFilter = FileTypeFilter.ALL,
+    val minSizeBytes: Long? = null,
+    val maxSizeBytes: Long? = null,
+    val modifiedAfterMillis: Long? = null,
+    val scopePath: String? = null,
+    val includeSubfolders: Boolean = true,
+) {
+    fun matches(file: FileItem): Boolean =
+        type.matches(file) &&
+            (minSizeBytes == null || file.size >= minSizeBytes) &&
+            (maxSizeBytes == null || file.size <= maxSizeBytes) &&
+            (modifiedAfterMillis == null || file.lastModified.time >= modifiedAfterMillis)
+}
+
 /** Scans ordinary shared-storage paths only. Links are never traversed and directory handles are closed on cancellation. */
 class StorageCategoryIndex(
     private val maxResults: Int = 50_000,
@@ -82,16 +100,45 @@ class StorageCategoryIndex(
         volumes: List<StorageVolumeInfo>,
         showHidden: Boolean,
         hasPermission: () -> Boolean,
+    ): Flow<CategoryIndexState> = search(query, volumes, showHidden, StorageSearchFilters(), hasPermission)
+
+    fun search(
+        query: String,
+        volumes: List<StorageVolumeInfo>,
+        showHidden: Boolean,
+        filters: StorageSearchFilters,
+        hasPermission: () -> Boolean,
     ): Flow<CategoryIndexState> {
         val name = query.trim()
         require(name.isNotEmpty()) { "Enter a file name to search" }
-        return scanMatching(volumes, showHidden, hasPermission) { it.name.contains(name, ignoreCase = true) }
+        val roots = filters.scopePath?.let { requested ->
+            val scope = runCatching { java.io.File(requested).toPath().toRealPath() }.getOrNull()
+                ?: return kotlinx.coroutines.flow.flowOf(CategoryIndexState(status = CategoryScanStatus.UNAVAILABLE))
+            if (!volumes.any { volume ->
+                    volume.isAvailable && runCatching {
+                        scope.startsWith(java.io.File(checkNotNull(volume.path)).toPath().toRealPath())
+                    }.getOrDefault(false)
+                }) {
+                return kotlinx.coroutines.flow.flowOf(CategoryIndexState(status = CategoryScanStatus.DENIED))
+            }
+            if (!java.nio.file.Files.isDirectory(scope)) {
+                return kotlinx.coroutines.flow.flowOf(CategoryIndexState(status = CategoryScanStatus.UNAVAILABLE))
+            }
+            listOf(StorageVolumeInfo(
+                description = scope.toString(), path = scope.toString(),
+                isPrimary = true, isRemovable = false, state = StorageVolumeInfo.STATE_MOUNTED,
+            ))
+        } ?: volumes
+        return scanMatching(roots, showHidden, hasPermission, filters.includeSubfolders) {
+            it.name.contains(name, ignoreCase = true) && filters.matches(it)
+        }
     }
 
     private fun scanMatching(
         volumes: List<StorageVolumeInfo>,
         showHidden: Boolean,
         hasPermission: () -> Boolean,
+        includeSubfolders: Boolean = true,
         accepts: (FileItem) -> Boolean,
     ): Flow<CategoryIndexState> = flow {
         val matches = mutableListOf<FileItem>()
@@ -146,6 +193,7 @@ class StorageCategoryIndex(
                     return
                 }
                 if (attributes.isDirectory) {
+                    if (!includeSubfolders && depth >= 1) return
                     if (depth >= maxDepth) {
                         skipped()
                         return
