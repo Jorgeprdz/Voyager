@@ -42,6 +42,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.voyagerfiles.R
 import com.voyagerfiles.data.model.SortBy
+import com.voyagerfiles.data.model.GroupBy
 import kotlinx.coroutines.delay
 
 internal object FinderToolbarTokens {
@@ -219,6 +220,8 @@ internal fun FinderToolbarOverflow(
     canCreateFolder: Boolean, onNewFolder: () -> Unit, onTrash: () -> Unit,
     sortBy: SortBy, onSort: (SortBy) -> Unit,
     descending: Boolean, onToggleDirection: () -> Unit,
+    groupBy: GroupBy, onGroupBy: (GroupBy) -> Unit,
+    groupDescending: Boolean, onToggleGroupDirection: () -> Unit,
     preview: Boolean, previewAvailable: Boolean, onTogglePreview: () -> Unit,
 ) {
     if (!plan.overflow) return
@@ -250,6 +253,18 @@ internal fun FinderToolbarOverflow(
                 DropdownMenuItem(text = { Text(stringResource(if (descending) R.string.finderdex_toolbar_sort_ascending
                         else R.string.finderdex_toolbar_sort_descending)) },
                     onClick = { menu = false; onToggleDirection() })
+                DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_group_by), fontWeight = FontWeight.SemiBold) },
+                    enabled = false, onClick = {})
+                GroupBy.entries.forEach { group ->
+                    DropdownMenuItem(text = { Text(finderGroupChoice(group)) },
+                        leadingIcon = { if (groupBy == group) Text("✓") },
+                        onClick = { menu = false; onGroupBy(group) })
+                }
+                DropdownMenuItem(text = { Text(stringResource(
+                    if (groupDescending) R.string.finderdex_groups_ascending
+                    else R.string.finderdex_groups_descending)) },
+                    enabled = groupBy != GroupBy.NONE,
+                    onClick = { menu = false; onToggleGroupDirection() })
                 DropdownMenuItem(
                     text = { Text(stringResource(
                         if (!previewAvailable) R.string.finderdex_toolbar_preview_resize
@@ -355,6 +370,8 @@ internal fun FinderToolbar(
     preview: Boolean, togglePreview: () -> Unit,
     descending: Boolean, toggleSort: () -> Unit,
     sortBy: SortBy, setSortBy: (SortBy) -> Unit, onMobile: () -> Unit,
+    groupBy: GroupBy, setGroupBy: (GroupBy) -> Unit,
+    groupDescending: Boolean, toggleGroupDirection: () -> Unit,
     canCreateFolder: Boolean, onNewFolder: () -> Unit, onTrash: () -> Unit,
     previewAvailable: Boolean,
 ) {
@@ -422,6 +439,18 @@ internal fun FinderToolbar(
                                         leadingIcon = { if (sortBy == opt) Text("✓") },
                                         onClick = { sortMenu = false; setSortBy(opt) })
                                 }
+                                DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_group_by)) },
+                                    enabled = false, onClick = {})
+                                GroupBy.entries.forEach { group ->
+                                    DropdownMenuItem(text = { Text(finderGroupChoice(group)) },
+                                        leadingIcon = { if (groupBy == group) Text("✓") },
+                                        onClick = { sortMenu = false; setGroupBy(group) })
+                                }
+                                DropdownMenuItem(text = { Text(stringResource(
+                                    if (groupDescending) R.string.finderdex_groups_ascending
+                                    else R.string.finderdex_groups_descending)) },
+                                    enabled = groupBy != GroupBy.NONE,
+                                    onClick = { sortMenu = false; toggleGroupDirection() })
                             }
                         }
                         FinderToolbarSeparator()
@@ -435,9 +464,57 @@ internal fun FinderToolbar(
                 FinderToolbarSearch(searching, search, toggleSearch, setSearch, plan.inlineSearch)
                 FinderToolbarOverflow(plan, controller.currentPath, controller.canForward,
                     { controller.forward() }, canCreateFolder, onNewFolder, onTrash,
-                    sortBy, setSortBy, descending, toggleSort, preview, previewAvailable, togglePreview)
+                    sortBy, setSortBy, descending, toggleSort,
+                    groupBy, setGroupBy, groupDescending, toggleGroupDirection,
+                    preview, previewAvailable, togglePreview)
                 Spacer(Modifier.width(7.dp))
             }
+        }
+    }
+}
+
+@Composable
+private fun finderGroupChoice(group: GroupBy): String = stringResource(when (group) {
+    GroupBy.NONE -> R.string.finderdex_group_none
+    GroupBy.NAME -> R.string.browser_sort_name
+    GroupBy.DATE -> R.string.finderdex_modified_date
+    GroupBy.TYPE -> R.string.browser_sort_type
+    GroupBy.SIZE -> R.string.browser_sort_size
+})
+
+/** Reuses the existing glass control styling for the independent secondary pane. */
+@Composable
+internal fun FinderPaneArrangementMenu(
+    sortBy: SortBy, onSort: (SortBy) -> Unit,
+    descending: Boolean, onToggleDirection: () -> Unit,
+    groupBy: GroupBy, onGroupBy: (GroupBy) -> Unit,
+    groupDescending: Boolean, onToggleGroupDirection: () -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        FinderToolbarButton("Ordenar y agrupar", "sort", standalone = true) { expanded = true }
+        FinderGlassMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_toolbar_sort_by)) },
+                enabled = false, onClick = {})
+            SortBy.entries.forEach { option ->
+                DropdownMenuItem(text = { Text(stringResource(option.labelRes)) },
+                    leadingIcon = { if (sortBy == option) Text("✓") },
+                    onClick = { onSort(option); expanded = false })
+            }
+            DropdownMenuItem(text = { Text(stringResource(if (descending)
+                R.string.finderdex_toolbar_sort_ascending else R.string.finderdex_toolbar_sort_descending)) },
+                onClick = { onToggleDirection(); expanded = false })
+            DropdownMenuItem(text = { Text(stringResource(R.string.finderdex_group_by)) },
+                enabled = false, onClick = {})
+            GroupBy.entries.forEach { group ->
+                DropdownMenuItem(text = { Text(finderGroupChoice(group)) },
+                    leadingIcon = { if (groupBy == group) Text("✓") },
+                    onClick = { onGroupBy(group); expanded = false })
+            }
+            DropdownMenuItem(text = { Text(stringResource(if (groupDescending)
+                R.string.finderdex_groups_ascending else R.string.finderdex_groups_descending)) },
+                enabled = groupBy != GroupBy.NONE,
+                onClick = { onToggleGroupDirection(); expanded = false })
         }
     }
 }
