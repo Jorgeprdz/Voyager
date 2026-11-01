@@ -69,6 +69,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
 import com.voyagerfiles.ui.theme.FinderMobileTokens
+import com.voyagerfiles.ui.theme.FinderAppearance
+import com.voyagerfiles.ui.theme.LocalFinderAppearance
 import com.voyagerfiles.ui.components.TranslationNotice
 import com.voyagerfiles.ui.components.rememberTranslationLinkOpener
 import com.voyagerfiles.data.index.StorageCategory
@@ -99,6 +101,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val glassDefault = LocalFinderAppearance.current == FinderAppearance()
     val bookmarks by viewModel.bookmarks.collectAsState()
     val sessions by viewModel.sessions.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()
@@ -158,18 +161,22 @@ fun HomeScreen(
                         if (hasAllFilesAccess && primary != null) {
                             val info = primary.path?.let { FileUtils.getStorageInfo(it) }
                             androidx.compose.material3.Surface(onClick = { primary.path?.let(onNavigateToBrowser) },
-                                shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
+                                shape = MaterialTheme.shapes.large,
+                                 color = if (glassDefault) FinderMobileTokens.navy else MaterialTheme.colorScheme.primaryContainer,
                                 shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
                                 Column(Modifier.padding(16.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(46.dp))
                                         Column(Modifier.weight(1f).padding(start = 14.dp)) {
-                                            Text(primary.description, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.titleMedium)
+                                            Text(primary.description, color = if (glassDefault) androidx.compose.ui.graphics.Color.White
+                                                 else MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleMedium)
                                             if (info != null) Text(stringResource(R.string.home_storage_usage,
                                                 FileItem.formatFileSize(info.used), FileItem.formatFileSize(info.total)),
-                                                color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
+                                                color = if (glassDefault) FinderMobileTokens.ice else MaterialTheme.colorScheme.onPrimaryContainer,
+                                                 style = MaterialTheme.typography.bodySmall)
                                         }
-                                        Icon(Icons.Filled.ChevronRight, null, tint = androidx.compose.ui.graphics.Color.White)
+                                        Icon(Icons.Filled.ChevronRight, null, tint = if (glassDefault) androidx.compose.ui.graphics.Color.White
+                                             else MaterialTheme.colorScheme.onPrimaryContainer)
                                     }
                                     if (info != null && info.total > 0) {
                                         Spacer(Modifier.height(12.dp))
@@ -177,7 +184,9 @@ fun HomeScreen(
                                             modifier = Modifier.fillMaxWidth().height(5.dp), color = androidx.compose.ui.graphics.Color(0xFF85D4FF),
                                             trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = .15f))
                                         Text("${FileItem.formatFileSize(info.available)} ${stringResource(R.string.home_storage_available)}",
-                                            Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.labelMedium)
+                                            Modifier.padding(top = 8.dp), color = if (glassDefault) FinderMobileTokens.ice
+                                                else MaterialTheme.colorScheme.onPrimaryContainer,
+                                                style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
                             }
@@ -374,7 +383,7 @@ internal fun StorageVolumeCard(
             .clickable(enabled = volume.isAvailable, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (isInternal)
-                MaterialTheme.colorScheme.onPrimaryContainer
+                MaterialTheme.colorScheme.primaryContainer
             else MaterialTheme.colorScheme.surface,
         ),
     ) {
