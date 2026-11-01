@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -101,7 +102,10 @@ class ExternalArchiveActivity : ComponentActivity() {
         sourceName = name
         sourceSize = documentSize(source)
         setContent {
-            VoyagerTheme(appTheme = AppTheme.SYSTEM) {
+            val appViewModel = (application as VoyagerApp).browserViewModel
+            val appearance by appViewModel.finderAppearance.collectAsState()
+            val appTheme by appViewModel.theme.collectAsState()
+            VoyagerTheme(appTheme = appTheme, appearance = appearance) {
                 Surface(Modifier.fillMaxSize()) {
                     Column(
                         Modifier.fillMaxSize().padding(20.dp),
