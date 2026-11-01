@@ -65,6 +65,32 @@
             </intent-filter>
         </activity>
 
+
+        <!-- Narrow ACTION_VIEW handler. Android controls the default app choice; no
+             automatic extraction, broad octet-stream interception, or path access. -->
+        <activity
+            android:name=".app.ExternalArchiveActivity"
+            android:exported="true"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.MaterialBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/zip" />
+                <data android:scheme="content" android:mimeType="application/x-zip-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-tar" />
+                <data android:scheme="content" android:mimeType="application/x-gtar" />
+                <data android:scheme="content" android:mimeType="application/gzip" />
+                <data android:scheme="content" android:mimeType="application/x-gzip" />
+                <data android:scheme="content" android:mimeType="application/x-compressed-tar" />
+                <data android:scheme="content" android:mimeType="application/x-tgz" />
+                <data android:scheme="content" android:mimeType="application/x-bzip2" />
+                <data android:scheme="content" android:mimeType="application/vnd.rar" />
+                <data android:scheme="content" android:mimeType="application/x-rar-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-rar" />
+            </intent-filter>
+        </activity>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
