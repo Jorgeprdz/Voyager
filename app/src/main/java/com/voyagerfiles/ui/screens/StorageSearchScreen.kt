@@ -33,6 +33,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,6 +56,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.voyagerfiles.ui.components.FinderMobileSearchField
 import com.voyagerfiles.R
 import com.voyagerfiles.data.index.CategoryScanStatus
 import com.voyagerfiles.data.model.FileItem
@@ -167,9 +169,11 @@ internal fun StorageSearchContent(
     val result = state.result
     Scaffold(
         modifier = Modifier.imePadding(),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.search_storage_title)) },
+                title = { Text(stringResource(R.string.action_search)) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back))
@@ -187,12 +191,12 @@ internal fun StorageSearchContent(
         Column(Modifier.fillMaxSize().padding(padding)) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedTextField(
-                        value = state.query,
-                        onValueChange = onQueryChange,
+                    FinderMobileSearchField(
+                        query = state.query,
+                        onQueryChange = onQueryChange,
                         modifier = Modifier.weight(1f).testTag("storage-search-query"),
-                        label = { Text(stringResource(R.string.search_file_name)) },
-                        singleLine = true,
+                        placeholder = stringResource(R.string.search_file_name),
+                        clearDescription = stringResource(R.string.content_desc_clear_search),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { if (state.query.isNotBlank()) onSubmit() }),
                     )
