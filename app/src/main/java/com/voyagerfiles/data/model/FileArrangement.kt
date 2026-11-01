@@ -43,7 +43,12 @@ object FileArrangementEngine {
             return listOf(FileGroup("all", "", order(files, options)))
         }
         val mapped = files.groupBy { groupKey(it, options.groupBy, now, zone) }
-        val orderedKeys = mapped.keys.sortedWith(compareBy<GroupKey> { it.rank }.thenBy { it.label })
+        val groupComparator = when (options.groupBy) {
+            GroupBy.NAME, GroupBy.TYPE ->
+                compareBy<GroupKey> { fold(it.label) }.thenBy { it.id }
+            else -> compareBy<GroupKey> { it.rank }.thenBy { it.label }
+        }
+        val orderedKeys = mapped.keys.sortedWith(groupComparator)
             .let { if (options.groupOrder == SortOrder.DESCENDING) it.asReversed() else it }
         return orderedKeys.map { key ->
             FileGroup(key.id, key.label, order(mapped.getValue(key), options))
@@ -72,15 +77,15 @@ object FileArrangementEngine {
                 val today = now.atZone(zone).toLocalDate()
                 val thisWeek = today.minusDays(7)
                 when {
-                    day.isAfter(today) -> GroupKey("future", "Fecha futura", 0)
-                    day == today -> GroupKey("today", "Hoy", 1)
-                    day == today.minusDays(1) -> GroupKey("yesterday", "Ayer", 2)
-                    !day.isBefore(thisWeek) -> GroupKey("last-week", "Últimos 7 días (sin hoy ni ayer)", 3)
+                    day.isAfter(today) -> GroupKey("future", "Fecha futura", 3005)
+                    day == today -> GroupKey("today", "Hoy", 3004)
+                    day == today.minusDays(1) -> GroupKey("yesterday", "Ayer", 3003)
+                    !day.isBefore(thisWeek) -> GroupKey("last-week", "Últimos 7 días (sin hoy ni ayer)", 3002)
                     day.year == today.year && day.month == today.month ->
-                        GroupKey("month", "Este mes (anterior a 7 días)", 4)
+                        GroupKey("month", "Este mes (anterior a 7 días)", 3001)
                     day.year == today.year ->
-                        GroupKey("year", "Este año (meses anteriores)", 5)
-                    else -> GroupKey("old:"+day.year, day.year.toString(), 10000 - day.year)
+                        GroupKey("year", "Este año (meses anteriores)", 3000)
+                    else -> GroupKey("old:"+day.year, day.year.toString(), day.year - 1000)
                 }
             }
         }
