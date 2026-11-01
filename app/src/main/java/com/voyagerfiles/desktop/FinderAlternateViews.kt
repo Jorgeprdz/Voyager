@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import com.voyagerfiles.data.model.FileItem
+import com.voyagerfiles.data.model.GroupBy
 import com.voyagerfiles.data.model.SortBy
 import com.voyagerfiles.ui.components.FileThumbnailOrIcon
 import java.text.DateFormat
@@ -41,6 +42,8 @@ internal fun FinderListView(
     query: String,
     descending: Boolean,
     sortBy: SortBy,
+    groupBy: GroupBy,
+    groupDescending: Boolean,
     modifier: Modifier,
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
@@ -50,10 +53,11 @@ internal fun FinderListView(
     zoom: FinderViewDensity,
 ) {
     val last = columns.lastOrNull()
-    val files = remember(last?.files, query, descending, sortBy) {
-        finderOrderFiles(last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) },
-            sortBy, descending)
+    val groups = remember(last?.files, query, descending, sortBy, groupBy, groupDescending) {
+        finderGroups(last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) },
+            sortBy, descending, groupBy, groupDescending)
     }
+    val files = remember(groups) { finderFlatten(groups) }
     val marquee = remember(last?.path) { FinderMarqueeState() }
     val glass = LocalFinderMaterials.current
     val palette = glass.palette
@@ -85,7 +89,11 @@ internal fun FinderListView(
         LazyColumn(state = listState,
             modifier = Modifier.fillMaxSize().onGloballyPositioned { listBounds = it.boundsInRoot() },
             contentPadding = PaddingValues(vertical = 5.dp)) {
-            items(files, key = { it.path }) { file ->
+            groups.forEach { group ->
+                if (groupBy != GroupBy.NONE) {
+                    item(key = "header:" + group.key) { FinderGroupHeader(group.heading, group.files.size) }
+                }
+                items(group.files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
                 val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                 var ctrl by remember { mutableStateOf(false) }
@@ -145,6 +153,7 @@ internal fun FinderListView(
                         onAction(it, file)
                     }
                 }
+                }
             }
         }
         FinderLazyListScrollbar(listState, Modifier.align(Alignment.CenterEnd))
@@ -162,6 +171,8 @@ internal fun FinderGalleryView(
     query: String,
     descending: Boolean,
     sortBy: SortBy,
+    groupBy: GroupBy,
+    groupDescending: Boolean,
     modifier: Modifier,
     onOpen: (FileItem) -> Unit,
     operationsAvailable: Boolean,
@@ -171,10 +182,11 @@ internal fun FinderGalleryView(
     zoom: FinderViewDensity,
 ) {
     val last = columns.lastOrNull()
-    val files = remember(last?.files, query, descending, sortBy) {
-        finderOrderFiles(last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) },
-            sortBy, descending)
+    val groups = remember(last?.files, query, descending, sortBy, groupBy, groupDescending) {
+        finderGroups(last?.files.orEmpty().filter { it.name.contains(query, ignoreCase = true) },
+            sortBy, descending, groupBy, groupDescending)
     }
+    val files = remember(groups) { finderFlatten(groups) }
     val selected = files.firstOrNull { it.path in last?.selected.orEmpty() }
     val glass = LocalFinderMaterials.current
     val palette = glass.palette
@@ -212,7 +224,11 @@ internal fun FinderGalleryView(
             .background(palette.footer)
             .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(files, key = { it.path }) { file ->
+            groups.forEach { group ->
+                if (groupBy != GroupBy.NONE) {
+                    item(key = "header:" + group.key) { FinderGroupHeader(group.heading, group.files.size) }
+                }
+                items(group.files, key = { it.path }) { file ->
                 var menu by remember { mutableStateOf(false) }
                 val secondaryClick = remember(file.path) { FinderSecondaryClickGate() }
                 var ctrl by remember { mutableStateOf(false) }
@@ -262,6 +278,7 @@ internal fun FinderGalleryView(
                         if (file.path in last?.selected.orEmpty()) last?.selected?.size ?: 1 else 1, isArchive = file.isArchive, canPaste = clipboardAvailable) {
                         onAction(it, file)
                     }
+                }
                 }
             }
         }
