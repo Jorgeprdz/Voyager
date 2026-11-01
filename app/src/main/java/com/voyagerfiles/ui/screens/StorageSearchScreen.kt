@@ -1,6 +1,8 @@
 package com.voyagerfiles.ui.screens
 
 import android.content.ActivityNotFoundException
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +19,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.voyagerfiles.R
 import com.voyagerfiles.data.index.CategoryScanStatus
 import com.voyagerfiles.data.model.FileItem
+import com.voyagerfiles.data.model.FileTypeFilter
 import com.voyagerfiles.ui.components.FileListItem
 import com.voyagerfiles.util.FileUtils
 import com.voyagerfiles.viewmodel.StorageSearchState
@@ -69,8 +75,10 @@ fun StorageSearchScreen(
     onNavigateBack: () -> Unit,
     onOpenFolder: (String) -> Unit,
     searchViewModel: StorageSearchViewModel = viewModel(),
+    currentFolder: String? = null,
 ) {
     val state by searchViewModel.state.collectAsState()
+    LaunchedEffect(currentFolder) { searchViewModel.setCurrentFolder(currentFolder) }
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
@@ -123,6 +131,14 @@ fun StorageSearchScreen(
         onNavigateBack = onNavigateBack,
         onOpenFile = { open(it, containingFolder = false) },
         onOpenLocation = { open(it, containingFolder = true) },
+        onSetScopeToFolder = searchViewModel::setScopeToCurrentFolder,
+        onSetIncludeSubfolders = searchViewModel::setIncludeSubfolders,
+        onSetType = searchViewModel::setFileType,
+        onSetMinimumMb = searchViewModel::setMinimumMegabytes,
+        onSetMaximumMb = searchViewModel::setMaximumMegabytes,
+        onSetModifiedWithinDays = searchViewModel::setModifiedWithinDays,
+        onSaveSearch = searchViewModel::saveCurrentSearch,
+        onLoadSearch = searchViewModel::loadSavedSearch,
     )
 }
 
@@ -139,6 +155,14 @@ internal fun StorageSearchContent(
     onNavigateBack: () -> Unit,
     onOpenFile: (FileItem) -> Unit,
     onOpenLocation: (FileItem) -> Unit,
+    onSetScopeToFolder: (Boolean) -> Unit = {},
+    onSetIncludeSubfolders: (Boolean) -> Unit = {},
+    onSetType: (FileTypeFilter) -> Unit = {},
+    onSetMinimumMb: (String) -> Unit = {},
+    onSetMaximumMb: (String) -> Unit = {},
+    onSetModifiedWithinDays: (Int?) -> Unit = {},
+    onSaveSearch: () -> Unit = {},
+    onLoadSearch: (Int) -> Unit = {},
 ) {
     val result = state.result
     Scaffold(
@@ -172,11 +196,83 @@ internal fun StorageSearchContent(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { if (state.query.isNotBlank()) onSubmit() }),
                     )
-                    IconButton(onClick = onSubmit, enabled = state.query.isNotBlank()) {
+                    IconButton(onClick = onSubmit, enabled = state.query.isNotBlank() && (state.minimumMegabytes.toLongOrNull() ?: 0L) <= (state.maximumMegabytes.toLongOrNull() ?: Long.MAX_VALUE)) {
                         Icon(Icons.Filled.Search, stringResource(R.string.action_search))
                     }
                 }
-                Text(stringResource(R.string.search_storage_scope), style = MaterialTheme.typography.bodySmall)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = state.filters.scopePath != null,
+                        enabled = state.currentFolder != null,
+                        onCheckedChange = onSetScopeToFolder,
+                    )
+                    Text(stringResource(R.string.search_in_current_folder), style = MaterialTheme.typography.bodySmall)
+                }
+                if (state.filters.scopePath != null) {
+                    Text(state.filters.scopePath, style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = state.filters.includeSubfolders, onCheckedChange = onSetIncludeSubfolders)
+                        Text(stringResource(R.string.search_include_subfolders), style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FileTypeFilter.entries.filterNot { it == FileTypeFilter.FOLDERS }.forEach { type ->
+                        FilterChip(selected = state.filters.type == type, onClick = { onSetType(type) },
+                            label = { Text(stringResource(type.labelRes)) })
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = state.minimumMegabytes,
+                        onValueChange = onSetMinimumMb,
+                        label = { Text(stringResource(R.string.search_min_mb)) },
+                        modifier = Modifier.weight(1f), singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    )
+                    OutlinedTextField(
+                        value = state.maximumMegabytes,
+                        onValueChange = onSetMaximumMb,
+                        label = { Text(stringResource(R.string.search_max_mb)) },
+                        modifier = Modifier.weight(1f), singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                    )
+                }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf<Int?>(null, 7, 30, 365).forEach { days ->
+                        val label = when (days) {
+                            7 -> R.string.search_modified_7
+                            30 -> R.string.search_modified_30
+                            365 -> R.string.search_modified_365
+                            else -> R.string.search_modified_any
+                        }
+                        FilterChip(selected = state.modifiedWithinDays == days,
+                            onClick = { onSetModifiedWithinDays(days) },
+                            label = { Text(stringResource(label)) })
+                    }
+                }
+                if (state.savedSearches.isNotEmpty()) {
+                    Text(stringResource(R.string.search_saved_queries), style = MaterialTheme.typography.labelMedium)
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.savedSearches.forEachIndexed { index, search ->
+                            TextButton(onClick = { onLoadSearch(index) }) { Text(search.title) }
+                        }
+                    }
+                }
+                TextButton(onClick = onSaveSearch, enabled = state.query.isNotBlank()) {
+                    Text(stringResource(R.string.search_save_current))
+                }
+                if (state.filters.scopePath == null) {
+                    Text(stringResource(R.string.search_storage_scope), style = MaterialTheme.typography.bodySmall)
+                }
+                val minimum = state.minimumMegabytes.toLongOrNull()
+                val maximum = state.maximumMegabytes.toLongOrNull()
+                if (minimum != null && maximum != null && minimum > maximum) {
+                    Text(stringResource(R.string.search_invalid_range), color = MaterialTheme.colorScheme.error)
+                }
                 if (result.status == CategoryScanStatus.DENIED) {
                     Text(stringResource(R.string.search_permission_required))
                     TextButton(onClick = onRequestAllFilesAccess) { Text(stringResource(R.string.permission_grant_full_access)) }
