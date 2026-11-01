@@ -377,6 +377,38 @@ class FileOperationCoordinatorTest {
     }
 
     @Test
+    fun mismatchingCommittedCopyNeverDeletesMoveSource() = runBlocking {
+        val source = MemoryProvider().apply { putFile("/local/report.txt", "correct bytes") }
+        val destination = object : MemoryProvider() {
+            override suspend fun getInputStream(path: String): Result<InputStream> =
+                Result.success(ByteArrayInputStream("corrupted!".toByteArray()))
+        }.apply { putDirectory("/remote") }
+
+        val result = FileOperationCoordinator.movePath(source, destination, "/local/report.txt", "/remote")
+
+        assertTrue(result.isFailure)
+        assertTrue(source.exists("/local/report.txt"))
+        assertEquals("correct bytes", source.readFile("/local/report.txt"))
+        assertTrue(destination.exists("/remote/report.txt"))
+    }
+
+    @Test
+    fun recursiveMoveValidatesAllNestedContentsBeforeSourceDeletion() = runBlocking {
+        val source = MemoryProvider().apply {
+            putDirectory("/local/bundle")
+            putDirectory("/local/bundle/nested")
+            putFile("/local/bundle/nested/readme.txt", "safe")
+        }
+        val destination = MemoryProvider().apply { putDirectory("/remote") }
+
+        val result = FileOperationCoordinator.movePath(source, destination,
+            "/local/bundle", "/remote")
+        assertEquals(TransferDisposition.COMPLETED, result.getOrThrow())
+        assertFalse(source.exists("/local/bundle"))
+        assertEquals("safe", destination.readFile("/remote/bundle/nested/readme.txt"))
+    }
+
+    @Test
     fun failedMoveRemovesPartialTargetAndKeepsSource() = runBlocking {
         val source = MemoryProvider().apply { putFile("/local/report.txt", "report") }
         val destination = FailingWriteProvider().apply { putDirectory("/remote") }
