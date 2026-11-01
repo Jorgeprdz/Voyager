@@ -665,4 +665,10 @@
     <string name="external_archive_failed">Archive error: %1$s</string>
     <string name="external_archive_complete">Extraction finished in the selected folder</string>
     <string name="external_archive_missing">The shared archive is no longer accessible</string>
+
+    <string name="finderdex_group_by">Group by</string>
+    <string name="finderdex_group_none">None</string>
+    <string name="finderdex_modified_date">Date modified</string>
+    <string name="finderdex_groups_descending">Groups: descending</string>
+    <string name="finderdex_groups_ascending">Groups: ascending</string>
 </resources>
