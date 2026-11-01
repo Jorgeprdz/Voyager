@@ -68,11 +68,8 @@ class LocalFileProvider(override val parallelWrites: Int = 4) : FileProvider {
         withContext(Dispatchers.IO) {
             runCatching {
                 val oldFile = File(oldPath)
-                val newFile = File(oldFile.parent, newName)
                 requireSource(oldFile)
-                if (newFile.exists()) throw IllegalStateException("$newName already exists in this folder")
-                if (!oldFile.renameTo(newFile)) throw IllegalStateException("Failed to rename")
-                newFile.toFileItem()
+                renameLocalWithoutOverwrite(oldFile, newName).toFileItem()
             }
         }
 

@@ -32,7 +32,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
+        android:label="@string/finderdex_preview_app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialBrowser"
@@ -56,11 +56,55 @@
         <activity
             android:name=".app.MainActivity"
             android:exported="true"
+            android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.MaterialBrowser.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+
+        <!-- Narrow ACTION_VIEW handler. Android controls the default app choice; no
+             automatic extraction, broad octet-stream interception, or path access. -->
+        <activity
+            android:name=".app.ExternalArchiveActivity"
+            android:exported="true"
+            android:resizeableActivity="true"
+            android:theme="@style/Theme.MaterialBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/zip" />
+                <data android:scheme="content" android:mimeType="application/x-zip-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-tar" />
+                <data android:scheme="content" android:mimeType="application/x-gtar" />
+                <data android:scheme="content" android:mimeType="application/gzip" />
+                <data android:scheme="content" android:mimeType="application/x-gzip" />
+                <data android:scheme="content" android:mimeType="application/x-compressed-tar" />
+                <data android:scheme="content" android:mimeType="application/x-tgz" />
+                <data android:scheme="content" android:mimeType="application/x-bzip2" />
+                <data android:scheme="content" android:mimeType="application/vnd.rar" />
+                <data android:scheme="content" android:mimeType="application/x-rar-compressed" />
+                <data android:scheme="content" android:mimeType="application/x-rar" />
+            </intent-filter>
+            <!-- ACTION_SEND carries the content URI in EXTRA_STREAM, not in intent.data. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/x-tar" />
+                <data android:mimeType="application/x-gtar" />
+                <data android:mimeType="application/gzip" />
+                <data android:mimeType="application/x-gzip" />
+                <data android:mimeType="application/x-compressed-tar" />
+                <data android:mimeType="application/x-tgz" />
+                <data android:mimeType="application/x-bzip2" />
+                <data android:mimeType="application/vnd.rar" />
+                <data android:mimeType="application/x-rar-compressed" />
+                <data android:mimeType="application/x-rar" />
             </intent-filter>
         </activity>
 

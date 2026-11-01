@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="finderdex_breadcrumb_description">Localização atual: %1$s</string>
+    <string name="finderdex_view_columns">Visualização em colunas</string>
+    <string name="finderdex_search_folder">Pesquisar nesta pasta</string>
+    <string name="finderdex_desktop">FinderDex · Área de trabalho</string>
+    <string name="finderdex_view_icons">Visualização de ícones</string>
+</resources>

@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -110,6 +111,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
 ) : AndroidViewModel(application) {
 
     private val prefs = PreferencesManager(application)
+    private val arrangementStore = com.voyagerfiles.data.local.FileArrangementStore(application)
     private val db = AppDatabase.getInstance(application)
     private val connectionDao = db.connectionDao()
     private val connectionRepository = ConnectionRepository(connectionDao, AndroidCredentialCipher())
@@ -140,6 +142,10 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val rootEditor: StateFlow<RootTextEditorState?> = _rootEditor.asStateFlow()
 
     private val _sessions = MutableStateFlow<List<BrowserSession>>(emptyList())
+    val transferHistory = operationController.history
+    private val _renameResults = MutableStateFlow<List<Pair<String, Boolean>>>(emptyList())
+    val renameResults = _renameResults.asStateFlow()
+
     val sessions: StateFlow<List<BrowserSession>> = _sessions.asStateFlow()
 
     private val _activeSession = MutableStateFlow<BrowserSession?>(null)
@@ -171,6 +177,12 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val trashState: StateFlow<TrashState> = _trashState.asStateFlow()
 
     val theme = prefs.theme.stateIn(viewModelScope, SharingStarted.Eagerly, AppTheme.SYSTEM)
+    val finderAppearance = prefs.finderAppearance.stateIn(
+        viewModelScope, SharingStarted.Eagerly, com.voyagerfiles.ui.theme.FinderAppearance(),
+    )
+    fun setFinderAppearance(value: com.voyagerfiles.ui.theme.FinderAppearance) {
+        viewModelScope.launch { prefs.setFinderAppearance(value) }
+    }
     val searchBarMode = prefs.searchBarMode.stateIn(viewModelScope, SharingStarted.Eagerly, SearchBarMode.TOP)
     val confirmRemoteDownloads = prefs.confirmRemoteDownloads.stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
@@ -200,6 +212,10 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val connections = connectionRepository.connections.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
     val bookmarks = bookmarkDao.getAllBookmarks().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    private val _restoringSessions = MutableStateFlow(true)
+    val restoringSessions = _restoringSessions.asStateFlow()
+    private val tabStore = com.voyagerfiles.desktop.FinderTabStore(application)
+
     init {
         viewModelScope.launch {
             operationState.collect { state ->
@@ -224,27 +240,60 @@ class FileBrowserViewModel @JvmOverloads constructor(
             }
         }
         viewModelScope.launch {
-            prefs.sortBy.distinctUntilChanged().collect { sort ->
-                _browseState.update { it.copy(sortBy = sort) }
-                if (_browseState.value.files.isNotEmpty()) resortFiles()
-            }
-        }
-        viewModelScope.launch {
-            prefs.sortOrder.distinctUntilChanged().collect { order ->
-                _browseState.update { it.copy(sortOrder = order) }
-                if (_browseState.value.files.isNotEmpty()) resortFiles()
-            }
-        }
-        viewModelScope.launch {
             prefs.viewMode.distinctUntilChanged().collect { mode ->
                 _browseState.update { it.copy(viewMode = mode) }
             }
         }
         // Load initial path
         initialNavigationJob = viewModelScope.launch {
-            val defaultPath = prefs.defaultPath.first()
-            navigateToPath(defaultPath)
+            try {
+                val (restored, active) = withContext(Dispatchers.IO) { tabStore.read() }
+                restored.forEach { sessionProviders[it.id] = FileProviderFactory.createLocal() }
+                _sessions.value = restored
+                if (restored.isNotEmpty()) activateSessionInternal(restored.firstOrNull { it.id == active }?.id ?: restored.first().id)
+                else navigateToPath(prefs.defaultPath.first())
+            } finally { _restoringSessions.value = false }
         }
+        viewModelScope.launch {
+            restoringSessions.first { !it }
+            combine(_sessions, _activeSession) { sessions, selected -> sessions to selected?.id }
+                .collect { (sessions, selected) -> tabStore.write(sessions, selected) }
+        }
+    }
+
+    /** Keep an independent column controller (history/selection/scroll) for each local tab session. */
+    private val desktopColumnsBySession = mutableMapOf<String, com.voyagerfiles.desktop.FinderColumnController>()
+    private val desktopColumns: com.voyagerfiles.desktop.FinderColumnController?
+        get() = _activeSession.value?.id?.let(desktopColumnsBySession::get)
+
+    /** Read-only binding captured for one local session; never navigates browseState to list a column. */
+    fun finderColumns(): com.voyagerfiles.desktop.FinderColumnController? {
+        val session = _activeSession.value ?: return null
+        if (session.source != FileSource.LOCAL && !session.source.isNetwork) return null
+        desktopColumnsBySession[session.id]?.let { return it }
+        val provider = sessionProviders[session.id] ?: return null
+        return com.voyagerfiles.desktop.FinderColumnController(
+            scope = viewModelScope,
+            session = session,
+            listDirectory = { path ->
+                if (_activeSession.value?.id != session.id) Result.failure(IllegalStateException("Session closed"))
+                else if (!BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath))
+                    Result.failure(SecurityException("Outside session"))
+                else provider.listFiles(path)
+            },
+            parentOf = provider::getParentPath,
+            initialScroll = { path -> tabStore.scroll(session.id, path) },
+            onScroll = { path, index, offset -> tabStore.scroll(session.id, path, index, offset) },
+            onLocation = { path, selection ->
+                viewModelScope.launch {
+                    if (_activeSession.value?.id == session.id) {
+                        if (_browseState.value.currentPath != path) navigateToPath(path)
+                        if (_activeSession.value?.id == session.id && _browseState.value.currentPath == path)
+                            setDragSelection(selection)
+                    }
+                }
+            },
+        ).also { desktopColumnsBySession[session.id] = it }
     }
 
     fun navigateTo(path: String) {
@@ -261,6 +310,40 @@ class FileBrowserViewModel @JvmOverloads constructor(
                 return@launch
             }
             navigateToPath(normalizedPath)
+        }
+    }
+
+    /** A new tab has its own session even if its initial path matches another tab. */
+    fun reorderSession(id: String, delta: Int) {
+        _sessions.update { values ->
+            val next = values.toMutableList()
+            val index = next.indexOfFirst { it.id == id }
+            val target = index + delta
+            if (index >= 0 && target in next.indices) java.util.Collections.swap(next, index, target)
+            next
+        }
+    }
+
+    fun openLocalTab(path: String) {
+        cancelInitialNavigation()
+        viewModelScope.launch {
+            val normalized = BrowserNavigationBounds.normalizePath(path)
+            val root = Environment.getExternalStorageDirectory().absolutePath
+            if (!BrowserNavigationBounds.isPathAtOrInsideRoot(normalized, root)) {
+                showSnackbar(UiText.Resource(R.string.location_outside_session))
+                return@launch
+            }
+            if (_sessions.value.count { it.source == FileSource.LOCAL } >= 12) return@launch
+            val sessionId = "local:desktop-tab:${java.util.UUID.randomUUID()}"
+            sessionProviders[sessionId] = FileProviderFactory.createLocal()
+            _sessions.update { sessions ->
+                sessions + BrowserSession(
+                    id = sessionId, title = titleForLocalPath(normalized),
+                    source = FileSource.LOCAL, rootPath = root,
+                    currentPath = normalized
+                )
+            }
+            activateSessionInternal(sessionId)
         }
     }
 
@@ -507,15 +590,27 @@ class FileBrowserViewModel @JvmOverloads constructor(
 
     private fun sortFiles(files: List<FileItem>): List<FileItem> {
         val state = _browseState.value
-        val comparator = when (state.sortBy) {
-            SortBy.NAME -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
-            SortBy.SIZE -> compareBy { it.size }
-            SortBy.DATE -> compareBy { it.lastModified }
-            SortBy.TYPE -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.extension }
-                .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name }
+        return com.voyagerfiles.data.model.FileArrangementEngine.order(
+            files, com.voyagerfiles.data.model.FileArrangement(
+                sortBy = state.sortBy, sortOrder = state.sortOrder,
+                groupBy = state.groupBy, groupOrder = state.groupOrder,
+            ),
+        )
+    }
+
+    private fun updateArrangement(change: (com.voyagerfiles.data.model.FileArrangement) -> com.voyagerfiles.data.model.FileArrangement) {
+        val sessionId = _activeSession.value?.id ?: "local:default"
+        val state = _browseState.value
+        val updated = change(com.voyagerfiles.data.model.FileArrangement(
+            sortBy = state.sortBy, sortOrder = state.sortOrder,
+            groupBy = state.groupBy, groupOrder = state.groupOrder,
+        ))
+        arrangementStore.write(sessionId, updated)
+        _browseState.update {
+            it.copy(sortBy = updated.sortBy, sortOrder = updated.sortOrder,
+                groupBy = updated.groupBy, groupOrder = updated.groupOrder)
         }
-        val ordered = if (state.sortOrder == SortOrder.DESCENDING) comparator.reversed() else comparator
-        return files.sortedWith(compareByDescending<FileItem> { it.isDirectory }.then(ordered))
+        resortFiles()
     }
 
     fun toggleSelection(path: String) {
@@ -600,13 +695,13 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
-    fun uploadDocuments(uris: List<Uri>) {
+    fun uploadDocuments(uris: List<Uri>, destinationDirectory: String = _browseState.value.currentPath, onFinished: () -> Unit = {}) {
         if (uris.isEmpty()) return
         val destinationProvider = fileProvider
-        val destinationPath = _browseState.value.currentPath
+        val destinationPath = destinationDirectory
         val contentResolver = getApplication<Application>().contentResolver
         val progressLabel = UiText.Resource(R.string.progress_uploading)
-        launchOperation(R.string.progress_uploading, R.string.operation_upload) {
+        launchOperation(R.string.progress_uploading, R.string.operation_upload, onFinished = onFinished) {
             val sources = withContext(Dispatchers.IO) {
                 uris.map { uri -> UploadSourceFactory.fromUri(contentResolver, uri) }
             }
@@ -755,6 +850,60 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     ),
                 )
             }
+        }
+    }
+
+    /** One cancellable local batch; every file is checked again before provider mutation. */
+    fun renameMultipleLocal(changes: List<Pair<String, String>>) {
+        val state = _browseState.value
+        if (state.source != FileSource.LOCAL || changes.isEmpty() || changes.size > 1000) return
+        val available = state.files.associateBy { it.path }
+        if (changes.any { (path, _) -> path !in available }) return
+        val normalized = changes.map { (path, name) ->
+            path to (validFileNameOrNotify(name) ?: return)
+        }.distinctBy { it.first }.sortedBy { it.first }
+        val names = normalized.map { it.second.lowercase(java.util.Locale.ROOT) }
+        if (names.size != names.toSet().size) return
+        val provider = fileProvider
+        val dest = state.currentPath
+        launchOperation(R.string.progress_renaming, R.string.operation_rename, onFinished = { refreshFiles(); desktopColumns?.refresh() }) {
+            _renameResults.value = emptyList()
+            val latest = provider.listFiles(dest).getOrThrow()
+            val selected = normalized.map { it.first }.toSet()
+            val occupied = latest.filterNot { it.path in selected }
+                .mapTo(mutableSetOf()) { it.name.lowercase(java.util.Locale.ROOT) }
+            if (names.any { it in occupied }) {
+                throw IllegalStateException("A destination name is already used")
+            }
+            val oldNames = latest.filter { it.path in selected }.associateBy { it.path }
+            if (normalized.any { (path, newName) ->
+                    oldNames[path] == null ||
+                    (newName.lowercase(java.util.Locale.ROOT) in oldNames.values
+                        .filter { it.path != path }.map { it.name.lowercase(java.util.Locale.ROOT) })
+                }) throw IllegalStateException("Source was changed or rename would collide")
+            var completed = 0
+            var failed = 0
+            for ((path, name) in normalized) {
+                com.voyagerfiles.data.repository.TransferCancellation.check()
+                updateOperationProgress(TransferProgress(
+                    label = UiText.Resource(R.string.progress_renaming),
+                    completedItems = completed,
+                    totalItems = normalized.size,
+                    currentItemName = name
+                ))
+                provider.rename(path, name).onSuccess {
+                    completed++
+                    _renameResults.value = _renameResults.value + ("${path.substringAfterLast('/')} → $name" to true)
+                }.onFailure {
+                    if (it is CancellationException) throw it
+                    operationController.recordFailure(it)
+                    _renameResults.value = _renameResults.value + ("${path.substringAfterLast('/')} → $name" to false)
+                    failed++
+                }
+            }
+            updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_renaming), completedItems = completed, totalItems = normalized.size))
+            refreshFiles()
+            showSnackbar(UiText.Dynamic("$completed renamed; $failed failed"))
         }
     }
 
@@ -949,6 +1098,129 @@ class FileBrowserViewModel @JvmOverloads constructor(
         return true
     }
 
+    /**
+     * Desktop transfers use Voyager's transactional coordinator, not platform File.copyTo.
+     * Rejects paths outside the active local session before any write.
+     */
+    fun moveDesktopPaths(paths: List<String>, destinationDirectory: String) =
+        transferDesktopPaths(paths, destinationDirectory, move = true)
+
+    fun copyDesktopPaths(paths: List<String>, destinationDirectory: String) =
+        transferDesktopPaths(paths, destinationDirectory, move = false)
+
+    private fun transferDesktopPaths(paths: List<String>, destinationDirectory: String, move: Boolean) {
+        val session = _activeSession.value ?: return
+        if (session.source != FileSource.LOCAL || paths.isEmpty()) return
+        val normalized = BrowserNavigationBounds.normalizePath(destinationDirectory)
+        val canonicalRoot = runCatching { java.io.File(session.rootPath).canonicalFile.toPath() }.getOrNull()
+        fun isSafeLocalPath(path: String): Boolean {
+            val root = canonicalRoot ?: return false
+            return BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
+                runCatching { java.io.File(path).canonicalFile.toPath().startsWith(root) }.getOrDefault(false)
+        }
+        if (!isSafeLocalPath(normalized) || paths.any { !isSafeLocalPath(it) }) {
+            showSnackbar(UiText.Dynamic("Origen o destino fuera de la sesión")); return
+        }
+        val provider = sessionProviders[session.id] ?: return
+        val chosen = paths.distinct()
+        val progressLabel = if (move) R.string.progress_moving else R.string.progress_copying
+        launchOperation(progressLabel, R.string.operation_paste) {
+            require(provider.getFileInfo(normalized).getOrThrow().isDirectory) {
+                "El destino no es una carpeta accesible"
+            }
+            var completed = 0
+            val errors = mutableListOf<String>()
+            try {
+            for (source in chosen) {
+                val onProgress: (StreamTransferProgress) -> Unit = { progress ->
+                    updateOperationProgress(TransferProgress(UiText.Resource(progressLabel),
+                        completedItems = completed, totalItems = chosen.size,
+                        currentItemName = source.substringAfterLast('/'),
+                        copiedBytes = progress.bytesTransferred, totalBytes = progress.totalBytes,
+                        elapsedNanos = progress.elapsedNanos))
+                }
+                val result = if (move)
+                    FileOperationCoordinator.movePath(provider, provider, source, normalized,
+                        operationController.conflicts::resolve, onProgress)
+                else FileOperationCoordinator.copyPath(provider, provider, source, normalized,
+                        operationController.conflicts::resolve, onProgress)
+                result.onSuccess { completed++ }
+                result.onFailure { error ->
+                    if (error is CancellationException) throw error
+                    operationController.recordFailure(error)
+                    errors += "${source.substringAfterLast('/')}: ${error.localizedMessage ?: "error"}"
+                }
+            }
+            } finally {
+                // Previous entries may already be committed when a later entry is cancelled.
+                refreshFiles()
+                desktopColumns?.refresh()
+            }
+            if (errors.isNotEmpty()) {
+                showSnackbar(UiText.Dynamic("${errors.size} elemento(s) fallaron: ${errors.joinToString("; ").take(400)}"))
+            } else showSnackbar(UiText.Dynamic("$completed elemento(s) ${if (move) "movido(s)" else "copiado(s)"}"))
+        }
+    }
+
+    /** Duplicate through Voyager's transactional coordinator, retaining every original. */
+    fun duplicateDesktopPaths(paths: List<String>) {
+        val session = _activeSession.value ?: return
+        if (session.source != FileSource.LOCAL || paths.isEmpty()) return
+        val provider = sessionProviders[session.id] ?: return
+        val parent = _browseState.value.currentPath
+        val rootCanonical = runCatching { java.io.File(session.rootPath).canonicalFile.toPath() }.getOrNull()
+        fun inside(path: String): Boolean {
+            val root = rootCanonical ?: return false
+            return BrowserNavigationBounds.isPathAtOrInsideRoot(path, session.rootPath) &&
+                runCatching { java.io.File(path).canonicalFile.toPath().startsWith(root) }.getOrDefault(false)
+        }
+        if (!inside(parent) || paths.any { !inside(it) || provider.getParentPath(it) != parent }) {
+            showSnackbar(UiText.Dynamic("Selección fuera del directorio activo")); return
+        }
+        val chosen = paths.distinct()
+        launchOperation(R.string.progress_copying, R.string.operation_paste) {
+            val names = provider.listFiles(parent).getOrThrow().mapTo(mutableSetOf()) { it.name.lowercase() }
+            val failures = mutableListOf<String>()
+            var completed = 0
+            try {
+                chosen.forEach { source ->
+                    try {
+                        val file = provider.getFileInfo(source).getOrThrow()
+                        val base = if (file.isDirectory || !file.name.contains('.')) file.name
+                            else file.name.substringBeforeLast('.')
+                        val ext = if (file.isDirectory || !file.name.contains('.')) ""
+                            else ".${file.name.substringAfterLast('.')}"
+                        val name = generateSequence(1) { it + 1 }
+                            .map { index -> "$base copia" + (if (index == 1) "" else " $index") + ext }
+                            .first { it.lowercase() !in names }
+                        FileOperationCoordinator.copyPath(provider, provider, source, parent,
+                            onProgress = { progress ->
+                                updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_copying),
+                                    completedItems = completed, totalItems = chosen.size, currentItemName = file.name,
+                                    copiedBytes = progress.bytesTransferred, totalBytes = progress.totalBytes,
+                                    elapsedNanos = progress.elapsedNanos))
+                            }, destinationName = name).getOrThrow()
+                        names += name.lowercase()
+                        completed++
+                        updateOperationProgress(TransferProgress(UiText.Resource(R.string.progress_copying),
+                            completedItems = completed, totalItems = chosen.size, currentItemName = file.name))
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        operationController.recordFailure(error)
+                        failures += "${source.substringAfterLast('/')}: ${error.localizedMessage ?: "error"}"
+                    }
+                }
+            } finally {
+                refreshFiles()
+                desktopColumns?.refresh()
+            }
+            if (failures.isNotEmpty())
+                showSnackbar(UiText.Dynamic("${failures.size} duplicaciones fallaron: ${failures.joinToString("; ").take(380)}"))
+            else showSnackbar(UiText.Dynamic("$completed elementos duplicados"))
+        }
+    }
+
     fun copyToClipboard(paths: List<String>, clearSelectionAfter: Boolean = true) {
         _clipboardPaths.value = paths
         _clipboardOperation.value = ClipboardOperation.COPY
@@ -994,11 +1266,21 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
     }
 
-    fun paste() {
+    fun paste() = pasteAtDirectory(_browseState.value.currentPath)
+
+    fun pasteIntoDesktopFolder(folderPath: String) {
+        val session = _activeSession.value ?: return
+        if (session.source != FileSource.LOCAL ||
+            !BrowserNavigationBounds.isPathAtOrInsideRoot(folderPath, session.rootPath)) {
+            showSnackbar(UiText.Dynamic("Destino fuera de la sesión local")); return
+        }
+        pasteAtDirectory(folderPath)
+    }
+
+    private fun pasteAtDirectory(destPath: String) {
         val paths = _clipboardPaths.value.toList()
         val operation = _clipboardOperation.value
         if (paths.isEmpty() || operation == ClipboardOperation.NONE) return
-        val destPath = _browseState.value.currentPath
         val sourceProvider = clipboardProvider ?: fileProvider
         val destinationProvider = fileProvider
         val progressLabelRes = when (operation) {
@@ -1008,6 +1290,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
         val progressLabel = UiText.Resource(progressLabelRes)
         launchOperation(progressLabelRes, R.string.operation_paste) {
+            require(fileProvider.getFileInfo(destPath).getOrThrow().isDirectory) { "Paste target is not a folder" }
             var failed = 0
             var firstError: Throwable? = null
             var completed = 0
@@ -1022,6 +1305,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     )
                 }
             }
+            try {
             for (sourcePath in paths) {
                 val itemResult = itemResults.getValue(sourcePath)
                 val item = itemResult.getOrNull()
@@ -1097,10 +1381,14 @@ class FileBrowserViewModel @JvmOverloads constructor(
                     if (firstError == null) firstError = error
                 }
             }
+            } finally {
+                // Clipboard batches can be cancelled after moving some sources.
+                refreshFiles()
+                desktopColumns?.refresh()
+            }
             if (operation == ClipboardOperation.CUT && failed == 0 && skipped == 0) {
                 clearClipboard()
             }
-            refreshFiles()
             if (failed > 0) {
                 showSnackbar(
                     OperationMessages.partial(
@@ -1423,21 +1711,23 @@ class FileBrowserViewModel @JvmOverloads constructor(
         @StringRes progressLabel: Int,
         @StringRes operationName: Int,
         @StringRes cancelledMessage: Int = R.string.transfer_cancelled,
+        onFinished: () -> Unit = {},
         block: suspend () -> Unit,
     ) {
         val started = operationController.launch(
             label = UiText.Resource(progressLabel),
-            cancellable = operationName in setOf(R.string.operation_upload, R.string.operation_paste, R.string.operation_download, R.string.audio_setting_tone, R.string.operation_extract, R.string.operation_compress),
+            cancellable = operationName in setOf(R.string.operation_rename, R.string.operation_upload, R.string.operation_paste, R.string.operation_download, R.string.audio_setting_tone, R.string.operation_extract, R.string.operation_compress),
             onFailure = { error ->
                 showSnackbar(
                     if (error is CancellationException) UiText.Resource(cancelledMessage)
                     else OperationMessages.failure(operationName, error),
                 )
             },
-            onFinished = {},
+            onFinished = onFinished,
             block = block,
         )
         if (!started) {
+            onFinished()
             val active = operationState.value as? OperationState.Running ?: return
             showSnackbar(UiText.Resource(R.string.operation_already_running, listOf(active.label)))
         }
@@ -1587,19 +1877,22 @@ class FileBrowserViewModel @JvmOverloads constructor(
         viewModelScope.launch { prefs.setLimitedAccessAccepted(accepted) }
     }
 
-    fun setSortBy(sortBy: SortBy) {
-        viewModelScope.launch { prefs.setSortBy(sortBy) }
-    }
+    fun setSortBy(sortBy: SortBy) = updateArrangement { it.copy(sortBy = sortBy) }
 
-    fun setSortOrder(order: SortOrder) {
-        viewModelScope.launch { prefs.setSortOrder(order) }
-    }
+    fun setSortOrder(order: SortOrder) = updateArrangement { it.copy(sortOrder = order) }
+
+    fun setGroupBy(by: com.voyagerfiles.data.model.GroupBy) =
+        updateArrangement { it.copy(groupBy = by) }
+
+    fun setGroupOrder(order: SortOrder) = updateArrangement { it.copy(groupOrder = order) }
 
     fun setViewMode(mode: ViewMode) {
         viewModelScope.launch { prefs.setViewMode(mode) }
     }
 
     override fun onCleared() {
+        desktopColumnsBySession.values.forEach { it.close() }
+        desktopColumnsBySession.clear()
         remoteImageThumbnailSessions.values.forEach(RemoteImageThumbnailSession::close)
         remoteImageThumbnailSessions.clear()
         // viewModelScope is cancelled at this point, so close privileged pipes synchronously.
@@ -1623,8 +1916,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
         }
         scrollMemory.enter(session.id, session.currentPath, returning = true)
         _activeSession.value = session
+        val arrangement = arrangementStore.read(session.id)
         _browseState.update {
             it.copy(
+                sortBy = arrangement.sortBy, sortOrder = arrangement.sortOrder,
+                groupBy = arrangement.groupBy, groupOrder = arrangement.groupOrder,
                 currentPath = session.currentPath,
                 source = session.source,
                 selectedFiles = emptySet(),
@@ -1638,6 +1934,7 @@ class FileBrowserViewModel @JvmOverloads constructor(
     }
 
     private suspend fun closeSessionInternal(sessionId: String) {
+        desktopColumnsBySession.remove(sessionId)?.close()
         val closedSession = _sessions.value.firstOrNull { it.id == sessionId } ?: return
         remoteImageThumbnailSessions.remove(sessionId)?.close()
         sessionProviders.remove(sessionId)?.disconnect()

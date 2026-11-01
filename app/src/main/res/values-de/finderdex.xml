@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="finderdex_breadcrumb_description">Aktueller Speicherort: %1$s</string>
+    <string name="finderdex_view_columns">Spaltenansicht</string>
+    <string name="finderdex_search_folder">In diesem Ordner suchen</string>
+    <string name="finderdex_desktop">FinderDex · Desktop</string>
+    <string name="finderdex_view_icons">Symbolansicht</string>
+</resources>

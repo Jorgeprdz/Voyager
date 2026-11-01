@@ -132,6 +132,10 @@ import com.voyagerfiles.audio.AudioToneInstaller
 import com.voyagerfiles.ui.components.AudioToneMenuItems
 import com.voyagerfiles.ui.components.rememberAudioToneAction
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.FinderMobileTokens
+import com.voyagerfiles.ui.components.FinderMobileCreateButton
+import com.voyagerfiles.ui.components.FinderMobileFilterPill
+import com.voyagerfiles.ui.components.FinderMobileSearchField
 import com.voyagerfiles.ui.components.FileSortMenu
 import com.voyagerfiles.data.model.Bookmark
 import com.voyagerfiles.data.model.LocalFileVisibility
@@ -316,7 +320,16 @@ fun BrowserScreen(
         )
     }
     val runningOperation = operationState as? OperationState.Running
-    val firstVisiblePath = state.visibleFiles.firstOrNull()?.path
+    val arrangedGroups = remember(state.visibleFiles, state.sortBy, state.sortOrder, state.groupBy, state.groupOrder) {
+        com.voyagerfiles.data.model.FileArrangementEngine.groups(
+            state.visibleFiles,
+            com.voyagerfiles.data.model.FileArrangement(
+                state.sortBy, state.sortOrder, state.groupBy, state.groupOrder,
+            ),
+        )
+    }
+    val arrangedFiles = remember(arrangedGroups) { arrangedGroups.flatMap { it.files } }
+    val firstVisiblePath = arrangedFiles.firstOrNull()?.path
 
     LaunchedEffect(isTelevision, state.isLoading, firstVisiblePath, state.viewMode) {
         if (isTelevision && !state.isLoading && firstVisiblePath != null) {
@@ -449,7 +462,7 @@ fun BrowserScreen(
                 }
             }
             ArchiveTapAction.OPEN_EXTERNALLY -> {
-                FileUtils.openFile(context, file).onFailure { error ->
+                FileUtils.openFile(context, file).onSuccess { com.voyagerfiles.desktop.FinderRecentStore(context).record(file) }.onFailure { error ->
                     scope.launch {
                         snackbarHostState.showSnackbar(
                             if (error is ActivityNotFoundException) {
@@ -491,6 +504,7 @@ fun BrowserScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
@@ -707,10 +721,10 @@ fun BrowserScreen(
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                        actionIconContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 )
             } else {
@@ -732,7 +746,13 @@ fun BrowserScreen(
                             IconButton(onClick = ::navigateUpOrLeave) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.content_desc_back))
                             }
-                            Spacer(modifier = Modifier.weight(1f))
+                            Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                                Text(state.currentPath.substringAfterLast('/').ifBlank { context.getString(R.string.finderdex_mobile_title) },
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                    color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium)
+                                Text(state.files.size.toString(),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelSmall)
+                            }
                             if (searchBarMode == SearchBarMode.COMPACT) {
                                 IconButton(onClick = { compactSearchExpanded = true }) {
                                     Icon(Icons.Filled.Search, stringResource(R.string.action_search))
@@ -796,6 +816,10 @@ fun BrowserScreen(
                                 sortOrder = state.sortOrder,
                                 onSortByChange = viewModel::setSortBy,
                                 onSortOrderChange = viewModel::setSortOrder,
+                                groupBy = state.groupBy,
+                                groupOrder = state.groupOrder,
+                                onGroupByChange = viewModel::setGroupBy,
+                                onGroupOrderChange = viewModel::setGroupOrder,
                             )
                             Box {
                                 IconButton(onClick = { showMoreMenu = true }) {
@@ -845,6 +869,7 @@ fun BrowserScreen(
                         }
                         PathBreadcrumb(
                             path = state.currentPath,
+                            rootPath = activeSession?.rootPath ?: "/",
                             onNavigate = ::navigateTo,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -921,12 +946,10 @@ fun BrowserScreen(
         floatingActionButton = {
             if (!isSelectionMode && runningOperation == null) {
                 Box {
-                    FloatingActionButton(
+                    FinderMobileCreateButton(
                         onClick = { showCreateMenu = true },
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    ) {
-                        Icon(Icons.Filled.CreateNewFolder, stringResource(R.string.content_desc_create))
-                    }
+                        contentDescription = stringResource(R.string.content_desc_create),
+                    )
                     BrowserCreateMenu(
                         expanded = showCreateMenu,
                         model = createMenuModel,
@@ -1062,13 +1085,21 @@ fun BrowserScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize().testTag("browser-files")
-                                .dragFileSelection(state.visibleFiles.map { it.path }, state.selectedFiles,
+                                .dragFileSelection(arrangedFiles.map { it.path }, state.selectedFiles,
                                     enabled = !isTelevision && runningOperation == null, listState = listState,
                                     onSelection = viewModel::setDragSelection,
                                     onStartHaptic = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }),
                         ) {
-                            items(state.visibleFiles, key = { it.path }) { file ->
-                                FileListItem(
+                            arrangedGroups.forEach { group ->
+                                if (state.groupBy != com.voyagerfiles.data.model.GroupBy.NONE) {
+                                    item(key = "group:" + group.key) {
+                                        Text("${group.heading} (${group.files.size})",
+                                            modifier = Modifier.fillMaxWidth().semantics { heading() }.padding(horizontal = 16.dp, vertical = 8.dp),
+                                            style = MaterialTheme.typography.titleSmall)
+                                    }
+                                }
+                                items(group.files, key = { it.path }) { file ->
+                                    FileListItem(
                                     file = file,
                                     remoteImages = remoteImages,
                                     modifier = if (isTelevision && file.path == firstVisiblePath) {
@@ -1122,6 +1153,7 @@ fun BrowserScreen(
                                         }
                                     },
                                 )
+                                }
                             }
                         }
                     }
@@ -1135,14 +1167,23 @@ fun BrowserScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize().testTag("browser-files")
-                                .dragFileSelection(state.visibleFiles.map { it.path }, state.selectedFiles,
+                                .dragFileSelection(arrangedFiles.map { it.path }, state.selectedFiles,
                                     enabled = !isTelevision && runningOperation == null, gridState = gridState,
                                     gridContentOffset = Offset(gridPadding, gridPadding),
                                     onSelection = viewModel::setDragSelection,
                                     onStartHaptic = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }),
                         ) {
-                            items(state.visibleFiles, key = { it.path }) { file ->
-                                FileGridItem(
+                            arrangedGroups.forEach { group ->
+                                if (state.groupBy != com.voyagerfiles.data.model.GroupBy.NONE) {
+                                    item(key = "group:" + group.key,
+                                        span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                        Text("${group.heading} (${group.files.size})",
+                                            modifier = Modifier.fillMaxWidth().semantics { heading() }.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            style = MaterialTheme.typography.titleSmall)
+                                    }
+                                }
+                                items(group.files, key = { it.path }) { file ->
+                                    FileGridItem(
                                     file = file,
                                     remoteImages = remoteImages,
                                     modifier = if (isTelevision && file.path == firstVisiblePath) {
@@ -1171,6 +1212,7 @@ fun BrowserScreen(
                                         toggleSelection(file.path)
                                     },
                                 )
+                                }
                             }
                         }
                     }
@@ -1486,23 +1528,12 @@ private fun BrowserSearchField(
     LaunchedEffect(onCloseSearch != null) {
         if (onCloseSearch != null) searchFocus.requestFocus()
     }
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-        trailingIcon = {
-            if (onCloseSearch != null) {
-                IconButton(onClick = onCloseSearch) {
-                    Icon(Icons.Filled.Close, stringResource(R.string.action_close_search))
-                }
-            } else if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Filled.Close, stringResource(R.string.content_desc_clear_search))
-                }
-            }
-        },
-        placeholder = { Text(stringResource(R.string.browser_search_placeholder)) },
-        singleLine = true,
+    FinderMobileSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = stringResource(R.string.browser_search_placeholder),
+        clearDescription = stringResource(R.string.content_desc_clear_search),
+        onClose = onCloseSearch,
         modifier = modifier.focusRequester(searchFocus).testTag(BROWSER_SEARCH_TEST_TAG),
     )
 }
@@ -1520,10 +1551,10 @@ private fun FileTypeFilterRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(FileTypeFilter.entries, key = { it.name }) { filter ->
-            FilterChip(
+            FinderMobileFilterPill(
+                label = stringResource(filter.labelRes),
                 selected = selectedFilter == filter,
                 onClick = { onFilterChange(filter) },
-                label = { Text(stringResource(filter.labelRes)) },
             )
         }
     }

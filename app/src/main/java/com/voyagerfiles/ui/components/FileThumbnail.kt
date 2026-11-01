@@ -57,6 +57,10 @@ fun FileThumbnailOrIcon(
     modifier: Modifier = Modifier,
     remoteImages: RemoteImageThumbnailLoader? = null,
 ) {
+    if (file.isDirectory) {
+        FinderMobileFolder(modifier.size(iconSize).testTag(FILE_ICON_TEST_TAG))
+        return
+    }
     val icon = fileIcon(file)
     if (file.isImage && file.source.isNetwork && remoteImages != null) {
         val context = LocalContext.current

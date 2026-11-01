@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NavigateNext
@@ -21,9 +22,13 @@ fun PathBreadcrumb(
     path: String,
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier,
+    rootPath: String = "/",
 ) {
     val scrollState = rememberScrollState()
-    val parts = path.split("/").filter { it.isNotEmpty() }
+    val root = rootPath.trimEnd('/').ifEmpty { "/" }
+    val relative = if (root != "/" && (path == root || path.startsWith("$root/"))) path.removePrefix(root) else path
+    val base = if (relative != path || path == root) root else "/"
+    val parts = relative.split("/").filter { it.isNotEmpty() }
 
     LaunchedEffect(path) {
         scrollState.animateScrollTo(scrollState.maxValue)
@@ -36,12 +41,13 @@ fun PathBreadcrumb(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "/",
+            text = if (base == "/") "/" else base.substringAfterLast('/'),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
-                .clickable { onNavigate("/") }
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .heightIn(min = 48.dp)
+                .clickable { onNavigate(base) }
+                .padding(horizontal = 10.dp, vertical = 10.dp),
         )
 
         parts.forEachIndexed { index, part ->
@@ -50,7 +56,7 @@ fun PathBreadcrumb(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            val targetPath = "/" + parts.subList(0, index + 1).joinToString("/")
+            val targetPath = base.trimEnd('/') + "/" + parts.subList(0, index + 1).joinToString("/")
             val isLast = index == parts.lastIndex
             Text(
                 text = part,
@@ -58,8 +64,9 @@ fun PathBreadcrumb(
                 color = if (isLast) MaterialTheme.colorScheme.onSurface
                 else MaterialTheme.colorScheme.primary,
                 modifier = Modifier
+                    .heightIn(min = 48.dp)
                     .clickable(enabled = !isLast) { onNavigate(targetPath) }
-                    .padding(horizontal = 4.dp, vertical = 8.dp),
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
             )
         }
     }

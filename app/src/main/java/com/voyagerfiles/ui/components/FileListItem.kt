@@ -2,6 +2,8 @@ package com.voyagerfiles.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
 import com.voyagerfiles.data.model.FileItem
 import java.text.DateFormat
 
@@ -64,9 +68,11 @@ fun FileListItem(
         if (isSelected) R.string.content_desc_deselect_named else R.string.content_desc_select_named,
         file.name,
     )
+    val appearance = LocalFinderSemanticTokens.current
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            isSelected -> if (appearance.appearance.highContrast) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             // Marks the row whose menu is open, like a pressed state, without looking selected.
             isHighlighted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                 .compositeOver(MaterialTheme.colorScheme.surface)
@@ -75,9 +81,9 @@ fun FileListItem(
         label = "selection_bg",
     )
     val horizontalPadding = if (compact) 8.dp else 16.dp
-    val verticalPadding = if (compact) 4.dp else 12.dp
-    val iconSize = if (compact) 32.dp else 40.dp
-    val iconSpacing = if (compact) 12.dp else 16.dp
+    val verticalPadding = if (compact) 4.dp else 6.dp
+    val iconSize = if (compact) 32.dp else 36.dp
+    val iconSpacing = if (compact) 12.dp else 14.dp
     val nameStyle = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge
     // Give trailing content the row's full height through the screen edge.
     val trailingWidth = if (compact) 48.dp else 56.dp
@@ -90,6 +96,9 @@ fun FileListItem(
         color = backgroundColor,
         modifier = modifier
             .fillMaxWidth()
+            .then(if (isSelected && appearance.appearance.highContrast)
+                Modifier.border(2.dp, appearance.focus, RoundedCornerShape(appearance.selectionRadiusDp.dp))
+                else Modifier)
             .then(
                 if (trailingContent != null) {
                     Modifier
@@ -175,6 +184,12 @@ fun FileListItem(
                 }
             }
 
+            HorizontalDivider(
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .padding(start = horizontalPadding + iconSize + iconSpacing),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f),
+            )
             if (trailingContent != null) {
                 Box(modifier = Modifier.matchParentSize(), contentAlignment = Alignment.CenterEnd) {
                     Box(

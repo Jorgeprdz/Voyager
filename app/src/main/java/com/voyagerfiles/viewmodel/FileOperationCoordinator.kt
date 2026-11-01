@@ -5,6 +5,8 @@ import com.voyagerfiles.data.repository.TransferCancellation
 import com.voyagerfiles.data.repository.FileProvider
 import com.voyagerfiles.data.repository.StreamTransferProgress
 import java.util.UUID
+import java.security.MessageDigest
+import java.io.InputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -46,8 +48,12 @@ object FileOperationCoordinator {
         destinationDirectoryPath: String,
         resolveConflict: ConflictResolver = rejectConflict,
         onProgress: (StreamTransferProgress) -> Unit = {},
+        destinationName: String? = null,
     ): Result<TransferDisposition> = withContext(Dispatchers.IO) {
-        runCatching { copyPathInternal(sourceProvider, destinationProvider, sourcePath, destinationDirectoryPath, resolveConflict, onProgress) }
+        runCatching {
+            copyPathInternal(sourceProvider, destinationProvider, sourcePath,
+                destinationDirectoryPath, resolveConflict, onProgress, destinationName)
+        }
     }
 
     suspend fun movePath(
@@ -61,12 +67,75 @@ object FileOperationCoordinator {
         runCatching {
             val disposition = copyPathInternal(sourceProvider, destinationProvider, sourcePath, destinationDirectoryPath, resolveConflict, onProgress)
             if (disposition == TransferDisposition.COMPLETED) {
-                // The destination is committed. Cancellation keeps both copies; never remove a committed replacement.
+                // Never delete the source on a remote provider's success claim alone.
+                // Reopen both committed trees and verify bytes, not only nominal sizes.
+                val source = sourceProvider.getFileInfo(sourcePath).getOrThrow()
+                val destination = destinationProvider.listFiles(destinationDirectoryPath).getOrThrow()
+                    .singleOrNull { it.name == source.name && it.isDirectory == source.isDirectory }
+                    ?: error("Copied destination is missing or ambiguous; source retained")
+                verifyCommittedCopy(sourceProvider, destinationProvider, source, destination)
+                // Cancellation or verification failure keeps both copies for manual resolution.
                 TransferCancellation.check()
                 sourceProvider.delete(sourcePath).getOrThrow()
             }
             disposition
         }
+    }
+
+    /**
+     * Validate a committed cross-provider (or local) copy before a destructive move.
+     * Inability to read or verify the destination fails closed and retains the source.
+     */
+    private suspend fun verifyCommittedCopy(
+        sourceProvider: FileProvider,
+        destinationProvider: FileProvider,
+        source: FileItem,
+        destination: FileItem,
+        depth: Int = 0,
+        visited: MutableSet<String> = mutableSetOf(),
+    ) {
+        TransferCancellation.check()
+        check(depth <= 128) { "Verification exceeded safe folder depth; source retained" }
+        check(source.isDirectory == destination.isDirectory && source.name == destination.name) {
+            "Destination differs from source; source retained"
+        }
+        check(visited.add(source.path)) { "Repeated folder or cycle during verification; source retained" }
+        if (source.isDirectory) {
+            val children = sourceProvider.listFiles(source.path).getOrThrow()
+            val copied = destinationProvider.listFiles(destination.path).getOrThrow()
+            check(children.size == copied.size) { "Copied folder does not contain the same entries; source retained" }
+            check(children.map { it.name }.toSet().size == children.size &&
+                copied.map { it.name }.toSet().size == copied.size) {
+                "Ambiguous names in copied folder; source retained"
+            }
+            val byName = copied.associateBy { it.name }
+            for (child in children) {
+                TransferCancellation.check()
+                val target = byName[child.name] ?: error("Missing copied item: ${child.name}; source retained")
+                verifyCommittedCopy(sourceProvider, destinationProvider, child, target, depth + 1, visited)
+            }
+        } else {
+            if (source.size > 0L && destination.size > 0L) {
+                check(source.size == destination.size) { "Copied file size mismatch; source retained" }
+            }
+            val fromHash = sourceProvider.getInputStream(source.path).getOrThrow().use { sha256(it) }
+            val toHash = destinationProvider.getInputStream(destination.path).getOrThrow().use(::sha256)
+            check(MessageDigest.isEqual(fromHash, toHash)) {
+                "Copied file content does not match source; source retained"
+            }
+        }
+    }
+
+    private fun sha256(input: InputStream): ByteArray {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(64 * 1024)
+        while (true) {
+            TransferCancellation.check()
+            val count = input.read(buffer)
+            if (count < 0) break
+            if (count > 0) digest.update(buffer, 0, count)
+        }
+        return digest.digest()
     }
 
     private suspend fun copyPathInternal(
@@ -76,9 +145,13 @@ object FileOperationCoordinator {
         destinationDirectoryPath: String,
         resolveConflict: ConflictResolver,
         onProgress: (StreamTransferProgress) -> Unit,
+        destinationName: String? = null,
     ): TransferDisposition {
         TransferCancellation.check()
         val item = sourceProvider.getFileInfo(sourcePath).getOrThrow()
+        require(destinationName == null || (destinationName.isNotBlank() &&
+            destinationName != "." && destinationName != ".." &&
+            '/' !in destinationName && '\\' !in destinationName)) { "Invalid duplicate name" }
         if (item.isDirectory) {
             require(!sourceProvider.isDescendantPath(sourcePath, destinationProvider, destinationDirectoryPath)) {
                 "A folder cannot be copied or moved into itself"
@@ -86,7 +159,7 @@ object FileOperationCoordinator {
         }
         return transfer(
             destinationProvider, destinationDirectoryPath,
-            ConflictSource(item.name, item.size.takeIf { it >= 0 }, item.lastModified), item.isDirectory, resolveConflict,
+            ConflictSource(destinationName ?: item.name, item.size.takeIf { it >= 0 }, item.lastModified), item.isDirectory, resolveConflict,
             validateTarget = { target ->
                 require(!sourceProvider.isSamePath(sourcePath, destinationProvider, target.path)) { "An item cannot replace itself" }
                 require(!target.isDirectory || !destinationProvider.isDescendantPath(target.path, sourceProvider, sourcePath)) {

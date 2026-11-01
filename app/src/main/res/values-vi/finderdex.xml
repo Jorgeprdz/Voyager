@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="finderdex_breadcrumb_description">Vị trí hiện tại: %1$s</string>
+    <string name="finderdex_view_columns">Chế độ xem cột</string>
+    <string name="finderdex_search_folder">Tìm trong thư mục này</string>
+    <string name="finderdex_desktop">FinderDex · Máy tính để bàn</string>
+    <string name="finderdex_view_icons">Chế độ xem biểu tượng</string>
+</resources>

@@ -11,6 +11,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.colorspace.ColorSpaces
@@ -487,22 +488,51 @@ fun isDarkTheme(theme: AppTheme, systemIsDark: Boolean): Boolean = when (theme) 
 @Composable
 fun VoyagerTheme(
     appTheme: AppTheme = AppTheme.SYSTEM,
+    appearance: FinderAppearance = FinderAppearance(),
     customColorScheme: ColorScheme? = null,
     content: @Composable () -> Unit,
 ) {
     val systemIsDark = isSystemInDarkTheme()
     val context = LocalContext.current
 
+    val darkTheme = if (appearance.style == FinderStyle.GLASS &&
+        appearance.brightness == FinderBrightness.AUTOMATIC) {
+        isDarkTheme(appTheme, systemIsDark)
+    } else FinderAppearanceResolver.resolveDark(appearance.brightness, systemIsDark)
+    val fallbackTokens = FinderAppearanceResolver.tokens(appearance, darkTheme)
     val colorScheme = when {
-        // Use dynamic color for SYSTEM theme on Android 12+
-        appTheme == AppTheme.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (systemIsDark) dynamicDarkColorScheme(context)
-            else dynamicLightColorScheme(context)
-        }
-        else -> getColorScheme(appTheme, systemIsDark, customColorScheme)
+        // Upgrade-safe default: preserve the legacy theme and its existing customized colors.
+        appearance == FinderAppearance() &&
+            appTheme == AppTheme.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
+            if (systemIsDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        appearance == FinderAppearance() ->
+            getColorScheme(appTheme, systemIsDark, customColorScheme)
+        else -> FinderAppearanceResolver.scheme(fallbackTokens,
+            if (appearance.style == FinderStyle.MATERIAL && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            } else null)
     }
-
-    val darkTheme = isDarkTheme(appTheme, systemIsDark)
+    val usingDynamicMaterial = appearance.style == FinderStyle.MATERIAL &&
+        appearance.dynamicColors && !appearance.highContrast &&
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // DeX and Material must resolve the SAME dynamic scheme, not a fallback/dynamic mix.
+    val tokens = if (usingDynamicMaterial) fallbackTokens.copy(
+        background = colorScheme.background,
+        surface = colorScheme.surface,
+        navigation = colorScheme.surfaceContainerLow,
+        raised = colorScheme.surfaceContainer,
+        accent = colorScheme.primary,
+        onAccent = colorScheme.onPrimary,
+        onSurface = colorScheme.onSurface,
+        secondaryText = colorScheme.onSurfaceVariant,
+        border = colorScheme.outline,
+        selected = colorScheme.primaryContainer,
+        onSelected = colorScheme.onPrimaryContainer,
+        selectedInactive = colorScheme.surfaceContainerHigh,
+        focus = colorScheme.primary,
+        folder = colorScheme.primary,
+        folderFront = colorScheme.secondary,
+    ) else fallbackTokens
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -512,9 +542,16 @@ fun VoyagerTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content,
-    )
+    CompositionLocalProvider(
+        LocalFinderAppearance provides appearance,
+        LocalFinderSemanticTokens provides tokens,
+    ) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            shapes = if (appearance == FinderAppearance()) androidx.compose.material3.MaterialTheme.shapes
+                else FinderAppearanceResolver.shapes(tokens),
+            content = content,
+        )
+    }
 }

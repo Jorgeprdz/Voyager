@@ -16,11 +16,14 @@ import kotlinx.coroutines.withContext
 class TransferOperationController(
     private val startForeground: () -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+    private val historyStore: TransferHistoryStore = TransferHistoryStore.None,
 ) {
     private val mutableState = MutableStateFlow<OperationState>(OperationState.Idle)
     val state = mutableState.asStateFlow()
     private val mutableResult = MutableStateFlow<OperationResult?>(null)
     val lastResult = mutableResult.asStateFlow()
+    private val mutableHistory = MutableStateFlow(historyStore.restore())
+    val history = mutableHistory.asStateFlow()
     val conflicts = TransferConflictDecisions()
     private var archiveReport: ArchiveExtractionReport? = null
 
@@ -43,6 +46,7 @@ class TransferOperationController(
         val token = TransferCancellation()
         cancellation = token
         mutableState.value = OperationState.Running(TransferProgress(label), id = ++nextId, cancellable = cancellable)
+        historyStore.started((mutableState.value as OperationState.Running).progress)
         try {
             startForeground()
         } catch (error: Throwable) {
@@ -50,6 +54,7 @@ class TransferOperationController(
             finish(OperationOutcome.FAILED)
             mutableState.value = OperationState.Idle
             onFailure(error)
+            onFinished()
             return true
         }
         scope.launch(token.contextElement()) {
@@ -98,13 +103,17 @@ class TransferOperationController(
 
     private fun finish(outcome: OperationOutcome) {
         val progress = (mutableState.value as? OperationState.Running)?.progress ?: return
-        mutableResult.value = OperationResult(progress.copy(currentItemName = null), outcome, archiveReport)
+        val result = OperationResult(progress.copy(currentItemName = null), outcome, archiveReport)
+        mutableResult.value = result
+        mutableHistory.value = (listOf(result) + mutableHistory.value).take(50)
+        historyStore.finished(mutableHistory.value)
     }
 
     fun update(progress: TransferProgress) {
         TransferCancellation.check()
         val running = mutableState.value as? OperationState.Running ?: return
         mutableState.value = running.copy(progress = progress)
+        historyStore.updated(progress)
     }
 
     fun cancel(expectedId: Long? = null) {

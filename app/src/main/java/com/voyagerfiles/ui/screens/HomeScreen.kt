@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -21,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Android
@@ -65,12 +68,16 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.FinderMobileTokens
+import com.voyagerfiles.ui.theme.FinderAppearance
+import com.voyagerfiles.ui.theme.LocalFinderAppearance
 import com.voyagerfiles.ui.components.TranslationNotice
 import com.voyagerfiles.ui.components.rememberTranslationLinkOpener
 import com.voyagerfiles.data.index.StorageCategory
 import com.voyagerfiles.data.model.Bookmark
 import com.voyagerfiles.data.model.FileItem
 import com.voyagerfiles.data.model.FileSource
+import com.voyagerfiles.data.model.HomeLayout
 import com.voyagerfiles.data.model.HomeSection
 import com.voyagerfiles.util.FileUtils
 import com.voyagerfiles.util.StorageInfo
@@ -78,7 +85,7 @@ import com.voyagerfiles.util.StorageVolumeInfo
 import com.voyagerfiles.viewmodel.BrowserSession
 import com.voyagerfiles.viewmodel.FileBrowserViewModel
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     viewModel: FileBrowserViewModel,
@@ -93,350 +100,224 @@ fun HomeScreen(
     onNavigateToCategory: (StorageCategory) -> Unit = {},
     onNavigateToSearch: () -> Unit = {},
 ) {
+    val context = LocalContext.current
+    val glassDefault = LocalFinderAppearance.current == FinderAppearance()
     val bookmarks by viewModel.bookmarks.collectAsState()
-    val dismissedTranslationNotices by viewModel.dismissedTranslationNotices.collectAsState()
-    val translationUrl = stringResource(R.string.translation_crowdin_url)
-    val isProvisionalTranslation = booleanResource(R.bool.translation_provisional)
-    val openTranslationLink = rememberTranslationLinkOpener()
-    var bookmarkToRemove by remember { mutableStateOf<Bookmark?>(null) }
-    val removeBookmarkLabel = stringResource(R.string.action_remove_bookmark)
     val sessions by viewModel.sessions.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()
     val homeLayout by viewModel.homeLayout.collectAsState()
-    val context = LocalContext.current
-    val safTreeLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree(),
-    ) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
-        onOpenSafTree(uri)
-    }
-    val storageVolumes = remember(context, hasAllFilesAccess) {
+    // Preserve the compact R3.1 default, but honor existing reorder/hide preferences.
+    val orderedSections = if (homeLayout == null || homeLayout == HomeLayout.DEFAULT) {
+        listOf(
+            HomeSection.STORAGE, HomeSection.FOLDERS, HomeSection.BOOKMARKS,
+            HomeSection.ACTIVE_SESSIONS, HomeSection.QUICK_ACCESS, HomeSection.REMOTE_CONNECTIONS,
+        )
+    } else homeLayout!!.visibleSections
+    var bookmarkToRemove by remember { mutableStateOf<Bookmark?>(null) }
+    var cloud by remember { mutableStateOf<com.voyagerfiles.data.remote.cloud.CloudService?>(null) }
+    var analytics by remember { mutableStateOf(false) }
+    var recents by remember { mutableStateOf(false) }
+    var transfers by remember { mutableStateOf(false) }
+    val volumes = remember(context, hasAllFilesAccess) {
         if (hasAllFilesAccess) FileUtils.getStorageVolumes(context) else emptyList()
     }
-    val storageInfoByPath = remember(storageVolumes) {
-        storageVolumes.mapNotNull { volume ->
-            volume.path?.takeIf { volume.isAvailable }?.let { path -> path to FileUtils.getStorageInfo(path) }
-        }.toMap()
-    }
+    val primary = volumes.firstOrNull { it.isPrimary } ?: volumes.firstOrNull()
     val directories = remember { FileUtils.getCommonDirectories() }
-    val visibleSessions = sessions.filter { hasAllFilesAccess || it.source != FileSource.LOCAL }
-    val localBookmarks = bookmarks.filter { it.source == FileSource.LOCAL }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.app_name)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-                actions = {
-                    IconButton(onClick = onNavigateToSearch) {
-                        Icon(Icons.Filled.Search, stringResource(R.string.search_storage_title))
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(Icons.Filled.Settings, stringResource(R.string.content_desc_settings))
-                    }
-                },
-            )
-        },
-    ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-            if (isProvisionalTranslation && dismissedTranslationNotices?.contains(translationUrl) == false) {
-                item(key = "translation-notice") {
-                    TranslationNotice(
-                        onImprove = {
-                            openTranslationLink()
-                            viewModel.dismissTranslationNotice(translationUrl)
-                        },
-                        onDismiss = { viewModel.dismissTranslationNotice(translationUrl) },
-                    )
-                }
-            }
-            homeLayout?.visibleSections?.forEach { section ->
-                when (section) {
-                    HomeSection.STORAGE -> {
-                        if (hasAllFilesAccess) {
-                            item(key = "storage-header") {
-                                Text(
-                                    stringResource(R.string.home_storage_section),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            items(
-                                items = storageVolumes,
-                                key = { "storage:${it.description}:${it.path}:${it.isPrimary}" },
-                            ) { volume ->
-                                StorageVolumeCard(
-                                    volume = volume,
-                                    storageInfo = volume.path?.let(storageInfoByPath::get),
-                                    onClick = { volume.path?.let(onNavigateToBrowser) },
-                                )
-                            }
-                        } else {
-                            item(key = "limited-storage") {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(onClick = onRequestAllFilesAccess),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    ),
-                                ) {
-                                    Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            stringResource(R.string.home_limited_storage_title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                        Text(
-                                            stringResource(R.string.home_limited_storage_message),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        item(key = "document-tree") {
-                            SafAccessCard(onClick = { safTreeLauncher.launch(null) })
-                        }
-
-                        if (hasAllFilesAccess) {
-                            item(key = "trash") {
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(onClick = onNavigateToTrash),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    ),
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(16.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Icon(
-                                            Icons.Filled.DeleteOutline,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(28.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Column {
-                                            Text(stringResource(R.string.home_trash), style = MaterialTheme.typography.titleMedium)
-                                            Text(
-                                                stringResource(R.string.home_trash_description),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    HomeSection.ACTIVE_SESSIONS -> {
-                        if (visibleSessions.isNotEmpty()) {
-                            item(key = "active-sessions-header") {
-                                Text(
-                                    stringResource(R.string.home_active_sessions_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 8.dp),
-                                )
-                            }
-                            items(visibleSessions, key = { "session:${it.id}" }) { session ->
-                                ActiveSessionRow(
-                                    session = session,
-                                    isActive = session.id == activeSession?.id,
-                                    onClick = { onNavigateToSession(session.id, session.currentPath) },
-                                )
-                            }
-                        }
-                    }
-
-                    HomeSection.QUICK_ACCESS -> {
-                        item(key = "quick-access-header") {
-                            Text(
-                                stringResource(R.string.home_quick_access_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = 8.dp),
-                            )
-                        }
-                        item(key = "quick-access-cards") {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                StorageCategory.entries.chunked(3).forEach { row ->
-                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        row.forEach { category ->
-                                            QuickAccessCard(
-                                                icon = when (category) {
-                                                    StorageCategory.APPS -> Icons.Filled.Android
-                                                    StorageCategory.VIDEOS -> Icons.Filled.VideoLibrary
-                                                    StorageCategory.AUDIO -> Icons.Filled.MusicNote
-                                                    StorageCategory.IMAGES -> Icons.Filled.Image
-                                                    StorageCategory.DOCUMENTS -> Icons.AutoMirrored.Filled.InsertDriveFile
-                                                },
-                                                label = stringResource(category.filter.labelRes),
-                                                modifier = Modifier.weight(1f),
-                                                onClick = { onNavigateToCategory(category) },
-                                            )
-                                        }
-                                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    HomeSection.REMOTE_CONNECTIONS -> {
-                        item(key = "remote-connections") {
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onNavigateToConnections() },
-                                colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                                ),
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Cloud,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(28.dp),
-                                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(
-                                            stringResource(R.string.home_remote_connections_title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        )
-                                        Text(
-                                            stringResource(R.string.home_remote_protocols),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    HomeSection.BOOKMARKS -> {
-                        if (hasAllFilesAccess && localBookmarks.isNotEmpty()) {
-                            item(key = "bookmarks-header") {
-                                Text(
-                                    stringResource(R.string.home_bookmarks_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 8.dp),
-                                )
-                            }
-                            items(localBookmarks, key = { "bookmark:${it.id}" }) { bookmark ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("home-bookmark:${bookmark.id}")
-                                        .combinedClickable(
-                                            onClick = { onNavigateToBrowser(bookmark.path) },
-                                            onLongClickLabel = removeBookmarkLabel,
-                                            onLongClick = { bookmarkToRemove = bookmark },
-                                        )
-                                        .padding(vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        Icons.Filled.Bookmark,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Text(bookmark.name, style = MaterialTheme.typography.bodyLarge)
-                                        Text(
-                                            bookmark.path,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    HomeSection.FOLDERS -> {
-                        if (hasAllFilesAccess) {
-                            item(key = "folders-header") {
-                                Text(
-                                    stringResource(R.string.home_folders_title),
-                                    style = MaterialTheme.typography.titleSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(top = 8.dp),
-                                )
-                            }
-                            items(directories, key = { "folder:${it.path}" }) { dir ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { onNavigateToBrowser(dir.path) }
-                                        .padding(vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Icon(
-                                        if (dir.isPrimary) Icons.Filled.PhoneAndroid else Icons.Filled.Folder,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(24.dp),
-                                    )
-                                    Spacer(modifier = Modifier.width(16.dp))
-                                    Text(stringResource(dir.labelRes), style = MaterialTheme.typography.bodyLarge)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            item { Spacer(modifier = Modifier.height(16.dp)) }
+    val root = android.os.Environment.getExternalStorageDirectory().path
+    val saf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            runCatching { context.contentResolver.takePersistableUriPermission(uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+            onOpenSafTree(uri)
         }
     }
-    bookmarkToRemove?.let { bookmark ->
-        AlertDialog(
-            onDismissRequest = { bookmarkToRemove = null },
-            title = { Text(removeBookmarkLabel) },
-            text = { Text(bookmark.name) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.removeBookmark(bookmark.path, bookmark.source)
-                    bookmarkToRemove = null
-                }) { Text(removeBookmarkLabel) }
-            },
-            dismissButton = {
-                TextButton(onClick = { bookmarkToRemove = null }) {
-                    Text(stringResource(R.string.action_cancel))
+    Scaffold(containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            TopAppBar(title = { Column {
+                Text(stringResource(R.string.finderdex_mobile_title), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.r31_your_files), color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium)
+            } }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                actions = { IconButton(onClick = onNavigateToSettings) {
+                    Icon(Icons.Filled.Settings, stringResource(R.string.content_desc_settings), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                } })
+        }) { padding ->
+        LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            item("search") {
+                androidx.compose.material3.Surface(onClick = onNavigateToSearch,
+                    shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.secondaryContainer,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                    Row(Modifier.heightIn(min = 52.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Search, null, tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.action_search), Modifier.padding(start = 12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-            },
-        )
+            }
+            orderedSections.forEach { section ->
+                when (section) {
+                HomeSection.STORAGE -> {
+                    item("primary-storage") {
+                        if (hasAllFilesAccess && primary != null) {
+                            val info = primary.path?.let { FileUtils.getStorageInfo(it) }
+                            androidx.compose.material3.Surface(onClick = { primary.path?.let(onNavigateToBrowser) },
+                                shape = MaterialTheme.shapes.large,
+                                 color = if (glassDefault) FinderMobileTokens.navy else MaterialTheme.colorScheme.primaryContainer,
+                                shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(46.dp))
+                                        Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                                            Text(primary.description, color = if (glassDefault) androidx.compose.ui.graphics.Color.White
+                                                 else MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.titleMedium)
+                                            if (info != null) Text(stringResource(R.string.home_storage_usage,
+                                                FileItem.formatFileSize(info.used), FileItem.formatFileSize(info.total)),
+                                                color = if (glassDefault) FinderMobileTokens.ice else MaterialTheme.colorScheme.onPrimaryContainer,
+                                                 style = MaterialTheme.typography.bodySmall)
+                                        }
+                                        Icon(Icons.Filled.ChevronRight, null, tint = if (glassDefault) androidx.compose.ui.graphics.Color.White
+                                             else MaterialTheme.colorScheme.onPrimaryContainer)
+                                    }
+                                    if (info != null && info.total > 0) {
+                                        Spacer(Modifier.height(12.dp))
+                                        LinearProgressIndicator(progress = { (info.used.toFloat() / info.total).coerceIn(0f, 1f) },
+                                            modifier = Modifier.fillMaxWidth().height(5.dp),
+                                            color = if (glassDefault) androidx.compose.ui.graphics.Color(0xFF85D4FF)
+                                                else MaterialTheme.colorScheme.primary,
+                                            trackColor = if (glassDefault) androidx.compose.ui.graphics.Color.White.copy(alpha = .15f)
+                                                else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = .20f))
+                                        Text("${FileItem.formatFileSize(info.available)} ${stringResource(R.string.home_storage_available)}",
+                                            Modifier.padding(top = 8.dp), color = if (glassDefault) FinderMobileTokens.ice
+                                                else MaterialTheme.colorScheme.onPrimaryContainer,
+                                                style = MaterialTheme.typography.labelMedium)
+                                    }
+                                }
+                            }
+                        } else MobileHomeRow(stringResource(R.string.home_limited_storage_title),
+                            Icons.Filled.PhoneAndroid, onRequestAllFilesAccess)
+                    }
+                }
+                HomeSection.FOLDERS -> {
+                    item("locations-title") { MobileHomeHeading(stringResource(R.string.home_folders_title)) }
+                    if (hasAllFilesAccess) items(directories, key = { "dir:${it.path}" }) { directory ->
+                        MobileHomeRow(stringResource(directory.labelRes), Icons.Filled.Folder,
+                            { onNavigateToBrowser(directory.path) }, folder = true)
+                    }
+                    items(volumes.filter { it != primary }, key = { "volume:${it.path}:${it.description}" }) { volume ->
+                        MobileHomeRow(volume.description, Icons.Filled.SdStorage, { volume.path?.let(onNavigateToBrowser) })
+                    }
+                    item("saf") { MobileHomeRow(stringResource(R.string.home_storage_access_framework), Icons.Filled.FolderOpen, { saf.launch(null) }) }
+                }
+                HomeSection.BOOKMARKS -> {
+                    val localBookmarks = bookmarks.filter { it.source == FileSource.LOCAL }
+                    if (hasAllFilesAccess && localBookmarks.isNotEmpty()) {
+                        item("favorites-title") { MobileHomeHeading(stringResource(R.string.home_bookmarks_title)) }
+                        items(localBookmarks, key = { "bookmark:${it.id}" }) { bookmark ->
+                            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag("home-bookmark-${bookmark.id}")
+                                .combinedClickable(onClick = { onNavigateToBrowser(bookmark.path) }, onLongClick = { bookmarkToRemove = bookmark }),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Bookmark, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                                Text(bookmark.name, Modifier.weight(1f).padding(start = 14.dp), color = MaterialTheme.colorScheme.onSurface)
+                                IconButton(onClick = { bookmarkToRemove = bookmark }) { Text("⋮") }
+                            }
+                        }
+                    }
+                }
+                HomeSection.ACTIVE_SESSIONS -> {
+                    val visibleSessions = sessions.filter { it.source != FileSource.LOCAL || hasAllFilesAccess }
+                    if (visibleSessions.isNotEmpty()) {
+                        item("sessions-title") { MobileHomeHeading(stringResource(R.string.home_active_sessions_title)) }
+                        items(visibleSessions, key = { "session:${it.id}" }) { session ->
+                            val label = mobileSessionLabel(session)
+                            MobileHomeRow(
+                                title = label,
+                                icon = Icons.Filled.FolderOpen,
+                                onClick = { onNavigateToSession(session.id, session.currentPath) },
+                                folder = session.source == FileSource.LOCAL,
+                                subtitle = session.description.takeIf { it != label },
+                                selected = activeSession?.id == session.id,
+                            )
+                        }
+                    }
+                }
+                HomeSection.QUICK_ACCESS -> {
+                    item("recents") { MobileHomeRow(stringResource(R.string.finderdex_recents_title), Icons.AutoMirrored.Filled.InsertDriveFile, { recents = true }) }
+                    item("tools-title") { MobileHomeHeading(stringResource(R.string.r31_tools)) }
+                    item("tools") {
+                        androidx.compose.foundation.layout.FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            StorageCategory.entries.forEach { category ->
+                                com.voyagerfiles.ui.components.FinderMobileFilterPill(
+                                    label = stringResource(category.filter.labelRes),
+                                    selected = false,
+                                    onClick = { onNavigateToCategory(category) },
+                                )
+                            }
+                        }
+                    }
+                    item("analyzer") { MobileHomeRow(stringResource(R.string.finderdex_analytics_title), Icons.Filled.SdStorage, { analytics = true }) }
+                    item("transfers") { MobileHomeRow(stringResource(R.string.transfer_channel), Icons.Filled.FolderOpen, { transfers = true }) }
+                    item("trash") { MobileHomeRow(stringResource(R.string.home_trash), Icons.Filled.DeleteOutline, onNavigateToTrash) }
+                }
+                HomeSection.REMOTE_CONNECTIONS -> {
+                    item("network") { MobileHomeRow(stringResource(R.string.home_remote_connections_title), Icons.Filled.Cloud, onNavigateToConnections) }
+                    item("cloud-title") { MobileHomeHeading(stringResource(R.string.r31_clouds)) }
+                    item("drive") { MobileHomeRow("Google Drive", Icons.Filled.Cloud, { cloud = com.voyagerfiles.data.remote.cloud.CloudService.GOOGLE_DRIVE }, subtitle = stringResource(R.string.r31_cloud_open)) }
+                    item("onedrive") { MobileHomeRow("OneDrive", Icons.Filled.Cloud, { cloud = com.voyagerfiles.data.remote.cloud.CloudService.ONEDRIVE }, subtitle = stringResource(R.string.r31_cloud_open)) }
+                }
+                }
+            }
+            item { Spacer(Modifier.height(24.dp)) }
+        }
+    }
+    if (analytics) com.voyagerfiles.ui.components.FinderMobileAnalyticsPanel(root, { analytics = false }) { analytics = false; onNavigateToBrowser(it) }
+    if (recents) com.voyagerfiles.desktop.FinderRecentsDialog(emptyList(), { recents = false }) { recents = false; onNavigateToBrowser(it) }
+    if (transfers) com.voyagerfiles.ui.components.TransferCenterDialog(viewModel) { transfers = false }
+    cloud?.let { com.voyagerfiles.ui.components.CloudBrowserDialog(it) { cloud = null } }
+    bookmarkToRemove?.let { bookmark ->
+        AlertDialog(onDismissRequest = { bookmarkToRemove = null }, title = { Text(stringResource(R.string.action_remove_bookmark)) },
+            text = { Text(bookmark.name) }, confirmButton = { TextButton(onClick = {
+                viewModel.removeBookmark(bookmark.path, bookmark.source); bookmarkToRemove = null
+            }) { Text(stringResource(R.string.action_remove_bookmark)) } },
+            dismissButton = { TextButton(onClick = { bookmarkToRemove = null }) { Text(stringResource(R.string.action_cancel)) } })
+    }
+}
+
+@Composable
+private fun MobileHomeHeading(title: String) {
+    Text(title, Modifier.padding(top = 12.dp, bottom = 4.dp), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun MobileHomeRow(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    folder: Boolean = false,
+    subtitle: String? = null,
+    selected: Boolean = false,
+) {
+    Row(
+        Modifier.fillMaxWidth()
+            .background(
+                if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
+                MaterialTheme.shapes.small,
+            )
+            .heightIn(min = 50.dp).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (folder) com.voyagerfiles.ui.components.FinderMobileFolder(Modifier.size(34.dp))
+        else Icon(icon, null, Modifier.size(28.dp), tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.labelSmall,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.Filled.ChevronRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -506,7 +387,7 @@ internal fun StorageVolumeCard(
         colors = CardDefaults.cardColors(
             containerColor = if (isInternal)
                 MaterialTheme.colorScheme.primaryContainer
-            else MaterialTheme.colorScheme.surfaceVariant,
+            else MaterialTheme.colorScheme.surface,
         ),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -515,25 +396,19 @@ internal fun StorageVolumeCard(
                     if (isInternal) Icons.Filled.PhoneAndroid else Icons.Filled.SdStorage,
                     contentDescription = null,
                     modifier = Modifier.size(32.dp),
-                    tint = if (isInternal)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         volume.description,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (isInternal)
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         statusLabel ?: storageUsage ?: volume.path.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isInternal)
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -545,7 +420,7 @@ internal fun StorageVolumeCard(
                     progress = { storageInfo.usedPercentage },
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
+                    trackColor = MaterialTheme.colorScheme.outlineVariant,
                 )
             }
         }
@@ -617,9 +492,10 @@ private fun QuickAccessCard(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.heightIn(min = 94.dp).clickable(onClick = onClick),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surface,
         ),
     ) {
         Column(
@@ -632,13 +508,13 @@ private fun QuickAccessCard(
                 icon,
                 contentDescription = label,
                 modifier = Modifier.size(28.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 label,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )

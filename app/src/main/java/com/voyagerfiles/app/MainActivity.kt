@@ -86,10 +86,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val theme by viewModel.theme.collectAsState()
+            val finderAppearance by viewModel.finderAppearance.collectAsState()
             val permissionGranted by hasStoragePermission
             val limitedAccessAccepted by viewModel.limitedAccessAccepted.collectAsState()
 
-            VoyagerTheme(appTheme = theme) {
+            VoyagerTheme(appTheme = theme, appearance = finderAppearance) {
                 when (storageAccessMode(permissionGranted, limitedAccessAccepted)) {
                     StorageAccessMode.NEEDS_DECISION -> PermissionScreen(
                         onRequestPermission = ::requestStoragePermission,

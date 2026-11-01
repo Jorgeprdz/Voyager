@@ -22,7 +22,11 @@ class LocalTrashManager(
 
     suspend fun moveToTrash(path: String): Result<TrashEntry> = withContext(Dispatchers.IO) {
         runCatching {
-            val source = File(path).canonicalFile
+            val requested = File(path)
+            require(!java.nio.file.Files.isSymbolicLink(requested.toPath())) {
+                "Moving a symbolic link to Trash must not move its target"
+            }
+            val source = requested.canonicalFile
             if (!source.exists()) throw IllegalArgumentException("Item no longer exists: $path")
             val root = rootFor(source) ?: throw IllegalArgumentException("Trash is not available for this location")
             val trashRoot = trashRoot(root)
@@ -54,7 +58,9 @@ class LocalTrashManager(
                     throw IOException("Could not finalize Trash entry")
                 }
             } catch (error: Throwable) {
-                if (source.exists()) pendingDirectory.deleteRecursively()
+                // A failed recursive source deletion can leave a partial source.
+                // Never discard the complete payload copy in that case.
+                if (source.exists() && !payload.exists()) pendingDirectory.deleteRecursively()
                 throw error
             }
 
@@ -192,8 +198,9 @@ class LocalTrashManager(
         copyPath(source, target)
         val deleted = if (source.isDirectory) source.deleteRecursively() else source.delete()
         if (!deleted) {
-            target.deleteRecursively()
-            throw IOException("Could not remove the original after copying")
+            // Source deletion may have been partial. Keep the destination copy as
+            // the only complete remaining copy instead of risking data loss.
+            throw IOException("Could not remove the original after copying; destination copy retained at ${target.path}")
         }
     }
 

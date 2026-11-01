@@ -1,0 +1,226 @@
+package com.voyagerfiles.desktop
+
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import java.io.File
+
+internal enum class FinderDropAction { MOVE, COPY }
+internal data class FinderPendingMove(
+    val paths: List<String>,
+    val destination: String,
+    val action: FinderDropAction = FinderDropAction.MOVE,
+)
+private data class FinderDropTarget(val path: String, val rect: Rect, val allowed: Boolean)
+
+/** Pointer coordinates and visual state are separate from Voyager's real transfer lifecycle. */
+internal class FinderDragDropState(
+    private val isWritableDirectory: (String) -> Boolean = { File(it).isDirectory && File(it).canWrite() },
+) {
+    /** Explicit Alt+drag uses Android's global mechanism; ordinary drags remain local. */
+    var externalStart: ((List<String>) -> Boolean)? = null
+    var externalHoveredDestination by mutableStateOf<String?>(null)
+        private set
+    var externalError: (() -> Unit)? = null
+    private val targets = mutableStateMapOf<String, FinderDropTarget>()
+    var allowedRoot: String = "/"
+    var enabled: Boolean = false
+    var draggingPaths by mutableStateOf<List<String>>(emptyList())
+        private set
+    var ghostPaths by mutableStateOf<List<String>>(emptyList())
+        private set
+    var cursorPosition by mutableStateOf(Offset.Unspecified)
+        private set
+    private var sourcePosition = Offset.Zero
+    var ghostDestination by mutableStateOf(Offset.Zero)
+        private set
+    var returning by mutableStateOf(false)
+        private set
+    var receiving by mutableStateOf(false)
+        private set
+    var copyRequested by mutableStateOf(false)
+    var awaitingTransfer by mutableStateOf(false)
+        private set
+    var hoveredDestination by mutableStateOf<String?>(null)
+        private set
+    var springFolder by mutableStateOf<String?>(null)
+        private set
+    var pending by mutableStateOf<FinderPendingMove?>(null)
+        private set
+
+    private fun withinRoot(path: String): Boolean =
+        allowedRoot == "/" || path == allowedRoot || path.startsWith("$allowedRoot/")
+
+    private fun canTarget(path: String): Boolean =
+        withinRoot(path) && isWritableDirectory(path)
+
+    fun register(id: String, path: String, rect: Rect) {
+        val candidate = FinderDropTarget(path, rect, canTarget(path))
+        if (targets[id] != candidate) targets[id] = candidate
+    }
+    fun unregister(id: String) {
+        targets.remove(id)
+        if (draggingPaths.isNotEmpty()) resolveHover()
+    }
+    fun clearTargets() { targets.clear(); hoveredDestination = null; externalHoveredDestination = null }
+
+    /** Android root-relative drag location resolves the smallest writable folder target. */
+    fun externalTargetAt(point: Offset): String? {
+        if (!point.x.isFinite() || !point.y.isFinite()) return null
+        return targets.values.asSequence()
+            .filter { it.allowed && withinRoot(it.path) && it.rect.contains(point) }
+            .minByOrNull { it.rect.width * it.rect.height }?.path
+    }
+    fun updateExternalHover(point: Offset) { externalHoveredDestination = externalTargetAt(point) }
+    fun clearExternalHover() { externalHoveredDestination = null }
+    fun start(paths: List<String>, at: Offset, from: Offset = at) {
+        if (!enabled) return
+        val valid = paths.distinct().filter(::withinRoot)
+        if (valid.isEmpty()) return
+        draggingPaths = valid
+        ghostPaths = valid
+        cursorPosition = at
+        sourcePosition = from
+        ghostDestination = at
+        returning = false
+        receiving = false
+        pending = null
+        resolveHover()
+    }
+    fun move(at: Offset) {
+        if (draggingPaths.isEmpty()) return
+        cursorPosition = at
+        resolveHover()
+    }
+
+    private fun target(): FinderDropTarget? {
+        if (!enabled || draggingPaths.isEmpty() ||
+            (!cursorPosition.x.isFinite() || !cursorPosition.y.isFinite())) return null
+        return targets.values.asSequence()
+            .filter { it.rect.contains(cursorPosition) }
+            .sortedBy { it.rect.width * it.rect.height }
+            .firstOrNull { candidate ->
+                candidate.allowed && draggingPaths.all { source ->
+                    withinRoot(source) && source != candidate.path &&
+                        !candidate.path.startsWith("$source/") &&
+                        File(source).parent != candidate.path
+                }
+            }
+    }
+    private fun resolveHover() {
+        hoveredDestination = target()?.path
+        if (springFolder != null && hoveredDestination == null &&
+            draggingPaths.isEmpty()) springFolder = null
+    }
+
+    fun openSpringFolder(folder: String) {
+        if (hoveredDestination == folder && draggingPaths.isNotEmpty() && canTarget(folder)) {
+            springFolder = folder
+        }
+    }
+    fun closeSpringFolder() { springFolder = null }
+
+    fun end() {
+        val destination = target()
+        if (destination != null) {
+            pending = FinderPendingMove(draggingPaths.toList(), destination.path,
+                if (copyRequested) FinderDropAction.COPY else FinderDropAction.MOVE)
+            ghostDestination = destination.rect.center
+            receiving = false
+            returning = false
+            draggingPaths = emptyList()
+            hoveredDestination = null
+            springFolder = null
+        } else cancel()
+    }
+    fun requestTransfer(paths: List<String>, destination: String, action: FinderDropAction): Boolean {
+        if (!enabled || paths.isEmpty() || !withinRoot(destination) || !isWritableDirectory(destination)) return false
+        val sources = paths.distinct()
+        if (sources.any { !withinRoot(it) || it == destination || destination.startsWith("$it/") || File(it).parent == destination }) return false
+        pending = FinderPendingMove(sources, destination, action)
+        return true
+    }
+
+    fun acceptPending() {
+        if (pending != null) {
+            awaitingTransfer = true
+            receiving = true
+            pending = null
+        }
+    }
+    fun completeTransfer(success: Boolean) {
+        awaitingTransfer = false
+        pending = null
+        if (success) clearGhost()
+        else {
+            receiving = false
+            returning = true
+            ghostDestination = sourcePosition
+        }
+    }
+    fun cancel() {
+        draggingPaths = emptyList()
+        hoveredDestination = null
+        springFolder = null
+        if (ghostPaths.isNotEmpty()) {
+            returning = true
+            receiving = false
+            ghostDestination = sourcePosition
+        }
+    }
+    fun clearGhost() {
+        ghostPaths = emptyList()
+        receiving = false
+        returning = false
+    }
+    fun dismiss() {
+        pending = null
+        if (!awaitingTransfer && ghostPaths.isNotEmpty()) cancel()
+    }
+}
+
+internal fun Modifier.finderDragSource(
+    path: String,
+    selection: Set<String>,
+    drag: FinderDragDropState,
+    copyModifier: Boolean = false,
+    externalRequested: Boolean = false,
+): Modifier = composed {
+    var rootOrigin by remember { mutableStateOf(Offset.Zero) }
+    this.onGloballyPositioned { rootOrigin = it.positionInRoot() }
+        .pointerInput(path, selection, drag, copyModifier, externalRequested) {
+            detectDragGestures(
+                onDragStart = { at ->
+                    val paths = if (path in selection) selection.toList() else listOf(path)
+                    if (externalRequested) {
+                        if (drag.externalStart?.invoke(paths) != true) drag.externalError?.invoke()
+                    } else {
+                        drag.copyRequested = copyModifier
+                        drag.start(paths, rootOrigin + at, rootOrigin + at)
+                    }
+                },
+                onDrag = { change, _ ->
+                    change.consume()
+                    drag.move(rootOrigin + change.position)
+                },
+                onDragEnd = { drag.end() },
+                onDragCancel = { drag.cancel() },
+            )
+        }
+}
+
+internal fun Modifier.finderFolderDropTarget(
+    id: String,
+    path: String,
+    drag: FinderDragDropState,
+): Modifier = composed {
+    DisposableEffect(id, drag) { onDispose { drag.unregister(id) } }
+    this.onGloballyPositioned { drag.register(id, path, it.boundsInRoot()) }
+}

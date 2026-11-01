@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Voyager</string>
+    <string name="app_name" translatable="false">FinderDex</string>
     <string name="protocol_sftp" translatable="false">SFTP</string>
     <string name="protocol_ftp" translatable="false">FTP</string>
     <string name="protocol_smb" translatable="false">SMB</string>
@@ -303,7 +303,7 @@
     <string name="details_permissions">Permissions</string>
     <string name="details_source_local">Local storage</string>
     <string name="details_source_saf">Document tree</string>
-    <string name="home_title" translatable="false">Voyager</string>
+    <string name="home_title" translatable="false">FinderDex</string>
     <string name="home_storage_section">Storage</string>
     <string name="home_limited_storage_title">Limited storage access</string>
     <string name="home_limited_storage_message">Document trees and remote servers remain available. Grant full access to browse device storage directly.</string>
@@ -457,7 +457,7 @@
     <string name="sftp_host_keys_forget_title">Forget saved host keys?</string>
     <string name="sftp_host_keys_forget_warning">This removes all saved host keys for %1$s. The next connection will save a new host key. Verify the replacement key with the server administrator through a trusted channel before reconnecting. A changed key can indicate someone impersonating the server. Existing sessions stay connected.</string>
     <string name="sftp_host_keys_forget">Forget</string>
-    <string name="transfer_channel">File transfers</string>
+    <string name="transfer_channel">Transfers</string>
     <string name="transfer_cancelling">Cancelling transfer</string>
     <string name="transfer_cancelled">Transfer cancelled</string>
     <string name="action_remove_bookmark">Remove from bookmarks</string>
@@ -558,4 +558,149 @@
     </plurals>
     <string name="action_hide">Hide</string>
     <string name="action_unhide">Unhide</string>
+    <string name="finderdex_view_columns">Column view</string>
+    <string name="finderdex_search_folder">Search this folder</string>
+    <string name="finderdex_desktop">FinderDex · Desktop</string>
+    <string name="finderdex_view_icons">Icon view</string>
+    <string name="finderdex_preview_app_name" translatable="false">FinderDex Preview</string>
+    <string name="finderdex_spring_opened">Folder opened temporarily</string>
+    <string name="finderdex_close">Close</string>
+    <string name="finderdex_drop_copy_here">Drop here to copy</string>
+    <string name="finderdex_drop_move_here">Drop here to move</string>
+    <string name="finderdex_opening">Opening…</string>
+    <string name="finderdex_no_subfolders">No subfolders</string>
+    <string name="finderdex_cannot_read_folder">Cannot read this folder</string>
+    <string name="finderdex_quicklook_close">Close  Esc</string>
+    <string name="finderdex_quicklook_loading">Loading preview…</string>
+    <string name="finderdex_trash_title">Trash</string>
+    <string name="finderdex_trash_loading">Loading items…</string>
+    <string name="finderdex_trash_empty">Trash is empty</string>
+    <string name="finderdex_restore">Restore</string>
+    <string name="finderdex_refresh">Refresh</string>
+    <string name="finderdex_column_name">Name</string>
+    <string name="finderdex_column_size">Size</string>
+    <string name="finderdex_column_modified">Modified</string>
+    <string name="finderdex_select_file">Select a file</string>
+    <string name="finderdex_double_click_open">Double-click to open</string>
+    <string name="finderdex_toolbar_forward">Forward</string>
+    <string name="finderdex_toolbar_new_folder">New folder</string>
+    <string name="finderdex_toolbar_trash">Trash</string>
+    <string name="finderdex_toolbar_sort_by">Sort by</string>
+    <string name="finderdex_toolbar_sort_ascending">Sort ascending</string>
+    <string name="finderdex_toolbar_sort_descending">Sort descending</string>
+    <string name="finderdex_toolbar_preview_resize">Preview (enlarge window)</string>
+    <string name="finderdex_toolbar_preview_hide">Hide preview</string>
+    <string name="finderdex_toolbar_preview_show">Show preview</string>
+    <string name="finderdex_breadcrumb_description">Current location: %1$s</string>
+    <string name="finderdex_path_copy">Copy full path</string>
+    <string name="finderdex_path_parent">Go to parent folder</string>
+    <string name="finderdex_zoom_very_small">Very small</string>
+    <string name="finderdex_zoom_small">Small</string>
+    <string name="finderdex_zoom_medium">Medium</string>
+    <string name="finderdex_zoom_large">Large</string>
+    <string name="finderdex_zoom_giant">Huge</string>
+    <string name="finderdex_zoom_compact">Icon size</string>
+    <string name="finderdex_zoom_decrease">A−</string>
+    <string name="finderdex_zoom_increase">A+</string>
+    <string name="finderdex_column_type">Type</string>
+    <string name="finderdex_favorite_up">Move favorite up</string>
+    <string name="finderdex_favorite_down">Move favorite down</string>
+    <string name="finderdex_favorite_pick_icon">Choose folder image…</string>
+    <string name="finderdex_favorite_reset_icon">Reset icon</string>
+    <string name="finderdex_favorite_remove">Remove from favorites</string>
+    <string name="finderdex_zoom_accessibility">Icon size</string>
+    <string name="finderdex_cloud_drive_title" translatable="false">Google Drive</string>
+    <string name="finderdex_cloud_drive_disconnected">Google Drive · disconnected</string>
+    <string name="finderdex_cloud_drive_unavailable">Not connected. FinderDex requires official OAuth setup and your authorization before accessing any Drive files. No files were accessed.</string>
+    <string name="finderdex_cloud_drive_ok">Got it</string>
+    <string name="finderdex_info_title">Get Info</string>
+    <string name="finderdex_copy_items_title">Copy items</string>
+    <string name="finderdex_move_items_title">Move items</string>
+    <string name="finderdex_confirm_drop">%1$s %2$d item(s) to %3$s?</string>
+    <string name="finderdex_onedrive_title" translatable="false">OneDrive</string>
+    <string name="finderdex_onedrive_disconnected">OneDrive · disconnected</string>
+    <string name="finderdex_onedrive_unavailable">Not connected. OneDrive requires Microsoft app registration, OAuth setup and your authorization before accessing files.</string>
+    <string name="finderdex_analytics_title">Storage analysis</string>
+    <string name="finderdex_analytics_skipped">Skipped or inaccessible entries: %1$d</string>
+    <string name="finderdex_analytics_summary">Scanned: %1$d files · %2$s</string>
+    <string name="finderdex_analytics_categories">Categories</string>
+    <string name="finderdex_analytics_entry">%1$s · %2$s</string>
+    <string name="finderdex_analytics_largest">Largest files</string>
+    <string name="finderdex_analytics_folders">Largest parent folders</string>
+    <string name="finderdex_analytics_nondeleting">Estimates cover accessible scanned files only. Nothing is deleted automatically.</string>
+    <string name="finderdex_recents_title">Recent</string>
+    <string name="finderdex_recents_opened">Opened through FinderDex</string>
+    <string name="finderdex_recents_modified">Modified in this folder</string>
+    <string name="finderdex_recents_empty">No files to display</string>
+    <string name="finderdex_recents_entry">%1$s · %2$s</string>
+    <string name="finderdex_recents_clear">Clear history</string>
+    <string name="finderdex_bulk_rename_title">Batch rename</string>
+    <string name="finderdex_bulk_prefix">Prefix</string>
+    <string name="finderdex_bulk_number">Numbering</string>
+    <string name="finderdex_bulk_preview">Preview</string>
+    <string name="finderdex_bulk_invalid">Invalid or conflicting name</string>
+    <string name="finderdex_mobile_title" translatable="false">FinderDex</string>
+    <string name="r31_your_files">Everything in its place</string>
+    <string name="r31_tools">Tools</string>
+    <string name="r31_clouds">Cloud storage</string>
+    <string name="r31_cloud_open">Account and access</string>
+    <string name="r31_cloud_config">OAuth registration is required. This build has no configured client ID.</string>
+    <string name="r31_cloud_authorize">Authorize your account in the system browser to access files.</string>
+    <string name="r31_cloud_error">Operation could not be verified. Check connection, authorization and destination before retrying.</string>
+    <string name="r31_connect">Connect account</string>
+    <string name="r31_disconnect">Disconnect</string>
+    <string name="r31_upload">Upload</string>
+    <string name="r31_use_folder">Use this destination</string>
+    <string name="r31_empty">Nothing to show yet</string>
+    <string name="r31_more">Load more</string>
+    <string name="r31_retry">Retry / Refresh</string>
+    <string name="r31_suffix">Suffix</string>
+    <string name="r31_replace">Find and replace</string>
+    <string name="r31_replace_with">Replace with</string>
+    <string name="r31_upper">UPPERCASE</string>
+    <string name="r31_lower">lowercase</string>
+    <string name="r31_first_number">Start at</string>
+    <string name="r31_digits">Digits (1–8)</string>
+    <string name="r31_preserve_extension">Preserve extension</string>
+    <string name="r31_last_week">Last 7 days</string>
+    <string name="r31_remove_history">Remove</string>
+
+    <string name="search_in_current_folder">Limit to current folder</string>
+    <string name="search_include_subfolders">Include subfolders</string>
+    <string name="search_min_mb">Min size (MB)</string>
+    <string name="search_max_mb">Max size (MB)</string>
+    <string name="search_modified_any">Any date</string>
+    <string name="search_modified_7">Last 7 days</string>
+    <string name="search_modified_30">Last 30 days</string>
+    <string name="search_modified_365">Last year</string>
+    <string name="search_saved_queries">Saved searches</string>
+    <string name="search_save_current">Save search</string>
+    <string name="search_invalid_range">Minimum size must not exceed maximum</string>
+
+    <string name="external_archive_contents">Archive contents</string>
+    <string name="external_archive_choose_destination">Choose extraction folder</string>
+    <string name="external_archive_loading">Reading archive</string>
+    <string name="external_archive_partial">Showing only the first 250 entries</string>
+    <string name="external_archive_failed">Archive error: %1$s</string>
+    <string name="external_archive_complete">Extraction finished in the selected folder</string>
+    <string name="external_archive_missing">The shared archive is no longer accessible</string>
+
+    <string name="finderdex_group_by">Group by</string>
+    <string name="finderdex_group_none">None</string>
+    <string name="finderdex_modified_date">Date modified</string>
+    <string name="finderdex_groups_descending">Groups: descending</string>
+    <string name="finderdex_groups_ascending">Groups: ascending</string>
+    <string name="r321_other">Other</string>
+    <string name="finderdex_appearance_title">FinderDex style</string>
+    <string name="finderdex_style_glass">FinderDex Glass</string>
+    <string name="finderdex_style_material">Android Material</string>
+    <string name="finderdex_style_oneui">Samsung One UI</string>
+    <string name="finderdex_style_fluent">Windows Fluent</string>
+    <string name="finderdex_brightness_title">Display mode</string>
+    <string name="finderdex_brightness_auto">Automatic</string>
+    <string name="finderdex_brightness_light">Light</string>
+    <string name="finderdex_brightness_dark">Dark</string>
+    <string name="finderdex_high_contrast">High contrast</string>
+    <string name="finderdex_reduce_transparency">Reduce transparency</string>
+    <string name="finderdex_dynamic_colors">Dynamic system colors</string>
 </resources>

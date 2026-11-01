@@ -25,6 +25,77 @@ import java.util.concurrent.atomic.AtomicReference
 class FileOperationCoordinatorTest {
 
     @Test
+    fun confirmedFolderDropMovesOnlySelectedPathsAndPreservesContents() = runBlocking {
+        val disk = MemoryProvider().apply {
+            putDirectory("/root")
+            putDirectory("/root/from")
+            putDirectory("/root/to")
+            putFile("/root/from/move.txt", "move safely")
+            putFile("/root/from/stay.txt", "do not touch")
+        }
+        val outcome = FileOperationCoordinator.movePath(disk, disk,
+            "/root/from/move.txt", "/root/to").getOrThrow()
+        assertEquals(TransferDisposition.COMPLETED, outcome)
+        assertFalse(disk.exists("/root/from/move.txt"))
+        assertEquals("move safely", disk.readFile("/root/to/move.txt"))
+        assertEquals("do not touch", disk.readFile("/root/from/stay.txt"))
+    }
+
+    @Test
+    fun folderDropRejectsMovingIntoItsOwnChildWithoutDeletingAnything() = runBlocking {
+        val disk = MemoryProvider().apply {
+            putDirectory("/root")
+            putDirectory("/root/Folder")
+            putDirectory("/root/Folder/Child")
+            putFile("/root/Folder/important.txt", "keep")
+        }
+        val outcome = FileOperationCoordinator.movePath(disk, disk,
+            "/root/Folder", "/root/Folder/Child")
+        assertTrue(outcome.isFailure)
+        assertEquals("keep", disk.readFile("/root/Folder/important.txt"))
+        assertTrue(disk.exists("/root/Folder/Child"))
+    }
+
+    @Test
+    fun namedCopyDuplicatesFileWithoutOverwritingSource() = runBlocking {
+        val storage = MemoryProvider().apply {
+            putDirectory("/root")
+            putFile("/root/notes.txt", "original")
+        }
+        FileOperationCoordinator.copyPath(storage, storage, "/root/notes.txt", "/root",
+            destinationName = "notes copia.txt").getOrThrow()
+        assertEquals("original", storage.readFile("/root/notes.txt"))
+        assertEquals("original", storage.readFile("/root/notes copia.txt"))
+        val clash = FileOperationCoordinator.copyPath(storage, storage, "/root/notes.txt", "/root",
+            destinationName = "notes copia.txt")
+        assertTrue(clash.isFailure)
+        assertEquals("original", storage.readFile("/root/notes copia.txt"))
+    }
+
+    @Test
+    fun namedCopyDuplicatesEntireFolderTree() = runBlocking {
+        val storage = MemoryProvider().apply {
+            putDirectory("/root")
+            putDirectory("/root/Documents")
+            putDirectory("/root/Documents/Sub")
+            putFile("/root/Documents/Sub/hello.txt", "untouched")
+        }
+        FileOperationCoordinator.copyPath(storage, storage, "/root/Documents", "/root",
+            destinationName = "Documents copia").getOrThrow()
+        assertEquals("untouched", storage.readFile("/root/Documents/Sub/hello.txt"))
+        assertEquals("untouched", storage.readFile("/root/Documents copia/Sub/hello.txt"))
+    }
+
+    @Test
+    fun namedCopyRejectsPathTraversal() = runBlocking {
+        val storage = MemoryProvider().apply { putDirectory("/root"); putFile("/root/a.txt", "keep") }
+        val result = FileOperationCoordinator.copyPath(storage, storage, "/root/a.txt", "/root",
+            destinationName = "../escaped.txt")
+        assertTrue(result.isFailure)
+        assertEquals("keep", storage.readFile("/root/a.txt"))
+    }
+
+    @Test
     fun cancelledMovePreservesSourceAndRemovesPartialTarget() = runBlocking {
         val payload = "x".repeat(3 * 64 * 1024)
         val source = MemoryProvider().apply { putFile("/source/large.bin", payload) }
@@ -303,6 +374,38 @@ class FileOperationCoordinatorTest {
         assertTrue(result.exceptionOrNull() is DestinationConflictException)
         assertFalse(destination.exists("/remote/folder/new.txt"))
         assertEquals("existing", destination.readFile("/remote/folder/existing.txt"))
+    }
+
+    @Test
+    fun mismatchingCommittedCopyNeverDeletesMoveSource() = runBlocking {
+        val source = MemoryProvider().apply { putFile("/local/report.txt", "correct bytes") }
+        val destination = object : MemoryProvider() {
+            override suspend fun getInputStream(path: String): Result<InputStream> =
+                Result.success(ByteArrayInputStream("corrupted!".toByteArray()))
+        }.apply { putDirectory("/remote") }
+
+        val result = FileOperationCoordinator.movePath(source, destination, "/local/report.txt", "/remote")
+
+        assertTrue(result.isFailure)
+        assertTrue(source.exists("/local/report.txt"))
+        assertEquals("correct bytes", source.readFile("/local/report.txt"))
+        assertTrue(destination.exists("/remote/report.txt"))
+    }
+
+    @Test
+    fun recursiveMoveValidatesAllNestedContentsBeforeSourceDeletion() = runBlocking {
+        val source = MemoryProvider().apply {
+            putDirectory("/local/bundle")
+            putDirectory("/local/bundle/nested")
+            putFile("/local/bundle/nested/readme.txt", "safe")
+        }
+        val destination = MemoryProvider().apply { putDirectory("/remote") }
+
+        val result = FileOperationCoordinator.movePath(source, destination,
+            "/local/bundle", "/remote")
+        assertEquals(TransferDisposition.COMPLETED, result.getOrThrow())
+        assertFalse(source.exists("/local/bundle"))
+        assertEquals("safe", destination.readFile("/remote/bundle/nested/readme.txt"))
     }
 
     @Test
