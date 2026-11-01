@@ -64,6 +64,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
 import com.voyagerfiles.data.model.*
+import com.voyagerfiles.ui.theme.FinderStyle
+import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
 import com.voyagerfiles.ui.components.FileThumbnailOrIcon
 import com.voyagerfiles.util.FileUtils
 import com.voyagerfiles.viewmodel.FileBrowserViewModel
@@ -97,6 +99,7 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
     val palette = LocalFinderMaterials.current.palette
     val resolved = when (color) { Muted -> palette.secondaryInk; Accent -> palette.icon; Ink -> palette.ink; else -> color }
     val folder = if (palette.dark) FinderFolderColors.Dark else FinderFolderColors.Light
+    val appearance = LocalFinderSemanticTokens.current
     Canvas(modifier) {
         val w = size.width; val h = size.height
         val stroke = Stroke(width = w * .075f, cap = StrokeCap.Round, join = StrokeJoin.Round)
@@ -110,7 +113,8 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                     quadraticBezierTo(w*.06f,h*.93f,w*.06f,h*.82f); close()
                 }
                 if (kind == "folder-outline") drawPath(tab,resolved,style=stroke)
-                else {
+                else if (appearance.appearance.style == FinderStyle.GLASS) {
+                    // Preserve the existing dimensional Glass icon and silhouette.
                     drawRoundRect(Color.Black.copy(alpha = if (palette.dark) .20f else .10f),
                         Offset(w*.085f,h*.385f),androidx.compose.ui.geometry.Size(w*.85f,h*.58f),
                         androidx.compose.ui.geometry.CornerRadius(w*.085f))
@@ -121,6 +125,22 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
                     drawLine(folder.highlight.copy(alpha = .78f),Offset(w*.13f,h*.35f),Offset(w*.87f,h*.35f),w*.015f)
                     drawLine(folder.highlight.copy(alpha = .40f),
                         Offset(w*.13f,h*.84f),Offset(w*.87f,h*.84f),w*.012f)
+                } else {
+                    val radius = when (appearance.appearance.style) {
+                        FinderStyle.FLUENT -> w*.025f
+                        FinderStyle.MATERIAL -> w*.1f
+                        else -> w*.07f
+                    }
+                    // Material is flat, One UI gently layered, Fluent yellow and sharply defined.
+                    drawPath(tab, appearance.folder)
+                    drawRoundRect(
+                        if (appearance.appearance.style == FinderStyle.MATERIAL)
+                            appearance.folder else appearance.folderFront,
+                        Offset(w*.06f,h*.31f),androidx.compose.ui.geometry.Size(w*.88f,h*.62f),
+                        androidx.compose.ui.geometry.CornerRadius(radius))
+                    if (appearance.appearance.style == FinderStyle.FLUENT) {
+                        drawLine(appearance.folder,Offset(w*.12f,h*.35f),Offset(w*.86f,h*.35f),w*.016f)
+                    }
                 }
             }
             "list" -> listOf(.25f,.5f,.75f).forEach { y ->
