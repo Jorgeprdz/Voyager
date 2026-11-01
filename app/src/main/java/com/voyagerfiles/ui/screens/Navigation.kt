@@ -231,6 +231,9 @@ private fun MobileAppNavigation(
         composable(Screen.Search.route) {
             val browseState by viewModel.browseState.collectAsState()
             StorageSearchScreen(
+                currentFolder = viewModel.activeSession.value
+                    ?.takeIf { it.source == com.voyagerfiles.data.model.FileSource.LOCAL }
+                    ?.let { browseState.currentPath },
                 showHidden = browseState.showHidden,
                 hasAllFilesAccess = hasAllFilesAccess,
                 onRequestAllFilesAccess = onRequestAllFilesAccess,
