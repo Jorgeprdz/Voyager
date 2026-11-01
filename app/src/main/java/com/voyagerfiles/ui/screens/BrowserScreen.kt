@@ -804,6 +804,10 @@ fun BrowserScreen(
                                 sortOrder = state.sortOrder,
                                 onSortByChange = viewModel::setSortBy,
                                 onSortOrderChange = viewModel::setSortOrder,
+                                groupBy = state.groupBy,
+                                groupOrder = state.groupOrder,
+                                onGroupByChange = viewModel::setGroupBy,
+                                onGroupOrderChange = viewModel::setGroupOrder,
                             )
                             Box {
                                 IconButton(onClick = { showMoreMenu = true }) {
@@ -1076,8 +1080,21 @@ fun BrowserScreen(
                                     onSelection = viewModel::setDragSelection,
                                     onStartHaptic = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }),
                         ) {
-                            items(state.visibleFiles, key = { it.path }) { file ->
-                                FileListItem(
+                            com.voyagerfiles.data.model.FileArrangementEngine.groups(
+                                state.visibleFiles,
+                                com.voyagerfiles.data.model.FileArrangement(
+                                    state.sortBy, state.sortOrder, state.groupBy, state.groupOrder,
+                                ),
+                            ).forEach { group ->
+                                if (state.groupBy != com.voyagerfiles.data.model.GroupBy.NONE) {
+                                    item(key = "group:" + group.key) {
+                                        Text("${group.heading} (${group.files.size})",
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                            style = MaterialTheme.typography.titleSmall)
+                                    }
+                                }
+                                items(group.files, key = { it.path }) { file ->
+                                    FileListItem(
                                     file = file,
                                     remoteImages = remoteImages,
                                     modifier = if (isTelevision && file.path == firstVisiblePath) {
@@ -1131,6 +1148,7 @@ fun BrowserScreen(
                                         }
                                     },
                                 )
+                                }
                             }
                         }
                     }
@@ -1150,8 +1168,22 @@ fun BrowserScreen(
                                     onSelection = viewModel::setDragSelection,
                                     onStartHaptic = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }),
                         ) {
-                            items(state.visibleFiles, key = { it.path }) { file ->
-                                FileGridItem(
+                            com.voyagerfiles.data.model.FileArrangementEngine.groups(
+                                state.visibleFiles,
+                                com.voyagerfiles.data.model.FileArrangement(
+                                    state.sortBy, state.sortOrder, state.groupBy, state.groupOrder,
+                                ),
+                            ).forEach { group ->
+                                if (state.groupBy != com.voyagerfiles.data.model.GroupBy.NONE) {
+                                    item(key = "group:" + group.key,
+                                        span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                                        Text("${group.heading} (${group.files.size})",
+                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                                            style = MaterialTheme.typography.titleSmall)
+                                    }
+                                }
+                                items(group.files, key = { it.path }) { file ->
+                                    FileGridItem(
                                     file = file,
                                     remoteImages = remoteImages,
                                     modifier = if (isTelevision && file.path == firstVisiblePath) {
@@ -1180,6 +1212,7 @@ fun BrowserScreen(
                                         toggleSelection(file.path)
                                     },
                                 )
+                                }
                             }
                         }
                     }
