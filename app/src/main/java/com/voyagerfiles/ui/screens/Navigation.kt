@@ -74,16 +74,18 @@ fun AppNavigation(
         if (desktop) {
             com.voyagerfiles.desktop.FinderDesktopHost(viewModel, mode, onMobile = { preferMobile = true })
         } else {
-            androidx.compose.foundation.layout.Column {
-                if (mode != com.voyagerfiles.desktop.DesktopMode.COMPACT && hasAllFilesAccess) {
-                    androidx.compose.material3.TextButton(onClick = {
-                        preferMobile = false
-                        if (session?.source != com.voyagerfiles.data.model.FileSource.LOCAL)
-                            viewModel.openLocalRoot(android.os.Environment.getExternalStorageDirectory().path)
-                    }) { Text(stringResource(R.string.finderdex_desktop)) }
+            com.voyagerfiles.ui.theme.FinderMobileTheme {
+                androidx.compose.foundation.layout.Column {
+                    if (mode != com.voyagerfiles.desktop.DesktopMode.COMPACT && hasAllFilesAccess) {
+                        androidx.compose.material3.TextButton(onClick = {
+                            preferMobile = false
+                            if (session?.source != com.voyagerfiles.data.model.FileSource.LOCAL)
+                                viewModel.openLocalRoot(android.os.Environment.getExternalStorageDirectory().path)
+                        }) { Text(stringResource(R.string.finderdex_desktop)) }
+                    }
+                    MobileAppNavigation(viewModel, hasAllFilesAccess, onRequestAllFilesAccess, requestedFolder,
+                        folderRequestGeneration, onFolderRequestConsumed)
                 }
-                MobileAppNavigation(viewModel, hasAllFilesAccess, onRequestAllFilesAccess, requestedFolder,
-                    folderRequestGeneration, onFolderRequestConsumed)
             }
         }
     }
