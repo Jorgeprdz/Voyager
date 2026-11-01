@@ -133,6 +133,9 @@ import com.voyagerfiles.ui.components.AudioToneMenuItems
 import com.voyagerfiles.ui.components.rememberAudioToneAction
 import com.voyagerfiles.R
 import com.voyagerfiles.ui.theme.FinderMobileTokens
+import com.voyagerfiles.ui.components.FinderMobileCreateButton
+import com.voyagerfiles.ui.components.FinderMobileFilterPill
+import com.voyagerfiles.ui.components.FinderMobileSearchField
 import com.voyagerfiles.ui.components.FileSortMenu
 import com.voyagerfiles.data.model.Bookmark
 import com.voyagerfiles.data.model.LocalFileVisibility
@@ -934,12 +937,10 @@ fun BrowserScreen(
         floatingActionButton = {
             if (!isSelectionMode && runningOperation == null) {
                 Box {
-                    FloatingActionButton(
+                    FinderMobileCreateButton(
                         onClick = { showCreateMenu = true },
-                        containerColor = FinderMobileTokens.ice,
-                    ) {
-                        Icon(Icons.Filled.CreateNewFolder, stringResource(R.string.content_desc_create))
-                    }
+                        contentDescription = stringResource(R.string.content_desc_create),
+                    )
                     BrowserCreateMenu(
                         expanded = showCreateMenu,
                         model = createMenuModel,
@@ -1528,23 +1529,12 @@ private fun BrowserSearchField(
     LaunchedEffect(onCloseSearch != null) {
         if (onCloseSearch != null) searchFocus.requestFocus()
     }
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-        trailingIcon = {
-            if (onCloseSearch != null) {
-                IconButton(onClick = onCloseSearch) {
-                    Icon(Icons.Filled.Close, stringResource(R.string.action_close_search))
-                }
-            } else if (query.isNotEmpty()) {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Filled.Close, stringResource(R.string.content_desc_clear_search))
-                }
-            }
-        },
-        placeholder = { Text(stringResource(R.string.browser_search_placeholder)) },
-        singleLine = true,
+    FinderMobileSearchField(
+        query = query,
+        onQueryChange = onQueryChange,
+        placeholder = stringResource(R.string.browser_search_placeholder),
+        clearDescription = stringResource(R.string.content_desc_clear_search),
+        onClose = onCloseSearch,
         modifier = modifier.focusRequester(searchFocus).testTag(BROWSER_SEARCH_TEST_TAG),
     )
 }
