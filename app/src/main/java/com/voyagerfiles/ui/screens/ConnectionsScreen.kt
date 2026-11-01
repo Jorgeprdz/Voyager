@@ -27,7 +27,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
 import com.voyagerfiles.data.model.ConnectionProtocol
 import com.voyagerfiles.data.model.RemoteConnection
+import com.voyagerfiles.ui.components.FinderMobileCreateButton
 import com.voyagerfiles.ui.components.ConnectionDialog
 import com.voyagerfiles.viewmodel.FileBrowserViewModel
 
@@ -80,12 +80,11 @@ fun ConnectionsScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            FinderMobileCreateButton(
                 onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-            ) {
-                Icon(Icons.Filled.Add, stringResource(R.string.content_desc_add_connection))
-            }
+                contentDescription = stringResource(R.string.content_desc_add_connection),
+                icon = Icons.Filled.Add,
+            )
         },
     ) { padding ->
         if (connections.isEmpty()) {

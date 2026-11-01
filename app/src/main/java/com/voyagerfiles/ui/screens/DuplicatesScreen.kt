@@ -37,6 +37,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.FinderMobileTokens
+import com.voyagerfiles.ui.components.finderMobileInputColors
 import com.voyagerfiles.data.model.FileItem
 import com.voyagerfiles.ui.components.DeleteChoiceDialog
 import com.voyagerfiles.ui.components.DeleteChoiceDialogModel
@@ -122,6 +124,8 @@ fun DuplicatesScreen(path: String, onNavigateBack: () -> Unit, viewModel: Duplic
                     label = { Text(stringResource(R.string.duplicates_exclusion_keywords)) },
                     placeholder = { Text(stringResource(R.string.duplicates_exclusion_example)) },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = FinderMobileTokens.controlShape,
+                    colors = finderMobileInputColors(),
                 )
             },
             confirmButton = {
