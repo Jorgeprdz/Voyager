@@ -2,6 +2,8 @@ package com.voyagerfiles.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.voyagerfiles.R
+import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
 import com.voyagerfiles.data.model.FileItem
 import java.text.DateFormat
 
@@ -65,9 +68,11 @@ fun FileListItem(
         if (isSelected) R.string.content_desc_deselect_named else R.string.content_desc_select_named,
         file.name,
     )
+    val appearance = LocalFinderSemanticTokens.current
     val backgroundColor by animateColorAsState(
         targetValue = when {
-            isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            isSelected -> if (appearance.appearance.highContrast) MaterialTheme.colorScheme.primaryContainer
+                else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             // Marks the row whose menu is open, like a pressed state, without looking selected.
             isHighlighted -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                 .compositeOver(MaterialTheme.colorScheme.surface)
@@ -91,6 +96,9 @@ fun FileListItem(
         color = backgroundColor,
         modifier = modifier
             .fillMaxWidth()
+            .then(if (isSelected && appearance.appearance.highContrast)
+                Modifier.border(2.dp, appearance.focus, RoundedCornerShape(appearance.selectionRadiusDp.dp))
+                else Modifier)
             .then(
                 if (trailingContent != null) {
                     Modifier
