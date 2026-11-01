@@ -75,16 +75,19 @@ class ExternalArchiveActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val source = when (intent?.action) {
+        val receivedIntent = intent
+        val source = when (receivedIntent?.action) {
             Intent.ACTION_SEND -> {
-                if (Build.VERSION.SDK_INT >= 33)
-                    intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-                else @Suppress("DEPRECATION")
-                    intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                if (Build.VERSION.SDK_INT >= 33) {
+                    receivedIntent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    receivedIntent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                }
             }
-            else -> intent?.data
+            else -> receivedIntent?.data
         }
-        val mime = intent?.type ?: source?.let { contentResolver.getType(it) }
+        val mime = receivedIntent?.type ?: source?.let { contentResolver.getType(it) }
         if (source == null || !ExternalArchiveIntent.isSupportedUri(source.scheme, mime)) {
             finish()
             return
