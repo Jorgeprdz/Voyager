@@ -159,4 +159,35 @@ class TransferOperationControllerTest {
         yield()
         assertEquals(OperationState.Idle, controller.state.value)
     }
+
+    @Test
+    fun journalsProgressAndRestoresCompletedHistory() = runBlocking {
+        class RecordingStore : TransferHistoryStore {
+            var started = 0
+            var updated = 0
+            var finished = 0
+            var persisted = emptyList<OperationResult>()
+            override fun restore() = persisted
+            override fun started(progress: TransferProgress) { started++ }
+            override fun updated(progress: TransferProgress) { updated++ }
+            override fun finished(history: List<OperationResult>) {
+                finished++
+                persisted = history
+            }
+        }
+        val store = RecordingStore()
+        val label = UiText.Dynamic("Copy safely")
+        val controller = TransferOperationController({}, this, store)
+        controller.launch(label, { throw it }, {}) {
+            controller.update(TransferProgress(label, completedItems = 1, totalItems = 1))
+        }
+        yield()
+        assertEquals(1, store.started)
+        assertEquals(1, store.updated)
+        assertEquals(1, store.finished)
+        assertEquals(OperationOutcome.COMPLETED, store.persisted.first().outcome)
+
+        val reopened = TransferOperationController({}, this, store)
+        assertEquals(store.persisted, reopened.history.value)
+    }
 }
