@@ -117,7 +117,7 @@ internal fun CloudBrowserDialog(cloud: CloudService, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = { job?.cancel(); onDismiss() }) {
         Surface(
             modifier = Modifier.fillMaxWidth().widthIn(max = 540.dp),
-            shape = FinderMobileTokens.menuShape,
+            shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shadowElevation = 8.dp,
@@ -231,7 +231,7 @@ internal fun CloudBrowserDialog(cloud: CloudService, onDismiss: () -> Unit) {
     if (rename != null || newFolder) AlertDialog(onDismissRequest = { rename = null; newFolder = false },
         title = { Text(stringResource(if (newFolder) R.string.create_new_folder else R.string.action_rename)) },
         text = { OutlinedTextField(name, { name = it }, singleLine = true,
-            shape = FinderMobileTokens.controlShape, colors = finderMobileInputColors()) },
+            shape = MaterialTheme.shapes.medium, colors = finderMobileInputColors()) },
         confirmButton = { TextButton(enabled = name.isNotBlank() && '/' !in name && '\\' !in name, onClick = {
             val target = rename; val folder = newFolder; val value = name
             rename = null; newFolder = false
