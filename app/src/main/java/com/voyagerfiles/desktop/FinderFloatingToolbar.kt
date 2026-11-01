@@ -43,6 +43,8 @@ import androidx.compose.ui.window.PopupProperties
 import com.voyagerfiles.R
 import com.voyagerfiles.data.model.SortBy
 import com.voyagerfiles.data.model.GroupBy
+import com.voyagerfiles.ui.theme.FinderStyle
+import com.voyagerfiles.ui.theme.LocalFinderSemanticTokens
 import kotlinx.coroutines.delay
 
 internal object FinderToolbarTokens {
@@ -105,11 +107,17 @@ internal data class FinderToolbarPlan(
 @Composable
 internal fun FinderToolbarCapsule(content: @Composable RowScope.() -> Unit) {
     val p = LocalFinderMaterials.current.palette
-    val shape = RoundedCornerShape(FinderToolbarTokens.CAPSULE_RADIUS_DP.dp)
+    val t = LocalFinderSemanticTokens.current
+    val shape = RoundedCornerShape(t.buttonRadiusDp.dp)
+    // Keep exactly the same 42dp geometry; only the group paint changes by style.
+    val chrome = when (t.appearance.style) {
+        FinderStyle.GLASS -> Modifier
+        FinderStyle.MATERIAL -> Modifier.background(p.toolbar, shape)
+        FinderStyle.ONE_UI -> Modifier
+        FinderStyle.FLUENT -> Modifier.background(p.titlebar, shape).border(.7.dp, p.separator, shape)
+    }
     Row(Modifier.height(FinderToolbarTokens.CAPSULE_HEIGHT_DP.dp)
-        .shadow(3.dp, shape, clip = false).clip(shape)
-        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(p.illuminatedEdge, p.titlebar)))
-        .border(0.7.dp, p.edge, shape).padding(horizontal = 2.dp),
+        .clip(shape).then(chrome).padding(horizontal = 2.dp),
         verticalAlignment = Alignment.CenterVertically, content = content)
 }
 
@@ -127,6 +135,7 @@ internal fun FinderToolbarButton(
 ) {
     val materials = LocalFinderMaterials.current
     val p = materials.palette
+    val buttonShape = RoundedCornerShape(LocalFinderSemanticTokens.current.buttonRadiusDp.dp)
     val tracker = LocalFinderControlFocus.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -152,10 +161,10 @@ internal fun FinderToolbarButton(
         label = "Finder toolbar state")
     Box(contentAlignment = Alignment.Center) {
         Box(Modifier.size(FinderToolbarTokens.BUTTON_DP.dp)
-            .then(if (standalone) Modifier.shadow(3.dp, CircleShape, clip = false) else Modifier)
-            .clip(CircleShape)
+            .then(if (standalone) Modifier.shadow(3.dp, buttonShape, clip = false) else Modifier)
+            .clip(buttonShape)
             .then(if (standalone) Modifier.background(p.titlebar)
-                .border(0.7.dp, p.edge, CircleShape) else Modifier)
+                .border(0.7.dp, p.edge, buttonShape) else Modifier)
             .background(material).hoverable(interaction)
             .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
             .onFocusChanged {
@@ -164,7 +173,7 @@ internal fun FinderToolbarButton(
             }
             .clickable(enabled = enabled, interactionSource = interaction, indication = null,
                 onClickLabel = label, onClick = { showTooltip = false; action() })
-            .then(if (focused) Modifier.border(1.5.dp, p.focusRing, CircleShape) else Modifier)
+            .then(if (focused) Modifier.border(1.5.dp, p.focusRing, buttonShape) else Modifier)
             .semantics { contentDescription = label; role = Role.Button; this.selected = selected },
             contentAlignment = Alignment.Center) {
             FinderGlyph(glyph, if (enabled) p.ink else p.secondaryInk.copy(alpha = 0.52f),
