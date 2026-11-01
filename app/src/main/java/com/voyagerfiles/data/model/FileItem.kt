@@ -137,6 +137,8 @@ data class BrowseState(
     val selectedFiles: Set<String> = emptySet(),
     val sortBy: SortBy = SortBy.NAME,
     val sortOrder: SortOrder = SortOrder.ASCENDING,
+    val groupBy: GroupBy = GroupBy.NONE,
+    val groupOrder: SortOrder = SortOrder.ASCENDING,
     val showHidden: Boolean = false,
     val viewMode: ViewMode = ViewMode.LIST,
     val source: FileSource = FileSource.LOCAL,
