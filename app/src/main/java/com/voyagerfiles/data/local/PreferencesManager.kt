@@ -20,6 +20,9 @@ import com.voyagerfiles.data.model.SessionAutoCloseTimeout
 import com.voyagerfiles.data.model.SearchBarMode
 import com.voyagerfiles.data.model.ViewMode
 import com.voyagerfiles.ui.theme.AppTheme
+import com.voyagerfiles.ui.theme.FinderAppearance
+import com.voyagerfiles.ui.theme.FinderStyle
+import com.voyagerfiles.ui.theme.FinderBrightness
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -30,6 +33,10 @@ class PreferencesManager(private val context: Context) {
     private object Keys {
         val SEARCH_BAR_MODE = stringPreferencesKey("search_bar_mode")
         val THEME = stringPreferencesKey("theme")
+        val FINDER_STYLE = stringPreferencesKey("finder_style")
+        val FINDER_BRIGHTNESS = stringPreferencesKey("finder_brightness")
+        val FINDER_CONTRAST = booleanPreferencesKey("finder_high_contrast")
+        val FINDER_REDUCE_TRANSPARENCY = booleanPreferencesKey("finder_reduce_transparency")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
         val USE_TRASH = booleanPreferencesKey("use_trash")
         val CONFIRM_REMOTE_DOWNLOADS = booleanPreferencesKey("confirm_remote_downloads")
@@ -49,6 +56,26 @@ class PreferencesManager(private val context: Context) {
         val CUSTOM_PRIMARY = longPreferencesKey("custom_primary")
         val CUSTOM_BACKGROUND = longPreferencesKey("custom_background")
         val CUSTOM_SURFACE = longPreferencesKey("custom_surface")
+    }
+
+    val finderAppearance: Flow<FinderAppearance> = context.dataStore.data.map { prefs ->
+        FinderAppearance(
+            style = runCatching { FinderStyle.valueOf(prefs[Keys.FINDER_STYLE].orEmpty()) }
+                .getOrDefault(FinderStyle.GLASS),
+            brightness = runCatching { FinderBrightness.valueOf(prefs[Keys.FINDER_BRIGHTNESS].orEmpty()) }
+                .getOrDefault(FinderBrightness.AUTOMATIC),
+            highContrast = prefs[Keys.FINDER_CONTRAST] ?: false,
+            reduceTransparency = prefs[Keys.FINDER_REDUCE_TRANSPARENCY] ?: false,
+        )
+    }
+
+    suspend fun setFinderAppearance(value: FinderAppearance) {
+        context.dataStore.edit {
+            it[Keys.FINDER_STYLE] = value.style.name
+            it[Keys.FINDER_BRIGHTNESS] = value.brightness.name
+            it[Keys.FINDER_CONTRAST] = value.highContrast
+            it[Keys.FINDER_REDUCE_TRANSPARENCY] = value.reduceTransparency
+        }
     }
 
     val theme: Flow<AppTheme> = context.dataStore.data.map { prefs ->
