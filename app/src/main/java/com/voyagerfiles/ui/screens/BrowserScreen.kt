@@ -320,7 +320,16 @@ fun BrowserScreen(
         )
     }
     val runningOperation = operationState as? OperationState.Running
-    val firstVisiblePath = state.visibleFiles.firstOrNull()?.path
+    val arrangedGroups = remember(state.visibleFiles, state.sortBy, state.sortOrder, state.groupBy, state.groupOrder) {
+        com.voyagerfiles.data.model.FileArrangementEngine.groups(
+            state.visibleFiles,
+            com.voyagerfiles.data.model.FileArrangement(
+                state.sortBy, state.sortOrder, state.groupBy, state.groupOrder,
+            ),
+        )
+    }
+    val arrangedFiles = remember(arrangedGroups) { arrangedGroups.flatMap { it.files } }
+    val firstVisiblePath = arrangedFiles.firstOrNull()?.path
 
     LaunchedEffect(isTelevision, state.isLoading, firstVisiblePath, state.viewMode) {
         if (isTelevision && !state.isLoading && firstVisiblePath != null) {
@@ -1076,21 +1085,16 @@ fun BrowserScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize().testTag("browser-files")
-                                .dragFileSelection(state.visibleFiles.map { it.path }, state.selectedFiles,
+                                .dragFileSelection(arrangedFiles.map { it.path }, state.selectedFiles,
                                     enabled = !isTelevision && runningOperation == null, listState = listState,
                                     onSelection = viewModel::setDragSelection,
                                     onStartHaptic = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }),
                         ) {
-                            com.voyagerfiles.data.model.FileArrangementEngine.groups(
-                                state.visibleFiles,
-                                com.voyagerfiles.data.model.FileArrangement(
-                                    state.sortBy, state.sortOrder, state.groupBy, state.groupOrder,
-                                ),
-                            ).forEach { group ->
+                            arrangedGroups.forEach { group ->
                                 if (state.groupBy != com.voyagerfiles.data.model.GroupBy.NONE) {
                                     item(key = "group:" + group.key) {
                                         Text("${group.heading} (${group.files.size})",
-                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                            modifier = Modifier.fillMaxWidth().semantics { heading() }.padding(horizontal = 16.dp, vertical = 8.dp),
                                             style = MaterialTheme.typography.titleSmall)
                                     }
                                 }
@@ -1163,23 +1167,18 @@ fun BrowserScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize().testTag("browser-files")
-                                .dragFileSelection(state.visibleFiles.map { it.path }, state.selectedFiles,
+                                .dragFileSelection(arrangedFiles.map { it.path }, state.selectedFiles,
                                     enabled = !isTelevision && runningOperation == null, gridState = gridState,
                                     gridContentOffset = Offset(gridPadding, gridPadding),
                                     onSelection = viewModel::setDragSelection,
                                     onStartHaptic = { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }),
                         ) {
-                            com.voyagerfiles.data.model.FileArrangementEngine.groups(
-                                state.visibleFiles,
-                                com.voyagerfiles.data.model.FileArrangement(
-                                    state.sortBy, state.sortOrder, state.groupBy, state.groupOrder,
-                                ),
-                            ).forEach { group ->
+                            arrangedGroups.forEach { group ->
                                 if (state.groupBy != com.voyagerfiles.data.model.GroupBy.NONE) {
                                     item(key = "group:" + group.key,
                                         span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                                         Text("${group.heading} (${group.files.size})",
-                                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                                            modifier = Modifier.fillMaxWidth().semantics { heading() }.padding(horizontal = 8.dp, vertical = 6.dp),
                                             style = MaterialTheme.typography.titleSmall)
                                     }
                                 }
