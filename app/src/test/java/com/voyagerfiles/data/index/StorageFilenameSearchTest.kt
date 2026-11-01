@@ -1,5 +1,6 @@
 package com.voyagerfiles.data.index
 
+import com.voyagerfiles.data.model.FileTypeFilter
 import com.voyagerfiles.util.StorageVolumeInfo
 import java.io.File
 import java.nio.file.Files
@@ -91,4 +92,35 @@ class StorageFilenameSearchTest {
     private fun volume(root: File) = StorageVolumeInfo(
         root.name, root.path, isPrimary = false, isRemovable = false, state = "mounted",
     )
+
+    @Test
+    fun advancedSearchCombinesScopeRecursionTypeSizeAndDate() = runBlocking {
+        val root = temporary.newFolder("advanced")
+        val target = write(root, "Report.txt")
+        write(root, "nested/Report.txt")
+        write(root, "Report.jpg")
+        val filters = StorageSearchFilters(
+            type = FileTypeFilter.DOCUMENTS,
+            minSizeBytes = 5L,
+            maxSizeBytes = 10L,
+            modifiedAfterMillis = 0L,
+            scopePath = root.absolutePath,
+            includeSubfolders = false,
+        )
+        val result = StorageCategoryIndex().search("report", listOf(volume(root)),
+            showHidden = true, filters = filters, hasPermission = { true }).last()
+        assertEquals(listOf(target.absolutePath), result.files.map { it.path })
+        assertEquals(CategoryScanStatus.COMPLETE, result.status)
+    }
+
+    @Test
+    fun scopedSearchRejectsPathsOutsideAccessibleVolume() = runBlocking {
+        val allowed = temporary.newFolder("allowed")
+        val other = temporary.newFolder("other")
+        write(other, "Report.txt")
+        val result = StorageCategoryIndex().search("Report", listOf(volume(allowed)), false,
+            StorageSearchFilters(scopePath = other.absolutePath)) { true }.last()
+        assertEquals(CategoryScanStatus.DENIED, result.status)
+        assertTrue(result.files.isEmpty())
+    }
 }
