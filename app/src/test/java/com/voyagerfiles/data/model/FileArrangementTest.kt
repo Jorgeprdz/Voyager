@@ -39,8 +39,8 @@ class FileArrangementTest {
         val options = FileArrangement(groupBy = GroupBy.TYPE,
             groupOrder = SortOrder.DESCENDING, sortOrder = SortOrder.DESCENDING)
         val groups = FileArrangementEngine.groups(items, options)
-        assertEquals(listOf("Documentos","Imágenes"), groups.map { it.heading })
-        assertEquals(listOf("report10.txt","report2.txt"), groups[0].files.map { it.name })
+        assertEquals(listOf("Imágenes","Documentos"), groups.map { it.heading })
+        assertEquals(listOf("photo10.jpg","photo2.jpg"), groups[0].files.map { it.name })
         assertEquals(items.size, groups.sumOf { it.files.size })
         assertEquals(items.size, groups.flatMap { it.files }.map { it.path }.distinct().size)
     }
@@ -70,6 +70,21 @@ class FileArrangementTest {
         assertEquals(2, initials.first { it.heading == "A" }.files.size)
         assertEquals("unknown", FileArrangementEngine.groupKey(files.last(),
             GroupBy.DATE, now, zone).id)
+    }
+
+    @Test fun dateGroupsFollowChronologyInBothDirections() {
+        val now = Instant.parse("2026-10-31T12:00:00Z")
+        val zone = ZoneId.of("UTC")
+        val items = listOf(
+            file("old", modified = Instant.parse("2024-06-01T12:00:00Z").toEpochMilli()),
+            file("yesterday", modified = Instant.parse("2026-10-30T12:00:00Z").toEpochMilli()),
+            file("today", modified = now.toEpochMilli()),
+        )
+        val asc = FileArrangementEngine.groups(items, FileArrangement(groupBy = GroupBy.DATE), now, zone)
+        assertEquals(listOf("2024", "Ayer", "Hoy"), asc.map { it.heading })
+        val desc = FileArrangementEngine.groups(items, FileArrangement(groupBy = GroupBy.DATE,
+            groupOrder = SortOrder.DESCENDING), now, zone)
+        assertEquals(asc.map { it.key }.reversed(), desc.map { it.key })
     }
 
     @Test fun foldersComeFirstInsideEachGroupWithoutDuplicatingItems() {
