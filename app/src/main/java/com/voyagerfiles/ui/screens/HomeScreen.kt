@@ -143,7 +143,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(4.dp)) {
             item("search") {
                 androidx.compose.material3.Surface(onClick = onNavigateToSearch,
-                    shape = FinderMobileTokens.controlShape, color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.secondaryContainer,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
                     Row(Modifier.heightIn(min = 52.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Filled.Search, null, tint = MaterialTheme.colorScheme.primary)
@@ -158,7 +158,7 @@ fun HomeScreen(
                         if (hasAllFilesAccess && primary != null) {
                             val info = primary.path?.let { FileUtils.getStorageInfo(it) }
                             androidx.compose.material3.Surface(onClick = { primary.path?.let(onNavigateToBrowser) },
-                                shape = FinderMobileTokens.cardShape, color = FinderMobileTokens.navy,
+                                shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.primaryContainer,
                                 shadowElevation = 2.dp, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
                                 Column(Modifier.padding(16.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -167,7 +167,7 @@ fun HomeScreen(
                                             Text(primary.description, color = androidx.compose.ui.graphics.Color.White, style = MaterialTheme.typography.titleMedium)
                                             if (info != null) Text(stringResource(R.string.home_storage_usage,
                                                 FileItem.formatFileSize(info.used), FileItem.formatFileSize(info.total)),
-                                                color = FinderMobileTokens.ice, style = MaterialTheme.typography.bodySmall)
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.bodySmall)
                                         }
                                         Icon(Icons.Filled.ChevronRight, null, tint = androidx.compose.ui.graphics.Color.White)
                                     }
@@ -177,7 +177,7 @@ fun HomeScreen(
                                             modifier = Modifier.fillMaxWidth().height(5.dp), color = androidx.compose.ui.graphics.Color(0xFF85D4FF),
                                             trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = .15f))
                                         Text("${FileItem.formatFileSize(info.available)} ${stringResource(R.string.home_storage_available)}",
-                                            Modifier.padding(top = 8.dp), color = FinderMobileTokens.ice, style = MaterialTheme.typography.labelMedium)
+                                            Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onPrimaryContainer, style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
                             }
@@ -291,7 +291,7 @@ private fun MobileHomeRow(
         Modifier.fillMaxWidth()
             .background(
                 if (selected) MaterialTheme.colorScheme.primaryContainer else androidx.compose.ui.graphics.Color.Transparent,
-                FinderMobileTokens.selectedShape,
+                MaterialTheme.shapes.small,
             )
             .heightIn(min = 50.dp).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -374,7 +374,7 @@ internal fun StorageVolumeCard(
             .clickable(enabled = volume.isAvailable, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = if (isInternal)
-                FinderMobileTokens.ice
+                MaterialTheme.colorScheme.onPrimaryContainer
             else MaterialTheme.colorScheme.surface,
         ),
     ) {
@@ -408,7 +408,7 @@ internal fun StorageVolumeCard(
                     progress = { storageInfo.usedPercentage },
                     modifier = Modifier.fillMaxWidth(),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = FinderMobileTokens.edge,
+                    trackColor = MaterialTheme.colorScheme.outlineVariant,
                 )
             }
         }
@@ -481,7 +481,7 @@ private fun QuickAccessCard(
 ) {
     Card(
         modifier = modifier.heightIn(min = 94.dp).clickable(onClick = onClick),
-        shape = FinderMobileTokens.cardShape,
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
