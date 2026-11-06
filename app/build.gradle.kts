@@ -90,6 +90,12 @@ android {
         debug {
             applicationIdSuffix = ".preview"
             isDebuggable = true
+            // Preview and production can coexist without competing for OAuth callbacks.
+            val previewOauthScheme = providers.gradleProperty("finderdex.oauthScheme")
+                .orElse(providers.environmentVariable("FINDERDEX_OAUTH_SCHEME").filter { it.isNotBlank() })
+                .getOrElse("com.finderdex.preview.oauth")
+            manifestPlaceholders["appAuthRedirectScheme"] = previewOauthScheme
+            buildConfigField("String", "OAUTH_REDIRECT", "\"$previewOauthScheme:/callback\"")
         }
     }
 
