@@ -28,14 +28,14 @@ android {
         applicationId = "com.finderdex"
         minSdk = 26
         targetSdk = 35
-        versionCode = 25
-        versionName = "3.1-polish-preview"
+        versionCode = 26
+        versionName = "3.5.0"
 
         // Public OAuth registration values only; never embed client secrets.
         listOf("DRIVE_CLIENT_ID", "ONEDRIVE_CLIENT_ID").forEach { key ->
             buildConfigField("String", key, "\"" + providers.gradleProperty("finderdex.$key").orElse(providers.environmentVariable("FINDERDEX_$key")).getOrElse("").replace("\\", "\\\\").replace("\"", "\\\"") + "\"")
         }
-        val oauthScheme = providers.gradleProperty("finderdex.oauthScheme").orElse(providers.environmentVariable("FINDERDEX_OAUTH_SCHEME").filter { it.isNotBlank() }).getOrElse("com.finderdex.preview.oauth")
+        val oauthScheme = providers.gradleProperty("finderdex.oauthScheme").orElse(providers.environmentVariable("FINDERDEX_OAUTH_SCHEME").filter { it.isNotBlank() }).getOrElse("com.finderdex.oauth")
         manifestPlaceholders["appAuthRedirectScheme"] = oauthScheme
         buildConfigField("String", "OAUTH_REDIRECT", "\"$oauthScheme:/callback\"")
 

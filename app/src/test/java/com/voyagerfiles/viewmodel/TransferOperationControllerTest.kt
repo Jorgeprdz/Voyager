@@ -13,6 +13,19 @@ import org.junit.Test
 
 class TransferOperationControllerTest {
     @Test
+    fun completionKeepsIdentityForIndependentReceivers() = runBlocking {
+        val controller = TransferOperationController({}, this)
+        controller.launch(UiText.Dynamic("Receive"), { throw it }, {}) {}
+        val id = (controller.state.value as OperationState.Running).id
+        yield()
+        assertEquals(id, controller.lastResult.value!!.id)
+        controller.launch(UiText.Dynamic("Unrelated"), { throw it }, {}) {}
+        yield()
+        assertEquals(id, controller.history.value.first { it.id == id }.id)
+        assertNotEquals(id, controller.lastResult.value!!.id)
+    }
+
+    @Test
     fun anArchiveReportReachesTheResultAndIsNotCarriedIntoTheNextOperation() = runBlocking {
         val controller = TransferOperationController({}, this)
         val report = ArchiveExtractionReport(

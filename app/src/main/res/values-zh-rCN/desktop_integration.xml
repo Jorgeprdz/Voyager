@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_home">主页</string>
+    <string name="finderdex_motion_title">动画</string>
+    <string name="finderdex_motion_full">完整动画</string>
+    <string name="finderdex_motion_reduced">减少动画</string>
+    <string name="finderdex_motion_off">关闭动画</string>
+    <string name="finderdex_interface_title">界面</string>
+    <string name="finderdex_interface_auto">自动 · 鼠标或桌面</string>
+    <string name="finderdex_interface_mobile">移动</string>
+    <string name="finderdex_interface_desktop">桌面</string>
+    <string name="finderdex_receive_title">保存到 FinderDex</string>
+    <string name="finderdex_receive_choose">选择保存位置</string>
+    <string name="finderdex_receive_cancel">取消</string>
+    <string name="finderdex_receive_ready">选择用于保存共享文件的文件夹。原始文件将保留。</string>
+    <string name="finderdex_receive_done">文件已保存</string>
+    <string name="finderdex_receive_invalid">未收到支持的共享文件。</string>
+    <string name="finderdex_receive_failed">无法保存文件。现有文件已保留。</string>
+    <string name="finderdex_dynamic_colors">系统动态配色</string>
+</resources>

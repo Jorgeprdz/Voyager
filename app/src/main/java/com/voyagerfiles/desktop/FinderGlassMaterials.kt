@@ -165,12 +165,7 @@ internal fun rememberFinderMaterials(): FinderMaterials {
         focused = view.hasWindowFocus()
         onDispose { if (observer.isAlive) observer.removeOnWindowFocusChangeListener(listener) }
     }
-    val reducedMotion = remember(context) {
-        runCatching {
-            Settings.Global.getFloat(context.contentResolver,
-                Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
-        }.getOrDefault(false)
-    }
+    val reducedMotion = !com.voyagerfiles.ui.theme.LocalFinderMotion.current.spatial
     // The compositor may support blur, but Window.setBackgroundBlurRadius additionally
     // REQUIRES a translucent and floating window. DeX's normal resizable Activity does
     // not meet that contract: retain the caption bar and render an opaque-backed tint.
@@ -199,7 +194,7 @@ internal fun rememberFinderMaterials(): FinderMaterials {
     val style = LocalFinderAppearance.current
     val t = LocalFinderSemanticTokens.current
     val base = if (isDark) FinderGlassPalette.Dark else FinderGlassPalette.Light
-    val palette = if (style == FinderAppearance()) base else base.copy(
+    val palette = if (style.copy(motion = com.voyagerfiles.ui.theme.FinderMotionMode.FULL) == FinderAppearance()) base else base.copy(
         window = t.background,
         sidebar = t.navigation.copy(alpha = t.glassAlpha),
         titlebar = t.navigation.copy(alpha = t.glassAlpha),

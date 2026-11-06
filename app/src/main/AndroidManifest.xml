@@ -32,7 +32,7 @@
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
-        android:label="@string/finderdex_preview_app_name"
+        android:label="@string/finderdex_app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.MaterialBrowser"
@@ -107,6 +107,25 @@
                 <data android:mimeType="application/x-rar" />
             </intent-filter>
         </activity>
+
+        <activity android:name=".app.ReceiveFilesActivity"
+            android:exported="true" android:resizeableActivity="true"
+            android:label="@string/finderdex_receive_title" android:theme="@style/Theme.MaterialBrowser">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+        <provider android:name=".app.FinderDocumentsProvider"
+            android:authorities="${applicationId}.documents"
+            android:exported="true" android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -1,120 +1,51 @@
-<div align="center">
+# FinderDex
 
-<img src="fastlane/metadata/android/en-US/images/icon.png" width="120" alt="Voyager icon">
+Gestor de archivos para Android con interfaces móvil y de escritorio, temas configurables e interacción con ratón y teclado. Basado en [Voyager](https://github.com/AlanHuang99/Voyager), de Alan Huang, bajo GPLv3.
 
-# Voyager
+## Instalar
 
-An open-source Android file manager for local storage, document trees, SFTP, FTP, SMB, and WebDAV.
+Descarga la APK firmada desde [GitHub Releases](https://github.com/Jorgeprdz/Voyager/releases). Requiere Android 8.0 o posterior.
 
-[![Build](https://github.com/AlanHuang99/Voyager/actions/workflows/build.yml/badge.svg)](https://github.com/AlanHuang99/Voyager/actions/workflows/build.yml)
-[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/AlanHuang99/Voyager)](https://github.com/AlanHuang99/Voyager/releases/latest)
+La aplicación de producción usa **`com.finderdex`**. La variante de desarrollo usa `com.finderdex.preview` y puede coexistir con ella; sus datos y permisos son independientes.
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="70">](https://f-droid.org/packages/com.voyagerfiles/)
+## Uso
 
-</div>
+FinderDex abre en **Inicio**. Desde allí puedes entrar al almacenamiento, favoritos, categorías y conexiones. En Ajustes puedes elegir **Automático, Móvil o Escritorio**. El modo automático detecta ratón/trackpad o un entorno de escritorio; la distribución se adapta al tamaño de la ventana.
 
-**Help translate Voyager:** [Join the Crowdin project](https://crowdin.com/project/voyagerandroid). Translate a few strings or review wording in your browser. No coding or local build is required.
+En el explorador de escritorio:
 
-## Install
+- Clic para seleccionar y doble clic para abrir; Ctrl/Shift para selección múltiple y por rango.
+- Selección rectangular, arrastre de archivos, menú contextual, pestañas y doble panel local.
+- Vistas de iconos, detalles, columnas y galería; ordenar y agrupar por nombre, tipo, tamaño o fecha.
+- Espacio abre/cierra la vista rápida; Escape cierra y las flechas recorren los archivos visibles. F2 permite renombrar.
+- Ctrl+C/X/V, Ctrl+A, Supr y navegación por historial mediante Alt+flechas.
 
-Requires **Android 8.0 or later**.
+## Funciones
 
-- **F-Droid:** install from [Voyager on F-Droid](https://f-droid.org/packages/com.voyagerfiles/).
-- **GitHub:** download `voyager-v<version>-universal.apk` from the [latest release](https://github.com/AlanHuang99/Voyager/releases/latest). Smaller APKs for individual CPU architectures are also available.
+- Almacenamiento interno, SD/USB y carpetas autorizadas mediante el selector de Android.
+- Copia, movimiento, renombrado, papelera local, duplicados y búsqueda de archivos.
+- Conexiones SFTP, FTP, SMB y WebDAV; integración Google Drive y OneDrive que requiere configurar sus registros OAuth.
+- Creación ZIP y extracción ZIP, TAR, TGZ, TBZ2, GZIP y BZIP2. **RAR se reconoce, pero no se extrae.**
+- Temas Glass, Material, One UI y Fluent; luminosidad, contraste, transparencia y movimiento completo/reducido/desactivado. La desactivación de animaciones del sistema tiene prioridad.
+- «Guardar en FinderDex» recibe uno o varios archivos compartidos, pide destino y utiliza el motor de transferencias con progreso, cancelación y resolución de conflictos.
+- Las ubicaciones locales autorizadas de FinderDex aparecen en el selector de documentos de Android para abrir y guardar. Android administra el selector y las aplicaciones predeterminadas.
 
-F-Droid verifies releases through its own build process, so a new GitHub release can appear there later. Both distribution paths use the same developer signing key. APK checksums are included in each GitHub release as `SHA256SUMS.txt`; see [Verify your download](#verify-your-download) for the signing fingerprint.
+## Estado y límites
 
-## Screenshots
+El explorador de escritorio utiliza ubicaciones locales. Las conexiones de red y nube conservan sus navegadores existentes. La cola no reanuda automáticamente una transferencia tras la muerte del proceso; el historial identifica operaciones interrumpidas. El rediseño completo Material 3 Expressive y la paridad de todos los proveedores siguen siendo trabajo separado.
 
-<p align="center">
-  <img src="docs/screenshots/home.png" width="30%" alt="Home screen with shared-storage search, storage locations, and quick access">
-  <img src="docs/screenshots/browser.png" width="30%" alt="File browser with per-file menus, search, and type filters">
-  <img src="docs/screenshots/trash.png" width="30%" alt="Trash screen with restore and permanent-delete actions">
-</p>
+La validación automatizada y las comprobaciones físicas pendientes están registradas en [el informe de integración](docs/finder-dex/desktop-integration-2026-11-06.md). Compilar las pruebas Android no equivale a ejecutarlas en un teléfono o Samsung DeX.
 
-## Get started
+## Compilar
 
-1. Open a storage location from Home. Grant Android's all-files access to browse shared storage, or continue in limited mode and choose a folder through Android's folder picker.
-2. Tap a folder to browse or a file to open it. The browser's search filters the current folder; Home's search finds file names across accessible mounted shared storage. Type filters and sorting help narrow the browser list.
-3. Long-press an item to select it, then use the available actions to copy, move, share, rename, or delete. Direct-local deletions can go to Trash for later restoration.
-4. Add a connection for a remote server. SFTP, FTP, and SMB file taps ask before downloading by default. WebDAV can open files in another app directly when the server supports the required byte ranges.
-
-Settings lets you choose the search position, theme, Home sections, and remote download behavior. Use the browser's view controls to switch between list and grid layouts, and its Sessions sheet to switch between open locations without returning to Home.
-
-## Features
-
-- Browse internal storage, SD cards, USB/OTG volumes, and folders granted through Android's folder picker.
-- Copy, move, rename, create, and delete files across local, document-tree, and remote locations, with transfer progress and cancellation. Share local and document-tree files through Android's share sheet.
-- Use list, compact list, or grid views, local and remote image thumbnails, sorting, current-folder search, and file-type filters.
-- Search filenames across accessible mounted shared storage from Home, and open a result's containing folder.
-- Open per-file action menus in List and Compact views.
-- Browse Home media categories with saved sorting by name, size, modification date, or type. Bookmark local folders and keep multiple browser sessions open.
-- Hide and unhide local files and folders from their menus. Use Show hidden files to reveal hidden entries.
-- Restore direct-local files from Trash and find duplicate files by content, with configurable folder exclusions.
-- Create ZIP archives and extract ZIP, TAR, TGZ, TBZ2, GZ, and BZ2 archives with progress and cancellation.
-- Connect to SFTP, FTP, SMB, and WebDAV. SFTP supports passwords, private keys, and generated key pairs; SMB can discover disk shares.
-- Open files with Android's registered apps, including direct WebDAV playback when the server supports seeking.
-- Choose among 20 included color schemes, custom themes, and Material You dynamic colors on Android 12 or later.
-- Navigate with Android TV remote controls, use an explicitly authorized root session on a compatible rooted device, or open an optional Shizuku session.
-
-## Privacy and access
-
-Voyager contains no analytics or tracking. Local browsing works without internet access; network connections are user-initiated. Remote passwords are encrypted with a device-bound Android Keystore key, and saved connections and SSH keys are excluded from Android backup and device transfer.
-
-SFTP remembers server host keys and rejects unexpected changes. HTTPS WebDAV validates certificates through Android's trusted authorities. FTP and HTTP WebDAV are unencrypted. Ordinary local browsing never requests root; root sessions require confirmation and authorization through your device's `su` manager. Shizuku sessions require a running Shizuku service and authorization in its permission dialog. Open one from Settings → Storage access → Open Shizuku session.
-
-See [Architecture and security](docs/ARCHITECTURE.md) for storage, authentication, and file-operation details.
-
-## Help translate
-
-1. [Open Voyager on Crowdin](https://crowdin.com/project/voyagerandroid), sign in, and choose your language.
-2. Open `strings.xml` and translate an untranslated string or improve an existing translation.
-3. Keep placeholders such as `%1$s` and plural forms intact. Leave a comment on the string if its context is unclear.
-
-You can also reach Crowdin through **Settings > About > Help improve translations**. Some languages contain provisional wording and show a dismissible notice in the app. Reviewed corrections reach installed apps through subsequent releases.
-
-The [translation guide](docs/TRANSLATING.md) explains terminology, formatting, review, and synchronization. Request another language or offer language review in [GitHub Discussions](https://github.com/AlanHuang99/Voyager/discussions).
-
-## Help and contribute
-
-- **Questions and usage tips:** [GitHub Discussions](https://github.com/AlanHuang99/Voyager/discussions).
-- **Bug reports:** [GitHub Issues](https://github.com/AlanHuang99/Voyager/issues). Include the app and Android versions, steps to reproduce, and the storage or server type involved. Remove personal filenames and connection details from screenshots.
-- **Translations and language review:** [Crowdin](https://crowdin.com/project/voyagerandroid).
-- **Code, documentation, and testing:** read [CONTRIBUTING.md](CONTRIBUTING.md). For a substantial feature, discuss the scope in an issue before starting.
-
-Voyager focuses on file browsing and management. Proposals should keep everyday navigation clear and avoid adding unnecessary setup or controls.
-
-## Build from source
-
-Install JDK 17 and an Android SDK with compile SDK 35, then run:
+JDK 17 y Android SDK 35:
 
 ```bash
-git clone https://github.com/AlanHuang99/Voyager.git
-cd Voyager
-./gradlew assembleDebug
+./gradlew testDebugUnitTest lintDebug assembleDebug
 ```
 
-Debug APKs are written to `app/build/outputs/apk/debug/`. The debug application ID is `com.voyagerfiles.debug`, so it can coexist with the release app.
+Para firmar una compilación `assembleRelease`, configura `ANDROID_KEYSTORE_PATH`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`. Las claves privadas se mantienen fuera del repositorio. El publicador heredado de Voyager no corresponde a FinderDex; las versiones FinderDex utilizan etiquetas `finderdex-v<versión>`.
 
-Before submitting code, run:
+## Licencia y origen
 
-```bash
-./gradlew testDebugUnitTest lintDebug assembleDebug assembleRelease
-```
-
-See [Testing](docs/TESTING.md) for device and protocol checks, [Architecture](docs/ARCHITECTURE.md) for the Kotlin and Compose app structure, and [Release process](docs/RELEASE.md) for GitHub and F-Droid distribution.
-
-## Verify your download
-
-The developer signing certificate has this SHA-256 fingerprint:
-
-```text
-db496277d456751abe8ca6405026337c81a561a134e38d49c8e21fb8f036badf
-```
-
-This identifies the signing certificate. Individual APK file checksums are listed in the release's `SHA256SUMS.txt`.
-
-## License
-
-Voyager is licensed under the [GNU General Public License v3.0](LICENSE).
+[GNU GPL v3.0](LICENSE). FinderDex conserva el código y los créditos de Voyager y añade las interfaces, temas e integración de escritorio de este fork.

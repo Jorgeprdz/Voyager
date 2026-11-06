@@ -33,6 +33,8 @@ class PreferencesManager(private val context: Context) {
     private object Keys {
         val SEARCH_BAR_MODE = stringPreferencesKey("search_bar_mode")
         val THEME = stringPreferencesKey("theme")
+        val INTERFACE_MODE = stringPreferencesKey("finder_interface_mode")
+        val FINDER_MOTION = stringPreferencesKey("finder_motion")
         val FINDER_STYLE = stringPreferencesKey("finder_style")
         val FINDER_BRIGHTNESS = stringPreferencesKey("finder_brightness")
         val FINDER_CONTRAST = booleanPreferencesKey("finder_high_contrast")
@@ -68,6 +70,8 @@ class PreferencesManager(private val context: Context) {
             highContrast = prefs[Keys.FINDER_CONTRAST] ?: false,
             reduceTransparency = prefs[Keys.FINDER_REDUCE_TRANSPARENCY] ?: false,
             dynamicColors = prefs[Keys.FINDER_DYNAMIC] ?: true,
+            motion = runCatching { com.voyagerfiles.ui.theme.FinderMotionMode.valueOf(prefs[Keys.FINDER_MOTION].orEmpty()) }
+                .getOrDefault(com.voyagerfiles.ui.theme.FinderMotionMode.FULL),
         )
     }
 
@@ -78,7 +82,16 @@ class PreferencesManager(private val context: Context) {
             it[Keys.FINDER_CONTRAST] = value.highContrast
             it[Keys.FINDER_REDUCE_TRANSPARENCY] = value.reduceTransparency
             it[Keys.FINDER_DYNAMIC] = value.dynamicColors
+            it[Keys.FINDER_MOTION] = value.motion.name
         }
+    }
+
+    val interfaceMode = context.dataStore.data.map { prefs ->
+        runCatching { com.voyagerfiles.desktop.InterfaceMode.valueOf(prefs[Keys.INTERFACE_MODE].orEmpty()) }
+            .getOrDefault(com.voyagerfiles.desktop.InterfaceMode.AUTOMATIC)
+    }
+    suspend fun setInterfaceMode(value: com.voyagerfiles.desktop.InterfaceMode) {
+        context.dataStore.edit { it[Keys.INTERFACE_MODE] = value.name }
     }
 
     val theme: Flow<AppTheme> = context.dataStore.data.map { prefs ->

@@ -177,6 +177,11 @@ class FileBrowserViewModel @JvmOverloads constructor(
     val trashState: StateFlow<TrashState> = _trashState.asStateFlow()
 
     val theme = prefs.theme.stateIn(viewModelScope, SharingStarted.Eagerly, AppTheme.SYSTEM)
+    val interfaceMode = prefs.interfaceMode.stateIn(viewModelScope, SharingStarted.Eagerly,
+        com.voyagerfiles.desktop.InterfaceMode.AUTOMATIC)
+    fun setInterfaceMode(value: com.voyagerfiles.desktop.InterfaceMode) {
+        viewModelScope.launch { prefs.setInterfaceMode(value) }
+    }
     val finderAppearance = prefs.finderAppearance.stateIn(
         viewModelScope, SharingStarted.Eagerly, com.voyagerfiles.ui.theme.FinderAppearance(),
     )
@@ -696,9 +701,33 @@ class FileBrowserViewModel @JvmOverloads constructor(
     }
 
     fun uploadDocuments(uris: List<Uri>, destinationDirectory: String = _browseState.value.currentPath, onFinished: () -> Unit = {}) {
+        uploadDocumentsTo(uris, fileProvider, destinationDirectory, onFinished)
+    }
+
+    /** External sharing uses an explicit SAF destination without changing the current browser session. */
+    fun receiveDocuments(uris: List<Uri>, tree: Uri): Long? {
+        if (uris.isEmpty() || operationState.value is OperationState.Running) return null
+        val app = getApplication<VoyagerApp>()
+        val resolver = app.contentResolver
+        val existing = resolver.persistedUriPermissions.firstOrNull { it.uri == tree }
+        val addedFlags = (if (existing?.isReadPermission == true) 0 else android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) or
+            (if (existing?.isWritePermission == true) 0 else android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        if (addedFlags != 0) resolver.takePersistableUriPermission(tree, addedFlags)
+        val provider = SafFileProvider(app, tree)
+        app.transferSourceGrants = uris
+        try {
+            uploadDocumentsTo(uris, provider, provider.rootPath) {
+                if (addedFlags != 0) runCatching { resolver.releasePersistableUriPermission(tree, addedFlags) }
+            }
+        } finally { app.transferSourceGrants = emptyList() }
+        return (operationState.value as? OperationState.Running)?.id ?: lastOperationResult.value?.id
+    }
+
+    fun cancelReceivedOperation(id: Long) = operationController.cancel(id)
+
+    private fun uploadDocumentsTo(uris: List<Uri>, destinationProvider: FileProvider,
+        destinationPath: String, onFinished: () -> Unit) {
         if (uris.isEmpty()) return
-        val destinationProvider = fileProvider
-        val destinationPath = destinationDirectory
         val contentResolver = getApplication<Application>().contentResolver
         val progressLabel = UiText.Resource(R.string.progress_uploading)
         launchOperation(R.string.progress_uploading, R.string.operation_upload, onFinished = onFinished) {

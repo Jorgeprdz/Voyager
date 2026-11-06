@@ -28,7 +28,7 @@ class TransferOperationController(
     private var archiveReport: ArchiveExtractionReport? = null
 
     private var reportedFailure: Throwable? = null
-    private var nextId = 0L
+    private var nextId = System.currentTimeMillis() * 1000
     private var cancellation: TransferCancellation? = null
 
     fun launch(
@@ -103,7 +103,8 @@ class TransferOperationController(
 
     private fun finish(outcome: OperationOutcome) {
         val progress = (mutableState.value as? OperationState.Running)?.progress ?: return
-        val result = OperationResult(progress.copy(currentItemName = null), outcome, archiveReport)
+        val result = OperationResult(progress.copy(currentItemName = null), outcome, archiveReport,
+            id = (mutableState.value as OperationState.Running).id)
         mutableResult.value = result
         mutableHistory.value = (listOf(result) + mutableHistory.value).take(50)
         historyStore.finished(mutableHistory.value)

@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_home">ホーム</string>
+    <string name="finderdex_motion_title">アニメーション</string>
+    <string name="finderdex_motion_full">すべての動き</string>
+    <string name="finderdex_motion_reduced">動きを減らす</string>
+    <string name="finderdex_motion_off">アニメーションなし</string>
+    <string name="finderdex_interface_title">インターフェース</string>
+    <string name="finderdex_interface_auto">自動 · マウスまたはデスクトップ</string>
+    <string name="finderdex_interface_mobile">モバイル</string>
+    <string name="finderdex_interface_desktop">デスクトップ</string>
+    <string name="finderdex_receive_title">FinderDex に保存</string>
+    <string name="finderdex_receive_choose">保存先を選択</string>
+    <string name="finderdex_receive_cancel">キャンセル</string>
+    <string name="finderdex_receive_ready">共有ファイルの保存先フォルダを選択してください。元のファイルは保持されます。</string>
+    <string name="finderdex_receive_done">ファイルを保存しました</string>
+    <string name="finderdex_receive_invalid">対応する共有ファイルがありません。</string>
+    <string name="finderdex_receive_failed">保存できませんでした。既存のファイルは保持されています。</string>
+    <string name="finderdex_dynamic_colors">システムのダイナミックカラー</string>
+</resources>

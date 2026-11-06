@@ -95,7 +95,7 @@ fun FinderMobileTheme(content: @Composable () -> Unit) {
     val dark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     // Legacy Glass retains its original mobile palette. Non-Glass uses the shared
     // app scheme so sheets, dialogs and browser chrome resolve the same roles.
-    val defaultGlass = appearance == FinderAppearance()
+    val defaultGlass = appearance.copy(motion = FinderMotionMode.FULL) == FinderAppearance()
     MaterialTheme(
         colorScheme = if (defaultGlass) FinderMobileTokens.colorScheme(dark)
             else MaterialTheme.colorScheme,

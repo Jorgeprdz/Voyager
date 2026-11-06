@@ -19,6 +19,7 @@ data class FinderAppearance(
     val highContrast: Boolean = false,
     val reduceTransparency: Boolean = false,
     val dynamicColors: Boolean = true,
+    val motion: FinderMotionMode = FinderMotionMode.FULL,
 )
 
 /**

@@ -24,6 +24,7 @@ data class OperationResult(
     val progress: TransferProgress,
     val outcome: OperationOutcome,
     val archiveReport: ArchiveExtractionReport? = null,
+    val id: Long = 0,
 )
 
 data class TrashState(

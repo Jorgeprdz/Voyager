@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_home">Home</string>
+    <string name="finderdex_motion_title">Animazioni</string>
+    <string name="finderdex_motion_full">Movimento completo</string>
+    <string name="finderdex_motion_reduced">Movimento ridotto</string>
+    <string name="finderdex_motion_off">Animazioni disattivate</string>
+    <string name="finderdex_interface_title">Interfaccia</string>
+    <string name="finderdex_interface_auto">Automatica · mouse o desktop</string>
+    <string name="finderdex_interface_mobile">Mobile</string>
+    <string name="finderdex_interface_desktop">Desktop</string>
+    <string name="finderdex_receive_title">Salva in FinderDex</string>
+    <string name="finderdex_receive_choose">Scegli destinazione</string>
+    <string name="finderdex_receive_cancel">Annulla</string>
+    <string name="finderdex_receive_ready">Scegli una cartella per i file condivisi. Gli originali vengono conservati.</string>
+    <string name="finderdex_receive_done">File salvati</string>
+    <string name="finderdex_receive_invalid">Nessun file compatibile ricevuto.</string>
+    <string name="finderdex_receive_failed">Impossibile salvare i file. I file esistenti sono stati conservati.</string>
+    <string name="finderdex_dynamic_colors">Colori dinamici di sistema</string>
+</resources>

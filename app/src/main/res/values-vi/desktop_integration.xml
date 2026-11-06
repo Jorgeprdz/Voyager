@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_home">Trang chủ</string>
+    <string name="finderdex_motion_title">Hoạt ảnh</string>
+    <string name="finderdex_motion_full">Chuyển động đầy đủ</string>
+    <string name="finderdex_motion_reduced">Giảm chuyển động</string>
+    <string name="finderdex_motion_off">Tắt hoạt ảnh</string>
+    <string name="finderdex_interface_title">Giao diện</string>
+    <string name="finderdex_interface_auto">Tự động · chuột hoặc màn hình máy tính</string>
+    <string name="finderdex_interface_mobile">Di động</string>
+    <string name="finderdex_interface_desktop">Máy tính</string>
+    <string name="finderdex_receive_title">Lưu vào FinderDex</string>
+    <string name="finderdex_receive_choose">Chọn nơi lưu</string>
+    <string name="finderdex_receive_cancel">Hủy</string>
+    <string name="finderdex_receive_ready">Chọn thư mục để lưu các tệp được chia sẻ. Giữ nguyên các tệp gốc.</string>
+    <string name="finderdex_receive_done">Đã lưu tệp</string>
+    <string name="finderdex_receive_invalid">Không nhận được tệp tương thích.</string>
+    <string name="finderdex_receive_failed">Không thể lưu tệp. Các tệp hiện có được giữ nguyên.</string>
+    <string name="finderdex_dynamic_colors">Màu hệ thống động</string>
+</resources>

@@ -1,0 +1,18 @@
+<resources>
+    <string name="finderdex_home">Inicio</string>
+    <string name="finderdex_motion_title">Animaciones</string>
+    <string name="finderdex_motion_full">Movimiento completo</string>
+    <string name="finderdex_motion_reduced">Movimiento reducido</string>
+    <string name="finderdex_motion_off">Animaciones desactivadas</string>
+    <string name="finderdex_interface_title">Interfaz</string>
+    <string name="finderdex_interface_auto">Automática · ratón o ventana de escritorio</string>
+    <string name="finderdex_interface_mobile">Móvil</string>
+    <string name="finderdex_interface_desktop">Escritorio</string>
+    <string name="finderdex_receive_title">Guardar en FinderDex</string>
+    <string name="finderdex_receive_choose">Elegir destino</string>
+    <string name="finderdex_receive_cancel">Cancelar</string>
+    <string name="finderdex_receive_ready">Elige una carpeta para guardar los archivos compartidos. Se conservan los originales.</string>
+    <string name="finderdex_receive_done">Archivos guardados</string>
+    <string name="finderdex_receive_invalid">No se recibieron archivos compartidos compatibles.</string>
+    <string name="finderdex_receive_failed">No se pudieron guardar los archivos. Se conservaron los archivos existentes.</string>
+</resources>

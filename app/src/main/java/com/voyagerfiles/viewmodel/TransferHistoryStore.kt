@@ -101,6 +101,7 @@ class AndroidTransferHistoryStore(context: Context) : TransferHistoryStore {
             put(JSONObject().apply {
                 put("progress", encodeProgress(result.progress))
                 put("outcome", result.outcome.name)
+                put("id", result.id)
             })
         }
     }
@@ -114,6 +115,7 @@ class AndroidTransferHistoryStore(context: Context) : TransferHistoryStore {
                 OperationResult(
                     decodeProgress(entry.getJSONObject("progress")),
                     OperationOutcome.valueOf(entry.getString("outcome")),
+                    id = entry.optLong("id", 0L),
                 )
             }.getOrNull()
         }

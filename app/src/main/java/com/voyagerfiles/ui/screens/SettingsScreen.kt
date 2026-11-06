@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -96,6 +97,7 @@ fun SettingsScreen(
     onOpenShizuku: () -> Unit = {},
 ) {
     val currentTheme by viewModel.theme.collectAsState()
+    val interfaceMode by viewModel.interfaceMode.collectAsState()
     val finderAppearance by viewModel.finderAppearance.collectAsState()
     val openTranslationLink = rememberTranslationLinkOpener()
     val browseState by viewModel.browseState.collectAsState()
@@ -138,6 +140,20 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(modifier = Modifier.height(12.dp))
+            Text(stringResource(R.string.finderdex_interface_title), style = MaterialTheme.typography.titleSmall)
+            com.voyagerfiles.desktop.InterfaceMode.entries.forEach { mode ->
+                val title = when (mode) {
+                    com.voyagerfiles.desktop.InterfaceMode.AUTOMATIC -> R.string.finderdex_interface_auto
+                    com.voyagerfiles.desktop.InterfaceMode.MOBILE -> R.string.finderdex_interface_mobile
+                    com.voyagerfiles.desktop.InterfaceMode.DESKTOP -> R.string.finderdex_interface_desktop
+                }
+                Row(Modifier.fillMaxWidth().clickable { viewModel.setInterfaceMode(mode) },
+                    verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = interfaceMode == mode, onClick = { viewModel.setInterfaceMode(mode) })
+                    Text(stringResource(title))
+                }
+            }
+            Spacer(Modifier.height(16.dp))
             FinderStyleSelector(finderAppearance, viewModel::setFinderAppearance)
             Spacer(modifier = Modifier.height(24.dp))
             Text(stringResource(R.string.settings_theme),

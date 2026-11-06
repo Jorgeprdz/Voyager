@@ -36,7 +36,7 @@ internal fun Modifier.finderDragVisual(
         animationSpec = if (materials.reducedMotion) snap() else tween(140),
         label = "Finder source opacity")
     val scale by animateFloatAsState(
-        if (hovered) 1.08f else if (dragged) 1.05f else 1f,
+        if (materials.reducedMotion) 1f else if (hovered) 1.08f else if (dragged) 1.05f else 1f,
         animationSpec = if (materials.reducedMotion) snap() else spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium), label = "Finder destination spring")
@@ -70,7 +70,7 @@ internal fun FinderDragGhost(drag: FinderDragDropState, modifier: Modifier = Mod
         label = "Finder floating stack",
     )
     val scale by animateFloatAsState(
-        if (drag.receiving) .70f else 1.05f,
+        if (materials.reducedMotion) 1f else if (drag.receiving) .70f else 1.05f,
         animationSpec = if (materials.reducedMotion) snap() else tween(160),
         label = "Finder ghost scale")
     val alpha by animateFloatAsState(
@@ -79,7 +79,7 @@ internal fun FinderDragGhost(drag: FinderDragDropState, modifier: Modifier = Mod
         label = "Finder ghost fade")
     LaunchedEffect(drag.returning) {
         if (drag.returning) {
-            delay(220)
+            delay(if (materials.reducedMotion) 0L else 220L)
             if (drag.returning) drag.clearGhost()
         }
     }

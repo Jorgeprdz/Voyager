@@ -4,6 +4,15 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.MaterialTheme
+import com.voyagerfiles.ui.theme.LocalFinderMotion
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -102,21 +111,34 @@ private fun decodeQuickLook(file: FileItem): QuickLookContent {
 internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
     onNavigate: (Int) -> Unit = {}) {
     val focus = remember { FocusRequester() }
+    val motion = LocalFinderMotion.current
+    val colors = MaterialTheme.colorScheme
+    val visibility = remember { MutableTransitionState(false).apply { targetState = true } }
+    var closing by remember { mutableStateOf(false) }
+    val dismiss by rememberUpdatedState(onDismiss)
+    val close = { visibility.targetState = false; closing = true }
+    // Wait for the actual transition, including Android's animation duration scale.
+    LaunchedEffect(visibility.isIdle, visibility.currentState, closing) {
+        if (closing && visibility.isIdle && !visibility.currentState) dismiss()
+    }
     var content by remember(file.path) { mutableStateOf<QuickLookContent>(QuickLookContent.Loading) }
     LaunchedEffect(file.path) {
         val decoded = withContext(Dispatchers.IO) { decodeQuickLook(file) }
         content = decoded
     }
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(onDismissRequest = close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        AnimatedVisibility(visibleState = visibility,
+            enter = fadeIn(tween(motion.duration(160))) + scaleIn(tween(motion.duration(160)), initialScale = if (motion.spatial) .96f else 1f),
+            exit = fadeOut(tween(motion.duration(120))) + scaleOut(tween(motion.duration(120)), targetScale = if (motion.spatial) .98f else 1f)) {
         Column(
             Modifier.fillMaxWidth(.74f).fillMaxHeight(.82f)
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                .background(Color(0xfff8f8fb))
+                .background(colors.surface)
                 .focusRequester(focus)
                 .onPreviewKeyEvent { event ->
                     if (event.type != KeyEventType.KeyDown) false
                     else when (event.key) {
-                        Key.Escape, Key.Spacebar -> { onDismiss(); true }
+                        Key.Escape, Key.Spacebar -> { close(); true }
                         Key.DirectionRight, Key.DirectionDown -> { onNavigate(1); true }
                         Key.DirectionLeft, Key.DirectionUp -> { onNavigate(-1); true }
                         else -> false
@@ -126,9 +148,9 @@ internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
                 .padding(20.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(file.name, color = Color(0xff292933), fontWeight = FontWeight.SemiBold, fontSize = 17.sp,
+                Text(file.name, color = colors.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 17.sp,
                     maxLines = 1, modifier = Modifier.weight(1f))
-                Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_quicklook_close), color = Color(0xff006fe4), modifier = Modifier.padding(start = 12.dp).clickable(onClick = onDismiss), fontSize = 12.sp)
+                Text(androidx.compose.ui.res.stringResource(com.voyagerfiles.R.string.finderdex_quicklook_close), color = colors.primary, modifier = Modifier.padding(start = 12.dp).clickable(onClick = close), fontSize = 12.sp)
             }
             Spacer(Modifier.height(16.dp))
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -137,17 +159,18 @@ internal fun FinderQuickLookDialog(file: FileItem, onDismiss: () -> Unit,
                     is QuickLookContent.Picture -> Image(preview.bitmap.asImageBitmap(), null,
                         modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
                     is QuickLookContent.Document -> Box(Modifier.fillMaxSize()
-                        .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                        .background(colors.surfaceContainerHigh, androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
                         .verticalScroll(rememberScrollState()).padding(20.dp)) {
-                        Text(preview.text, color = Color(0xff35353a), fontSize = 13.sp, lineHeight = 19.sp)
+                        Text(preview.text, color = colors.onSurface, fontSize = 13.sp, lineHeight = 19.sp)
                     }
-                    is QuickLookContent.Unavailable -> Text(preview.reason, color = Color(0xff77777e))
+                    is QuickLookContent.Unavailable -> Text(preview.reason, color = colors.onSurfaceVariant)
                 }
             }
             Spacer(Modifier.height(12.dp))
             Text("${file.formattedSize}   ·   ${file.mimeType}   ·   ${DateFormat.getDateTimeInstance().format(file.lastModified)}",
-                color = Color(0xff77777e), fontSize = 11.sp)
+                color = colors.onSurfaceVariant, fontSize = 11.sp)
         }
         LaunchedEffect(file.path) { focus.requestFocus() }
+        }
     }
 }

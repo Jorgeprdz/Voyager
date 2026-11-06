@@ -101,7 +101,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    val glassDefault = LocalFinderAppearance.current == FinderAppearance()
+    val glassDefault = LocalFinderAppearance.current.copy(motion = com.voyagerfiles.ui.theme.FinderMotionMode.FULL) == FinderAppearance()
     val bookmarks by viewModel.bookmarks.collectAsState()
     val sessions by viewModel.sessions.collectAsState()
     val activeSession by viewModel.activeSession.collectAsState()

@@ -59,6 +59,7 @@ internal fun FinderListView(
     }
     val files = remember(groups) { finderFlatten(groups) }
     val marquee = remember(last?.path) { FinderMarqueeState() }
+    val motion = com.voyagerfiles.ui.theme.LocalFinderMotion.current
     val glass = LocalFinderMaterials.current
     val palette = glass.palette
     val listState = rememberLazyListState()
@@ -107,7 +108,11 @@ internal fun FinderListView(
                 val surface = finderAnimatedMaterial(if (pressed) palette.pressed
                     else if (selected) palette.selection(false, glass.windowFocused)
                     else Color.Transparent, selected)
-                Row(Modifier.fillMaxWidth().height(zoom.rowHeightDp.dp)
+                Row(Modifier.animateItem(
+                    fadeInSpec = androidx.compose.animation.core.tween(motion.duration(120)),
+                    placementSpec = androidx.compose.animation.core.tween(if (motion.spatial) 180 else 0),
+                    fadeOutSpec = androidx.compose.animation.core.tween(motion.duration(90)))
+                    .fillMaxWidth().height(zoom.rowHeightDp.dp)
                     .padding(horizontal = 9.dp, vertical = 1.dp)
                     .clip(RoundedCornerShape(FinderContentTokens.LIST_ROW_CORNER_DP.dp))
                     .background(surface).hoverable(hoverSource)
@@ -188,6 +193,7 @@ internal fun FinderGalleryView(
     }
     val files = remember(groups) { finderFlatten(groups) }
     val selected = files.firstOrNull { it.path in last?.selected.orEmpty() }
+    val motion = com.voyagerfiles.ui.theme.LocalFinderMotion.current
     val glass = LocalFinderMaterials.current
     val palette = glass.palette
     Column(modifier.background(palette.content).testTag("finder-gallery")) {

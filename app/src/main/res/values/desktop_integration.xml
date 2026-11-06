@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_app_name" translatable="false">FinderDex</string>
+    <string name="finderdex_home">Home</string>
+    <string name="finderdex_motion_title">Animations</string>
+    <string name="finderdex_motion_full">Full motion</string>
+    <string name="finderdex_motion_reduced">Reduced motion</string>
+    <string name="finderdex_motion_off">Animations off</string>
+    <string name="finderdex_interface_title">Interface</string>
+    <string name="finderdex_interface_auto">Automatic · mouse or desktop window</string>
+    <string name="finderdex_interface_mobile">Mobile</string>
+    <string name="finderdex_interface_desktop">Desktop</string>
+    <string name="finderdex_receive_title">Save in FinderDex</string>
+    <string name="finderdex_receive_choose">Choose destination</string>
+    <string name="finderdex_receive_cancel">Cancel</string>
+    <string name="finderdex_receive_ready">Choose a folder to save the shared files. Originals are preserved.</string>
+    <string name="finderdex_receive_done">Files saved</string>
+    <string name="finderdex_receive_invalid">No supported shared files were received.</string>
+    <string name="finderdex_receive_failed">Could not save the files. Existing files were preserved.</string>
+</resources>

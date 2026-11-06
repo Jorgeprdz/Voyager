@@ -100,6 +100,18 @@ fun FinderStyleSelector(value: FinderAppearance, onChange: (FinderAppearance) ->
                     onClick = { onChange(value.copy(style = style)) })
             }
         }
+        Text(stringResource(R.string.finderdex_motion_title), style = MaterialTheme.typography.titleSmall)
+        com.voyagerfiles.ui.theme.FinderMotionMode.entries.forEach { mode ->
+            val title = when (mode) {
+                com.voyagerfiles.ui.theme.FinderMotionMode.FULL -> R.string.finderdex_motion_full
+                com.voyagerfiles.ui.theme.FinderMotionMode.REDUCED -> R.string.finderdex_motion_reduced
+                com.voyagerfiles.ui.theme.FinderMotionMode.OFF -> R.string.finderdex_motion_off
+            }
+            Row(Modifier.fillMaxWidth().clickable { onChange(value.copy(motion = mode)) }, verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(selected = value.motion == mode, onClick = null)
+                Text(stringResource(title))
+            }
+        }
         Text(stringResource(R.string.finderdex_brightness_title),
             style = MaterialTheme.typography.titleSmall)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {

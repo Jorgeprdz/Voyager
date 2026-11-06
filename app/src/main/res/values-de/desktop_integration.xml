@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_home">Start</string>
+    <string name="finderdex_motion_title">Animationen</string>
+    <string name="finderdex_motion_full">Volle Bewegung</string>
+    <string name="finderdex_motion_reduced">Reduzierte Bewegung</string>
+    <string name="finderdex_motion_off">Animationen aus</string>
+    <string name="finderdex_interface_title">Oberfläche</string>
+    <string name="finderdex_interface_auto">Automatisch · Maus oder Desktop</string>
+    <string name="finderdex_interface_mobile">Mobil</string>
+    <string name="finderdex_interface_desktop">Desktop</string>
+    <string name="finderdex_receive_title">In FinderDex speichern</string>
+    <string name="finderdex_receive_choose">Ziel auswählen</string>
+    <string name="finderdex_receive_cancel">Abbrechen</string>
+    <string name="finderdex_receive_ready">Wähle einen Ordner für die geteilten Dateien. Die Originale bleiben erhalten.</string>
+    <string name="finderdex_receive_done">Dateien gespeichert</string>
+    <string name="finderdex_receive_invalid">Keine unterstützten Dateien empfangen.</string>
+    <string name="finderdex_receive_failed">Dateien konnten nicht gespeichert werden. Vorhandene Dateien bleiben erhalten.</string>
+    <string name="finderdex_dynamic_colors">Dynamische Systemfarben</string>
+</resources>

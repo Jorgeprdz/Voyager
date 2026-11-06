@@ -67,27 +67,18 @@ fun AppNavigation(
 ) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
         val mode = com.voyagerfiles.desktop.DesktopModeController.mode(maxWidth.value, maxHeight.value)
-        val session by viewModel.activeSession.collectAsState()
-        var preferMobile by rememberSaveable { mutableStateOf(false) }
-        val desktop = mode != com.voyagerfiles.desktop.DesktopMode.COMPACT && hasAllFilesAccess &&
-            (session == null || session?.source == com.voyagerfiles.data.model.FileSource.LOCAL) && !preferMobile && requestedFolder == null
-        if (desktop) {
-            com.voyagerfiles.desktop.FinderDesktopHost(viewModel, mode, onMobile = { preferMobile = true })
-        } else {
-            com.voyagerfiles.ui.theme.FinderMobileTheme {
-                androidx.compose.foundation.layout.Column {
-                    if (mode != com.voyagerfiles.desktop.DesktopMode.COMPACT && hasAllFilesAccess) {
-                        androidx.compose.material3.TextButton(onClick = {
-                            preferMobile = false
-                            if (session?.source != com.voyagerfiles.data.model.FileSource.LOCAL)
-                                viewModel.openLocalRoot(android.os.Environment.getExternalStorageDirectory().path)
-                        }) { Text(stringResource(R.string.finderdex_desktop)) }
-                    }
-                    MobileAppNavigation(viewModel, hasAllFilesAccess, onRequestAllFilesAccess, requestedFolder,
-                        folderRequestGeneration, onFolderRequestConsumed)
-                }
-            }
-        }
+        val preference by viewModel.interfaceMode.collectAsState()
+        val pointing = com.voyagerfiles.desktop.rememberDesktopPointingDevice()
+        val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+        val externalDisplay = (androidx.compose.ui.platform.LocalView.current.display?.displayId
+            ?: android.view.Display.DEFAULT_DISPLAY) != android.view.Display.DEFAULT_DISPLAY
+        val desktopEnvironment = externalDisplay ||
+            (configuration.uiMode and android.content.res.Configuration.UI_MODE_TYPE_MASK) ==
+                android.content.res.Configuration.UI_MODE_TYPE_DESK
+        val desktop = com.voyagerfiles.desktop.DesktopInteractionPolicy.useDesktop(
+            preference, pointing, desktopEnvironment)
+        MobileAppNavigation(viewModel, hasAllFilesAccess, onRequestAllFilesAccess, requestedFolder,
+            folderRequestGeneration, onFolderRequestConsumed, desktop, mode)
     }
 }
 
@@ -99,9 +90,12 @@ private fun MobileAppNavigation(
     requestedFolder: String? = null,
     folderRequestGeneration: Long = 0,
     onFolderRequestConsumed: () -> Unit = {},
+    desktop: Boolean = false,
+    desktopMode: com.voyagerfiles.desktop.DesktopMode = com.voyagerfiles.desktop.DesktopMode.COMPACT,
 ) {
+    val motion = com.voyagerfiles.ui.theme.LocalFinderMotion.current
     val navController = rememberNavController()
-    val initialRoute = remember { if (viewModel.activeSession.value != null) Screen.Browser.createRoute(viewModel.browseState.value.currentPath) else Screen.Home.route }
+    val initialRoute = Screen.Home.route
     val context = LocalContext.current
     var shortcutFailed by remember { mutableStateOf(false) }
     var confirmRoot by remember { mutableStateOf(false) }
@@ -130,8 +124,8 @@ private fun MobileAppNavigation(
             } else {
                 AnimatedContentTransitionScope.SlideDirection.Start
             }
-            slideIntoContainer(direction, tween(300, easing = FastOutSlowInEasing)) { it / 8 } +
-                fadeIn(tween(220))
+            slideIntoContainer(direction, tween(motion.duration(300), easing = FastOutSlowInEasing)) { if (motion.spatial) it / 8 else 0 } +
+                fadeIn(tween(motion.duration(220)))
         },
         exitTransition = {
             val direction = if (targetState.destination.route == Screen.Home.route) {
@@ -139,20 +133,20 @@ private fun MobileAppNavigation(
             } else {
                 AnimatedContentTransitionScope.SlideDirection.Start
             }
-            slideOutOfContainer(direction, tween(300, easing = FastOutSlowInEasing)) { it / 8 } +
-                fadeOut(tween(180))
+            slideOutOfContainer(direction, tween(motion.duration(300), easing = FastOutSlowInEasing)) { if (motion.spatial) it / 8 else 0 } +
+                fadeOut(tween(motion.duration(180)))
         },
         popEnterTransition = {
             slideIntoContainer(
                 AnimatedContentTransitionScope.SlideDirection.End,
-                tween(300, easing = FastOutSlowInEasing),
-            ) { it / 8 } + fadeIn(tween(220))
+                tween(motion.duration(300), easing = FastOutSlowInEasing),
+            ) { if (motion.spatial) it / 8 else 0 } + fadeIn(tween(motion.duration(220)))
         },
         popExitTransition = {
             slideOutOfContainer(
                 AnimatedContentTransitionScope.SlideDirection.End,
-                tween(300, easing = FastOutSlowInEasing),
-            ) { it / 8 } + fadeOut(tween(180))
+                tween(motion.duration(300), easing = FastOutSlowInEasing),
+            ) { if (motion.spatial) it / 8 else 0 } + fadeOut(tween(motion.duration(180)))
         },
     ) {
         composable(Screen.Home.route) {
@@ -190,7 +184,12 @@ private fun MobileAppNavigation(
             route = Screen.Browser.route,
             arguments = listOf(navArgument("path") { type = NavType.StringType }),
         ) {
-            BrowserScreen(
+            val activeSession by viewModel.activeSession.collectAsState()
+            if (desktop && hasAllFilesAccess && activeSession?.source == com.voyagerfiles.data.model.FileSource.LOCAL) {
+                com.voyagerfiles.desktop.FinderDesktopHost(viewModel, desktopMode,
+                    onMobile = { viewModel.setInterfaceMode(com.voyagerfiles.desktop.InterfaceMode.MOBILE) },
+                    onHome = { navController.navigateHome() })
+            } else com.voyagerfiles.ui.theme.FinderMobileTheme { BrowserScreen(
                 viewModel = viewModel,
                 onNavigateBack = {
                     if (navController.previousBackStackEntry?.destination?.route == Screen.Search.route) navController.popBackStack()
@@ -198,7 +197,7 @@ private fun MobileAppNavigation(
                 },
                 onFindDuplicates = { path -> navController.navigate(Screen.Duplicates.createRoute(path)) },
                 hasAllFilesAccess = hasAllFilesAccess,
-            )
+            ) }
         }
 
         composable(Screen.Duplicates.route, arguments = listOf(navArgument("path") { type = NavType.StringType })) { entry ->
@@ -232,8 +231,9 @@ private fun MobileAppNavigation(
 
         composable(Screen.Search.route) {
             val browseState by viewModel.browseState.collectAsState()
+            val searchSession by viewModel.activeSession.collectAsState()
             StorageSearchScreen(
-                currentFolder = viewModel.activeSession.value
+                currentFolder = searchSession
                     ?.takeIf { it.source == com.voyagerfiles.data.model.FileSource.LOCAL }
                     ?.let { browseState.currentPath },
                 showHidden = browseState.showHidden,

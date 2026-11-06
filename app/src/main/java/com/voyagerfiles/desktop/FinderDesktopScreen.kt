@@ -250,7 +250,7 @@ internal fun FinderGlyph(kind: String, color: Color = Muted, modifier: Modifier 
 }
 
 @Composable
-fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobile: () -> Unit) {
+fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobile: () -> Unit, onHome: () -> Unit = {}) {
     val session by viewModel.activeSession.collectAsState()
     val restoringSessions by viewModel.restoringSessions.collectAsState()
     val browser by viewModel.browseState.collectAsState()
@@ -381,7 +381,7 @@ fun FinderDesktopHost(viewModel: FileBrowserViewModel, mode: DesktopMode, onMobi
         savedConnections = savedConnections,
         onConnectNetwork = { conn -> viewModel.connectToRemote(conn) },
         externalDragState = sharedDragState,
-        onRoot = viewModel::openLocalRoot,
+        onRoot = { path -> if (path == "finderdex:home") onHome() else viewModel.openLocalRoot(path) },
         onMobile = onMobile,
         onTransfers = { showTransfers = true },
         tabSessions = FinderDesktopTabPolicy.visible(localTabSessions),
@@ -812,6 +812,11 @@ internal fun FinderDesktopScreen(
                 (event.isCtrlPressed || event.isMetaPressed) && event.key == Key.A && !searching && !focusTracker.hasFocusedControl -> {
                     controller.selectAll(); true
                 }
+                event.key == Key.F2 && controller.selectedFile != null && operationsAvailable && !focusTracker.hasFocusedControl -> {
+                    renameFile = controller.selectedFile
+                    renameText = controller.selectedFile?.name.orEmpty()
+                    true
+                }
                 event.key == Key.Delete && controller.selectedFile != null && operationsAvailable && !focusTracker.hasFocusedControl -> {
                     val selected = controller.columns.value.lastOrNull()?.selected.orEmpty()
                     pendingDeletePaths = selected.toList()
@@ -972,7 +977,9 @@ internal fun FinderDesktopScreen(
     }
     quickLook?.let { file ->
         FinderQuickLookDialog(file, onDismiss = { quickLook = null }, onNavigate = { direction ->
-            val ordered = columns.lastOrNull()?.files.orEmpty().filterNot { it.isDirectory }
+            val ordered = finderGroups(
+                columns.lastOrNull()?.files.orEmpty().filter { !it.isDirectory && it.name.contains(search, true) },
+                sortBy, descending, groupBy, groupDescending).flatMap { it.files }
             val current = ordered.indexOfFirst { it.path == file.path }
             if (ordered.isNotEmpty() && current >= 0)
                 quickLook = ordered[(current + direction + ordered.size) % ordered.size]
@@ -1094,7 +1101,7 @@ private fun FinderSidebar(currentPath: String, width: Dp, bookmarks: List<Pair<S
                 false, { onTransfers() }, dragState = null, rail = rail)
             SidebarItem(stringResource(R.string.finderdex_recents_title), "recent:local", "document",
                 false, { onRecents() }, dragState = null, rail = rail)
-            SidebarItem("Inicio", root, "home", currentPath == root, onRoot, dragState = dragState, rail = rail)
+            SidebarItem(stringResource(R.string.finderdex_home), "finderdex:home", "home", false, onRoot, dragState = null, rail = rail)
             listOf("Descargas" to "Download", "Documentos" to "Documents", "Imágenes" to "Pictures", "Música" to "Music", "Películas" to "Movies").forEach { (name, folder) ->
                 val path = java.io.File(root, folder).path
                 if (java.io.File(path).isDirectory && java.io.File(path).canRead())

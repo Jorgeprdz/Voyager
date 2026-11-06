@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import com.voyagerfiles.R
 import com.voyagerfiles.data.model.FileItem
 import com.voyagerfiles.data.model.FileTypeFilter
-import com.voyagerfiles.data.model.FileTypeFilter
 import com.voyagerfiles.util.StorageVolumeInfo
 import java.io.IOException
 import java.nio.file.Files
@@ -93,7 +92,7 @@ class StorageCategoryIndex(
         volumes: List<StorageVolumeInfo>,
         showHidden: Boolean,
         hasPermission: () -> Boolean,
-    ): Flow<CategoryIndexState> = scanMatching(volumes, showHidden, hasPermission, category.filter::matches)
+    ): Flow<CategoryIndexState> = scanMatching(volumes, showHidden, hasPermission, accepts = category.filter::matches)
 
     fun search(
         query: String,

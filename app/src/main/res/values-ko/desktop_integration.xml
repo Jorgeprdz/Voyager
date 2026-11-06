@@ -1,0 +1,19 @@
+<resources>
+    <string name="finderdex_home">홈</string>
+    <string name="finderdex_motion_title">애니메이션</string>
+    <string name="finderdex_motion_full">전체 모션</string>
+    <string name="finderdex_motion_reduced">모션 줄이기</string>
+    <string name="finderdex_motion_off">애니메이션 끄기</string>
+    <string name="finderdex_interface_title">인터페이스</string>
+    <string name="finderdex_interface_auto">자동 · 마우스 또는 데스크톱</string>
+    <string name="finderdex_interface_mobile">모바일</string>
+    <string name="finderdex_interface_desktop">데스크톱</string>
+    <string name="finderdex_receive_title">FinderDex에 저장</string>
+    <string name="finderdex_receive_choose">저장 위치 선택</string>
+    <string name="finderdex_receive_cancel">취소</string>
+    <string name="finderdex_receive_ready">공유 파일을 저장할 폴더를 선택하세요. 원본 파일은 유지됩니다.</string>
+    <string name="finderdex_receive_done">파일 저장됨</string>
+    <string name="finderdex_receive_invalid">지원되는 공유 파일이 없습니다.</string>
+    <string name="finderdex_receive_failed">파일을 저장하지 못했습니다. 기존 파일은 유지됩니다.</string>
+    <string name="finderdex_dynamic_colors">시스템 동적 색상</string>
+</resources>

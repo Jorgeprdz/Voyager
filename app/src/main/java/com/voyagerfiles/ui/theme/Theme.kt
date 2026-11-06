@@ -502,10 +502,10 @@ fun VoyagerTheme(
     val fallbackTokens = FinderAppearanceResolver.tokens(appearance, darkTheme)
     val colorScheme = when {
         // Upgrade-safe default: preserve the legacy theme and its existing customized colors.
-        appearance == FinderAppearance() &&
+        appearance.copy(motion = FinderMotionMode.FULL) == FinderAppearance() &&
             appTheme == AppTheme.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
             if (systemIsDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        appearance == FinderAppearance() ->
+        appearance.copy(motion = FinderMotionMode.FULL) == FinderAppearance() ->
             getColorScheme(appTheme, systemIsDark, customColorScheme)
         else -> FinderAppearanceResolver.scheme(fallbackTokens,
             if (appearance.style == FinderStyle.MATERIAL && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -544,12 +544,13 @@ fun VoyagerTheme(
 
     CompositionLocalProvider(
         LocalFinderAppearance provides appearance,
+        LocalFinderMotion provides rememberFinderMotion(appearance.motion),
         LocalFinderSemanticTokens provides tokens,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
-            shapes = if (appearance == FinderAppearance()) androidx.compose.material3.MaterialTheme.shapes
+            shapes = if (appearance.copy(motion = FinderMotionMode.FULL) == FinderAppearance()) androidx.compose.material3.MaterialTheme.shapes
                 else FinderAppearanceResolver.shapes(tokens),
             content = content,
         )
